@@ -1,18 +1,14 @@
-version: '3.8'
-
 services:
   backend:
     build:
-      context: .
+      context: ./backend-java
       dockerfile: Dockerfile
     container_name: genui-backend
     ports:
-      - "5001:8080"
+      - "5001:5001"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:8080
       # LLM Configuration (from .env)
-      - SEMANTIC_KERNEL_PROVIDER=${SEMANTIC_KERNEL_PROVIDER}
+      - SEMANTIC_KERNEL_PROVIDER=${SEMANTIC_KERNEL_PROVIDER:-openai}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
@@ -20,11 +16,11 @@ services:
     networks:
       - genui-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
 
   frontend:
     build:
@@ -34,7 +30,8 @@ services:
     ports:
       - "3001:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - genui-network
     environment:

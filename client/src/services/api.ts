@@ -37,7 +37,8 @@ export const chatWithAgentSSE = async (
     // Add user message to history
     conversationHistory.push({ role: 'user', content: message });
 
-    const response = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
+    // Use /stream endpoint for SSE streaming with Spring Boot backend
+    const response = await fetch(`${API_BASE_URL}/v1/chat/completions/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -45,9 +46,8 @@ export const chatWithAgentSSE = async (
         // In production, this would come from user auth
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1',  // Azure deployment name
         messages: conversationHistory,
-        stream: true,
       }),
     });
 

@@ -1,16 +1,28 @@
-# .NET
-bin/
-obj/
-*.user
+# Dependencies
+node_modules/
+target/
+.m2/
 
 # Environment
 .env
 .env.local
+.env.*.local
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
 
 # OS
 .DS_Store
+Thumbs.db
 
-# IDE
-.vs/
-.idea/
-.vscode/
+# Build outputs
+dist/
+build/
+*.jar
+
+# Logs
+*.log
+logs/
