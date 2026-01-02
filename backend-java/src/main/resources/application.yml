@@ -23,7 +23,7 @@ spring:
 
 # GenUI configuration
 genui:
-  default-provider: ${SEMANTIC_KERNEL_PROVIDER:openai}
+  default-provider: ${GENUI_PROVIDER:openai}
   transform:
     model: ${GENUI_TRANSFORM_MODEL:gpt-4o-mini}
 

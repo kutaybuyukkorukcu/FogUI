@@ -41,7 +41,7 @@ Set these environment variables:
 | `AZURE_OPENAI_API_KEY` | Your Azure OpenAI API key | For Azure |
 | `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint URL | For Azure |
 | `AZURE_OPENAI_DEPLOYMENT_NAME` | Azure deployment name | For Azure |
-| `SEMANTIC_KERNEL_PROVIDER` | Default provider: `openai` or `azureopenai` | No |
+| `GENUI_PROVIDER` | Default provider: `openai` or `azureopenai` | No |
 
 ## API Usage
 

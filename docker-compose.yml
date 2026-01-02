@@ -8,7 +8,7 @@ services:
       - "5001:5001"
     environment:
       # LLM Configuration (from .env)
-      - SEMANTIC_KERNEL_PROVIDER=${SEMANTIC_KERNEL_PROVIDER:-openai}
+      - GENUI_PROVIDER=${GENUI_PROVIDER:-openai}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
