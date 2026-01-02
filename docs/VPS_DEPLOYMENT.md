@@ -77,7 +77,7 @@ This installs Docker, Docker Compose, and Coolify.
 Add these in the **Environment Variables** section:
 
 ```
-SEMANTIC_KERNEL_PROVIDER=openai
+GENUI_PROVIDER=openai
 OPENAI_API_KEY=your-api-key-here
 ```
 
