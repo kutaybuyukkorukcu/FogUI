@@ -1,0 +1,17 @@
+# Development Dockerfile with hot reload
+FROM maven:3.9-eclipse-temurin-21
+
+WORKDIR /app
+
+# Copy pom and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source
+COPY src ./src
+
+# Expose port and debug port
+EXPOSE 5001 5005
+
+# Run with DevTools and remote debugging
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Dspring.devtools.restart.enabled=true"]

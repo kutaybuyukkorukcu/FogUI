@@ -1,18 +1,15 @@
-import { PanelRight, PanelRightClose, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { Button } from '../ui/button';
 import { ChatInput } from './ChatInput';
-import type { ChatMessage } from '../../types';
-import { ComponentRenderer } from '../renderers/ComponentRenderer';
 import { MessageList } from './MessageList';
 import { ScrollArea } from '../ui/scroll-area';
+import { Trash2 } from 'lucide-react';
+import { UsageDisplay } from './UsageDisplay';
 import { useSSEChat } from '../../hooks/useSSEChat';
 
 export const ChatInterface = () => {
-  const { messages, sendMessage, isLoading, clearMessages } = useSSEChat();
-  const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
-  const [showPreview, setShowPreview] = useState(true);
+  const { messages, sendMessage, isLoading, clearMessages, lastUsage, totalUsage } = useSSEChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,7 +19,7 @@ export const ChatInterface = () => {
   return (
     <div className="flex h-screen bg-background">
       {/* Chat Panel */}
-      <div className={`flex flex-col transition-all duration-300 ${showPreview ? 'w-1/2' : 'w-full'}`}>
+      <div className="flex w-full flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b p-4">
           <div>
@@ -32,18 +29,6 @@ export const ChatInterface = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setShowPreview(!showPreview)}
-              title={showPreview ? 'Hide preview' : 'Show preview'}
-            >
-              {showPreview ? (
-                <PanelRightClose className="h-4 w-4" />
-              ) : (
-                <PanelRight className="h-4 w-4" />
-              )}
-            </Button>
             <Button
               variant="outline"
               size="icon"
@@ -89,11 +74,7 @@ export const ChatInterface = () => {
             </div>
           ) : (
             <>
-              <MessageList
-                messages={messages}
-                onSelectMessage={setSelectedMessage}
-                selectedMessageId={selectedMessage?.id}
-              />
+              <MessageList messages={messages} sendMessage={sendMessage} />
               <div ref={messagesEndRef} />
             </>
           )}
@@ -103,40 +84,10 @@ export const ChatInterface = () => {
         <div className="border-t p-4">
           <ChatInput onSend={sendMessage} isLoading={isLoading} />
         </div>
+        
+        {/* Usage Display */}
+        <UsageDisplay lastUsage={lastUsage} totalUsage={totalUsage} />
       </div>
-
-      {/* Preview Panel */}
-      {showPreview && (
-        <div className="w-1/2 border-l bg-muted/30">
-          <div className="flex h-full flex-col">
-            <div className="border-b bg-background p-4">
-              <h2 className="text-lg font-semibold">Preview</h2>
-              <p className="text-sm text-muted-foreground">
-                {selectedMessage
-                  ? 'Viewing generated component'
-                  : 'Component preview will appear here'}
-              </p>
-            </div>
-
-            <ScrollArea className="flex-1 p-6">
-              {selectedMessage?.toolResult ? (
-                <div className="space-y-4">
-                  <ComponentRenderer toolResult={selectedMessage.toolResult} />
-                </div>
-              ) : (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <p>No component to display</p>
-                    <p className="mt-2 text-sm">
-                      Ask a question to see generated UI components
-                    </p>
-                  </div>
-                </div>
-              )}
-            </ScrollArea>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
