@@ -1,50 +1,36 @@
-version: '3.8'
-
-# Development overrides - only used when running `docker-compose up` (not in production)
+# Development overrides - hot reload for both backend and frontend
 services:
-  postgres:
-    ports:
-      - "5432:5432"  # Expose for local DB tools
-
   backend:
-    # Override the production build with development setup
     build:
-      context: .
-      dockerfile: Dockerfile.dev  # We'll create this
+      context: ./backend-java
+      dockerfile: Dockerfile.dev
     ports:
-      - "5001:8080"  # Keep same external port as production
+      - "5001:5001"
+      - "5005:5005" # Debug port
     volumes:
-      # Mount source code for hot reload
-      - .:/src
-      - /src/bin
-      - /src/obj
+      # Mount source for hot reload
+      - ./backend-java/src:/app/src
+      - ./backend-java/pom.xml:/app/pom.xml
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:8080
-      - DOTNET_USE_POLLING_FILE_WATCHER=1  # Better file watching in containers
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=fogdata;Username=fogdata_user;Password=fogdata_password
-      - SemanticKernel__Provider=${SEMANTIC_KERNEL_PROVIDER:-AzureOpenAI}
-      - SemanticKernel__OpenAI__ApiKey=${OPENAI_API_KEY}
-      - SemanticKernel__OpenAI__ModelId=${OPENAI_MODEL_ID:-gpt-4o-mini}
-      - SemanticKernel__AzureOpenAI__Endpoint=${AZURE_OPENAI_ENDPOINT}
-      - SemanticKernel__AzureOpenAI__ApiKey=${AZURE_OPENAI_API_KEY}
-      - SemanticKernel__AzureOpenAI__DeploymentName=${AZURE_OPENAI_DEPLOYMENT_NAME:-gpt-4.1-mini}
-      - SemanticKernel__Ollama__Endpoint=${OLLAMA_ENDPOINT:-http://host.docker.internal:11434}
-      - SemanticKernel__Ollama__ModelId=${OLLAMA_MODEL_ID:-llama3.2}
-    command: ["dotnet", "watch", "run", "--urls", "http://+:8080"]
+      - SPRING_PROFILES_ACTIVE=dev
+      - SEMANTIC_KERNEL_PROVIDER=${SEMANTIC_KERNEL_PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_DEPLOYMENT_NAME=${AZURE_OPENAI_DEPLOYMENT_NAME:-gpt-4o-mini}
+      - LOGGING_LEVEL_COM_GENUI=DEBUG
 
   frontend:
-    # Override with development server
     build:
       context: ./client
-      dockerfile: Dockerfile.dev  # We'll create this
+      dockerfile: Dockerfile.dev
     volumes:
-      # Mount source code for hot reload
       - ./client:/app
-      - /app/node_modules  # Don't mount node_modules
+      - /app/node_modules
     ports:
-      - "5173:5173"  # Vite dev server port
+      - "5173:5173"
     environment:
       - NODE_ENV=development
-      - DOCKER_CONTAINER=true  # Signal that we're running in Docker
-    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+      - DOCKER_CONTAINER=true
+      - VITE_API_URL=http://localhost:5001
+    command: [ "npm", "run", "dev", "--", "--host", "0.0.0.0" ]

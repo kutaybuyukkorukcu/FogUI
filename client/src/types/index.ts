@@ -5,92 +5,116 @@ export interface Message {
   timestamp: Date;
 }
 
-export interface AgentAnalysis {
-  Intent?: string;
-  ToolToCall?: string;
-  Parameters?: Record<string, any>;
-  Reasoning?: string;
-  // Support both PascalCase and camelCase
-  intent?: string;
-  toolToCall?: string;
-  parameters?: Record<string, any>;
-  reasoning?: string;
-}
-
-export interface ToolCallResult {
-  Success?: boolean;
-  Data?: any;
-  Error?: string;
-  ComponentType?: 'weather' | 'chart' | 'table' | 'error';
-  // Support both PascalCase and camelCase
-  success?: boolean;
-  data?: any;
-  error?: string;
-  componentType?: 'weather' | 'chart' | 'table' | 'error';
-}
-
-export interface WeatherData {
-  // Support both PascalCase and camelCase
-  Id?: number;
-  id?: number;
-  Location?: string;
-  location?: string;
-  Temperature?: number;
-  temperature?: number;
-  Humidity?: number;
-  humidity?: number;
-  WindSpeed?: number;
-  windSpeed?: number;
-  Condition?: string;
-  condition?: string;
-  Date?: string;
-  date?: string;
-}
-
-export interface SalesData {
-  // Support both PascalCase (from backend) and camelCase
-  Id?: number;
-  id?: number;
-  Product?: string;
-  product?: string;
-  Amount?: number;
-  amount?: number;
-  Region?: string;
-  region?: string;
-  SaleDate?: string;
-  saleDate?: string;
-  SalesPerson?: {
-    Id?: number;
-    FirstName?: string;
-    LastName?: string;
-    Email?: string;
-    Region?: string;
-    Role?: string;
-  };
-  salesPerson?: {
-    id?: number;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    region?: string;
-    role?: string;
-  };
-}
-
-export interface SalesPersonPerformance {
-  // Support both PascalCase and camelCase
-  SalesPersonName?: string;
-  salesPersonName?: string;
-  TotalSales?: number;
-  totalSales?: number;
-  SalesCount?: number;
-  salesCount?: number;
-  Region?: string;
-  region?: string;
-}
-
 export interface ChatMessage extends Message {
-  analysis?: AgentAnalysis;
-  toolResult?: ToolCallResult;
   isStreaming?: boolean;
+  // Generative UI DSL format
+  generativeUIResponse?: GenerativeUIResponse;
+}
+
+// ============================================
+// Generative UI DSL Types
+// Aligned with backend GenerativeUIModels.cs
+// ============================================
+
+export interface ThinkingItem {
+  status: 'active' | 'complete';
+  message: string;
+  timestamp?: string;
+}
+
+export type ContentBlock = TextBlock | ComponentBlock;
+
+export interface TextBlock {
+  type: 'text';
+  value: string;
+}
+
+export interface ComponentBlock {
+  type: 'component';
+  componentType: string;
+  props: Record<string, unknown>;
+}
+
+export interface GenerativeUIResponse {
+  thinking: ThinkingItem[];
+  content: ContentBlock[];
+  metadata: {
+    timestamp?: string;
+    version?: string;
+    modelUsed?: string;
+    queryType?: string;
+    error?: boolean;
+    [key: string]: unknown;
+  };
+}
+
+// ============================================
+// Component Props Types - aligned with backend
+// ============================================
+
+export interface CardProps {
+  title?: string;
+  description?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface ListProps {
+  title?: string;
+  items: unknown[];
+  layout?: 'list' | 'grid' | 'compact';
+}
+
+export interface TableProps {
+  columns: string[];
+  rows: Record<string, unknown>[];
+}
+
+export interface ChartProps {
+  title?: string;
+  chartData: Record<string, unknown>[];
+}
+
+export interface FormFieldProps {
+  name: string;
+  label: string;
+  type: 'text' | 'number' | 'email' | 'date' | 'select' | 'textarea';
+  placeholder?: string;
+  required?: boolean;
+  options?: string[];
+  defaultValue?: string | number;
+}
+
+export interface FormProps {
+  title: string;
+  description?: string;
+  fields: FormFieldProps[];
+  submitText?: string;
+}
+
+export interface ConfirmationProps {
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: 'info' | 'warning' | 'danger';
+  data?: unknown;
+}
+
+// ============================================
+// Usage & Cost Tracking Types
+// ============================================
+
+export interface CostInfo {
+  promptCost: number;
+  completionCost: number;
+  totalCost: number;
+  currency: string;
+  model: string;
+}
+
+export interface UsageInfo {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  estimatedCost?: CostInfo;
 }
