@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*.*.*'
 
+# Required for OIDC trusted publishing
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   publish:
     name: Publish to NPM
@@ -20,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
           cache-dependency-path: packages/react/package-lock.json
@@ -31,10 +36,9 @@ jobs:
       - name: Build package
         run: npm run build
 
+      # Uses OIDC trusted publishing - no token needed!
       - name: Publish to NPM
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Generate publish summary
         run: |
@@ -42,6 +46,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Package:** \`@fogui/react\`" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔐 Published using OIDC Trusted Publishing" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Install with:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY

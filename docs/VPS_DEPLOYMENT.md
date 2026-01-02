@@ -63,13 +63,13 @@ This installs Docker, Docker Compose, and Coolify.
 
 ### Create New Resource
 
-1. In Coolify: **Projects** → **New Project** → "GenUI"
+1. In Coolify: **Projects** → **New Project** → "FogUI"
 2. **Add Resource** → **Docker Image**
 3. Configure:
 
 | Setting | Value |
 |---------|-------|
-| **Image** | `ghcr.io/YOUR_USERNAME/genui-poc/backend:latest` |
+| **Image** | `ghcr.io/YOUR_USERNAME/fogui/backend:latest` |
 | **Port** | `5001` |
 
 ### Environment Variables
@@ -148,4 +148,4 @@ git push dokku main
 | View Logs | Coolify → Application → Logs |
 | Restart Container | Coolify → Application → Restart |
 | Manual Deploy | Coolify → Application → Deploy |
-| Docker Image | `ghcr.io/<username>/genui-poc/backend:latest` |
+| Docker Image | `ghcr.io/<username>/fogui/backend:latest` |
