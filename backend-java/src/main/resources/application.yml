@@ -5,6 +5,28 @@ spring:
   application:
     name: genui-backend
   
+  # Database Configuration
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fogui}
+    username: ${DATABASE_USER:fogui}
+    password: ${DATABASE_PASSWORD:fogui_secret}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  # Flyway Migrations
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}
@@ -27,8 +49,14 @@ genui:
   transform:
     model: ${GENUI_TRANSFORM_MODEL:gpt-4o-mini}
 
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-super-secret-jwt-key-min-32-chars}
+  expiration-hours: ${JWT_EXPIRATION_HOURS:24}
+
 # Logging
 logging:
   level:
     com.genui: DEBUG
     org.springframework.ai: DEBUG
+    org.springframework.security: DEBUG

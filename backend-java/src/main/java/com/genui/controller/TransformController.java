@@ -2,10 +2,13 @@ package com.genui.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.genui.entity.User;
 import com.genui.model.openai.LLMProvider;
 import com.genui.model.openai.LLMProviderConfig;
 import com.genui.model.transform.TransformRequest;
 import com.genui.model.transform.TransformResponse;
+import com.genui.repository.UserRepository;
+import com.genui.security.ApiKeyUserDetails;
 import com.genui.service.ChatClientFactory;
 import com.genui.service.TransformPrompts;
 import com.genui.service.UIResponseParser;
@@ -17,6 +20,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -33,7 +37,8 @@ import java.util.concurrent.Executors;
  * <p>
  * This endpoint transforms raw LLM output into structured UI components.
  * Unlike /chat/completions, this doesn't call the customer's LLM.
- * Instead, customers call their own LLM and send the output here for transformation.
+ * Instead, customers call their own LLM and send the output here for
+ * transformation.
  * <p>
  * Flow:
  * 1. Customer calls their LLM (with their own API key)
@@ -49,6 +54,7 @@ public class TransformController {
 
     private final ChatClientFactory chatClientFactory;
     private final UIResponseParser responseParser;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -73,10 +79,14 @@ public class TransformController {
     /**
      * POST /genui/transform
      * Transform raw LLM text into structured UI components.
+     * Requires API key authentication.
      */
     @PostMapping("/transform")
     public ResponseEntity<TransformResponse> transform(
+            @AuthenticationPrincipal ApiKeyUserDetails userDetails,
             @RequestBody TransformRequest request) {
+
+        User user = userDetails != null ? userDetails.getUser() : null;
 
         if (request.getContent() == null || request.getContent().isBlank()) {
             return ResponseEntity.badRequest()
@@ -89,7 +99,8 @@ public class TransformController {
             var config = getTransformLLMConfig();
             if (config == null) {
                 return ResponseEntity.status(503)
-                        .body(TransformResponse.error("Transform service not configured. Set OPENAI_API_KEY or Azure credentials."));
+                        .body(TransformResponse
+                                .error("Transform service not configured. Set OPENAI_API_KEY or Azure credentials."));
             }
 
             var chatClient = chatClientFactory.createClient(config);
@@ -99,19 +110,21 @@ public class TransformController {
             if (request.getContext() != null) {
                 var ctx = request.getContext();
                 var hints = new StringBuilder();
-                if (ctx.getIntent() != null) hints.append("Intent: ").append(ctx.getIntent()).append(". ");
+                if (ctx.getIntent() != null)
+                    hints.append("Intent: ").append(ctx.getIntent()).append(". ");
                 if (ctx.getPreferredComponents() != null) {
-                    hints.append("Preferred components: ").append(String.join(", ", ctx.getPreferredComponents())).append(". ");
+                    hints.append("Preferred components: ").append(String.join(", ", ctx.getPreferredComponents()))
+                            .append(". ");
                 }
-                if (ctx.getInstructions() != null) hints.append(ctx.getInstructions());
+                if (ctx.getInstructions() != null)
+                    hints.append(ctx.getInstructions());
                 contextHints = hints.toString();
             }
 
             // Create the transformation prompt
             var prompt = new Prompt(
                     new SystemMessage(TransformPrompts.TRANSFORM_SYSTEM_PROMPT),
-                    new UserMessage(TransformPrompts.buildTransformPrompt(request.getContent(), contextHints))
-            );
+                    new UserMessage(TransformPrompts.buildTransformPrompt(request.getContent(), contextHints)));
             var response = chatClient.prompt(prompt).call();
             var content = response.content();
 
@@ -136,6 +149,14 @@ public class TransformController {
                     .processingTimeMs(processingTime)
                     .estimatedCost(estimatedCost)
                     .build();
+
+            // Increment user's usage counter
+            if (user != null) {
+                user.incrementUsage();
+                userRepository.save(user);
+                log.debug("Usage incremented for user: {} ({}/{})",
+                        user.getEmail(), user.getUsedThisMonth(), user.getMonthlyQuota());
+            }
 
             log.info("Transform completed in {}ms, ~{} tokens", processingTime, estimatedTokens);
 
@@ -186,8 +207,7 @@ public class TransformController {
 
                 var prompt = new Prompt(
                         new SystemMessage(TransformPrompts.TRANSFORM_SYSTEM_PROMPT),
-                        new UserMessage(TransformPrompts.buildTransformPrompt(request.getContent(), contextHints))
-                );
+                        new UserMessage(TransformPrompts.buildTransformPrompt(request.getContent(), contextHints)));
                 var fullContent = new StringBuilder();
 
                 chatClient.prompt(prompt)
@@ -218,7 +238,8 @@ public class TransformController {
                                 int tokens = (request.getContent().length() + fullContent.length()) / 4;
                                 emitter.send(SseEmitter.event()
                                         .name("usage")
-                                        .data("{\"transformTokens\":" + tokens + ",\"processingTimeMs\":" + processingTime + "}"));
+                                        .data("{\"transformTokens\":" + tokens + ",\"processingTimeMs\":"
+                                                + processingTime + "}"));
 
                                 emitter.send(SseEmitter.event().data("[DONE]"));
                                 emitter.complete();
