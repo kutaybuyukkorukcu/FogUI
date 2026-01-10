@@ -2,6 +2,82 @@ import React from 'react';
 import type { ComponentBlock } from '../types';
 
 /**
+ * Component registry type - maps componentType strings to React components.
+ * 
+ * Each component receives props that match the FogUI DSL for that component type.
+ */
+export type ComponentRegistry = Record<string, React.ComponentType<any>>;
+
+/**
+ * Standard prop interfaces for built-in FogUI component types.
+ * Useful for implementing custom components that match the expected API.
+ */
+export interface CardProps {
+  title?: string;
+  description?: string;
+  data?: Record<string, unknown>;
+  children?: React.ReactNode;
+}
+
+export interface ListProps {
+  title?: string;
+  items: unknown[];
+  ordered?: boolean;
+}
+
+export interface TableProps {
+  columns: string[];
+  rows: Record<string, unknown>[];
+  title?: string;
+}
+
+export interface CalloutProps {
+  title?: string;
+  message: string;
+  variant?: 'info' | 'warning' | 'tip' | 'error';
+}
+
+/**
+ * Merge multiple component registries with later registries taking precedence.
+ * Useful for layering: defaults → context → prop overrides.
+ */
+export function mergeRegistries(
+  ...registries: (ComponentRegistry | undefined)[]
+): ComponentRegistry {
+  return registries.reduce<ComponentRegistry>((merged, registry) => {
+    if (registry) {
+      return { ...merged, ...registry };
+    }
+    return merged;
+  }, {});
+}
+
+/**
+ * Create a component registry from an adapter.
+ * This is a convenience function for creating type-safe registries.
+ * 
+ * @example
+ * ```tsx
+ * import { createRegistry } from '@fogui/react';
+ * import { Card } from '@/components/ui/card';
+ * 
+ * const myRegistry = createRegistry({
+ *   card: MyCardComponent,
+ *   table: MyTableComponent,
+ * });
+ * ```
+ */
+export function createRegistry(components: Partial<{
+  card: React.ComponentType<CardProps>;
+  list: React.ComponentType<ListProps>;
+  table: React.ComponentType<TableProps>;
+  callout: React.ComponentType<CalloutProps>;
+  [key: string]: React.ComponentType<any>;
+}>): ComponentRegistry {
+  return components as ComponentRegistry;
+}
+
+/**
  * Default component implementations.
  * These provide basic rendering - users should customize for their design system.
  */

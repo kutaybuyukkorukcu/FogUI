@@ -3,7 +3,7 @@
  * 
  * Like magic from the fog - UI materializes from raw text.
  * 
- * @example
+ * @example Basic Usage
  * ```tsx
  * import { FogUIProvider, useFogUI, FogUIRenderer } from '@fogui/react';
  * 
@@ -30,12 +30,38 @@
  * }
  * ```
  * 
+ * @example With Custom Design System (Shadcn, MUI, etc.)
+ * ```tsx
+ * import { FogUIProvider } from '@fogui/react';
+ * import { Card, CardHeader, CardContent } from '@/components/ui/card';
+ * 
+ * // Map FogUI component types to YOUR components
+ * const myComponents = {
+ *   card: ({ title, description }) => (
+ *     <Card>
+ *       <CardHeader>{title}</CardHeader>
+ *       <CardContent>{description}</CardContent>
+ *     </Card>
+ *   ),
+ *   table: MyTableComponent,
+ *   list: MyListComponent,
+ * };
+ * 
+ * function App() {
+ *   return (
+ *     <FogUIProvider apiKey="fog_xxxx" components={myComponents}>
+ *       <Chat />
+ *     </FogUIProvider>
+ *   );
+ * }
+ * ```
+ * 
  * @packageDocumentation
  */
 
 // Provider & Context
 export { FogUIProvider, useFogUIContext } from './FogUIProvider';
-export type { FogUIProviderProps } from './FogUIProvider';
+export type { FogUIProviderProps, ComponentRegistry } from './FogUIProvider';
 
 // Main Hook
 export { useFogUI } from './useFogUI';
@@ -56,4 +82,15 @@ export type {
 
 // Components
 export { FogUIRenderer } from './components/FogUIRenderer';
-export { DynamicComponent, defaultComponentRegistry } from './components/ComponentRegistry';
+export { 
+  DynamicComponent, 
+  defaultComponentRegistry,
+  createRegistry,
+  mergeRegistries,
+} from './components/ComponentRegistry';
+export type {
+  CardProps,
+  ListProps,
+  TableProps,
+  CalloutProps,
+} from './components/ComponentRegistry';

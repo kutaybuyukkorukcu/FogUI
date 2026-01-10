@@ -66,6 +66,23 @@ services:
     environment:
       - NODE_ENV=production
 
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:5001}
+    container_name: fogui-dashboard
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - genui-network
+    environment:
+      - NODE_ENV=production
+
 networks:
   genui-network:
     driver: bridge
