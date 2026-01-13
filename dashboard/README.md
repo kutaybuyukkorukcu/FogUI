@@ -122,7 +122,7 @@ docker build -t fogui-dashboard .
 
 # Run
 docker run -p 3000:80 \
-  -e VITE_API_URL=https://api.fogui.dev \
+  -e VITE_API_URL=https://api.virtuoapps.com \
   fogui-dashboard
 ```
 

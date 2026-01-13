@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       login: async (email: string, password: string) => {
-        const response = await fetch('/auth/login', {
+        const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       register: async (email: string, password: string, name?: string) => {
-        const response = await fetch('/auth/register', {
+        const response = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password, name }),

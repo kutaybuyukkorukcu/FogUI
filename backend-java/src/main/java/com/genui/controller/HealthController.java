@@ -12,38 +12,36 @@ import java.util.Map;
 @RestController
 public class HealthController {
 
-    /**
-     * Health check endpoint
-     */
-    @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> health() {
-        return ResponseEntity.ok(Map.of(
-                "status", "healthy",
-                "version", "1.0.0"
-        ));
-    }
+        /**
+         * Health check endpoint
+         */
+        @GetMapping("/health")
+        public ResponseEntity<Map<String, Object>> health() {
+                return ResponseEntity.ok(Map.of(
+                                "status", "healthy",
+                                "version", "1.0.0",
+                                "timestamp", System.currentTimeMillis() // Added to trigger deployment
+                ));
+        }
 
-    /**
-     * API info endpoint
-     */
-    @GetMapping("/")
-    public ResponseEntity<Map<String, Object>> info() {
-        return ResponseEntity.ok(Map.of(
-                "name", "GenUI API",
-                "version", "1.0.0",
-                "description", "OpenAI-compatible API with Generative UI capabilities",
-                "endpoints", Map.of(
-                        "chatCompletions", "POST /v1/chat/completions",
-                        "health", "GET /health"
-                ),
-                "headers", Map.of(
-                        "required", new String[]{"X-LLM-API-Key: Your OpenAI/Azure API key"},
-                        "optional", new String[]{
-                                "X-LLM-Provider: openai | azure",
-                                "X-Azure-Endpoint: Azure OpenAI endpoint URL",
-                                "X-Azure-Deployment: Azure deployment name"
-                        }
-                )
-        ));
-    }
+        /**
+         * API info endpoint
+         */
+        @GetMapping("/")
+        public ResponseEntity<Map<String, Object>> info() {
+                return ResponseEntity.ok(Map.of(
+                                "name", "GenUI API",
+                                "version", "1.0.0",
+                                "description", "OpenAI-compatible API with Generative UI capabilities",
+                                "endpoints", Map.of(
+                                                "chatCompletions", "POST /v1/chat/completions",
+                                                "health", "GET /health"),
+                                "headers", Map.of(
+                                                "required", new String[] { "X-LLM-API-Key: Your OpenAI/Azure API key" },
+                                                "optional", new String[] {
+                                                                "X-LLM-Provider: openai | azure",
+                                                                "X-Azure-Endpoint: Azure OpenAI endpoint URL",
+                                                                "X-Azure-Deployment: Azure deployment name"
+                                                })));
+        }
 }

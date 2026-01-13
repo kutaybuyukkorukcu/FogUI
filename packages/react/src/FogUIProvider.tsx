@@ -3,7 +3,7 @@ import React, { createContext, useContext, useMemo } from 'react';
 /**
  * FogUI Platform API endpoint
  */
-const FOGUI_API_ENDPOINT = 'https://api.fogui.dev';
+const FOGUI_API_ENDPOINT = 'https://api.virtuoapps.com';
 
 /**
  * Component registry type - maps componentType to React components
@@ -26,7 +26,7 @@ export interface FogUIProviderProps {
   apiKey: string;
   /**
    * Custom API endpoint (for self-hosted deployments)
-   * @default 'https://api.fogui.dev'
+   * @default 'https://api.virtuoapps.com'
    */
   endpoint?: string;
   /**
