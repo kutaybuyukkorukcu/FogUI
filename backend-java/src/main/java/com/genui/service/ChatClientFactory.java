@@ -30,8 +30,7 @@ public class ChatClientFactory {
             case AZURE_OPENAI -> createAzureOpenAiClient(config);
             case ANTHROPIC -> throw new UnsupportedOperationException(
                     "Anthropic support requires additional configuration. Use OpenAI-compatible endpoint.");
-            case GOOGLE -> throw new UnsupportedOperationException(
-                    "Google AI support requires additional configuration.");
+            case GOOGLE -> createGoogleClient(config);
         };
     }
 
@@ -72,6 +71,26 @@ public class ChatClientFactory {
                 .build();
 
         var chatModel = new AzureOpenAiChatModel(azureClientBuilder, options);
+
+        return ChatClient.builder(chatModel).build();
+    }
+
+    private ChatClient createGoogleClient(LLMProviderConfig config) {
+        String model = config.getModel() != null ? config.getModel() : "gemini-1.5-flash";
+        log.info("Creating Google AI (Gemini) client with model: {} via OpenAI-compatible API", model);
+
+        // Google AI Studio provides an OpenAI-compatible API endpoint
+        // This works with the free API key from AI Studio without needing full GCP credentials
+        String googleAiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/openai";
+        
+        var api = new OpenAiApi(googleAiBaseUrl, config.getApiKey());
+
+        var options = OpenAiChatOptions.builder()
+                .withModel(model)
+                .withTemperature(0.7)
+                .build();
+
+        var chatModel = new OpenAiChatModel(api, options);
 
         return ChatClient.builder(chatModel).build();
     }

@@ -76,6 +76,12 @@ public class TransformController {
     @Value("${genui.default-provider:openai}")
     private String defaultProvider;
 
+    @Value("${google-ai.api-key:}")
+    private String googleAiKey;
+
+    @Value("${google-ai.model:gemini-1.5-flash}")
+    private String googleAiModel;
+
     /**
      * POST /genui/transform
      * Transform raw LLM text into structured UI components.
@@ -291,6 +297,15 @@ public class TransformController {
                     .endpoint(azureEndpoint)
                     .deploymentName(azureDeployment.isBlank() ? transformModel : azureDeployment)
                     .model(azureDeployment.isBlank() ? transformModel : azureDeployment)
+                    .build();
+        }
+
+        if (("google".equalsIgnoreCase(defaultProvider) || "gemini".equalsIgnoreCase(defaultProvider))
+                && googleAiKey != null && !googleAiKey.isBlank()) {
+            return LLMProviderConfig.builder()
+                    .provider(LLMProvider.GOOGLE)
+                    .apiKey(googleAiKey)
+                    .model(googleAiModel)
                     .build();
         }
 

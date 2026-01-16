@@ -43,6 +43,11 @@ spring:
             deployment-name: ${AZURE_OPENAI_DEPLOYMENT_NAME:gpt-4o-mini}
             temperature: 0.7
 
+# Google AI (Gemini) - Uses OpenAI-compatible API endpoint
+google-ai:
+  api-key: ${GOOGLE_AI_API_KEY:}
+  model: ${GOOGLE_AI_MODEL:gemini-1.5-flash}
+
 # GenUI configuration
 genui:
   default-provider: ${GENUI_PROVIDER:openai}
