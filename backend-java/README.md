@@ -41,7 +41,9 @@ Set these environment variables:
 | `AZURE_OPENAI_API_KEY` | Your Azure OpenAI API key | For Azure |
 | `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint URL | For Azure |
 | `AZURE_OPENAI_DEPLOYMENT_NAME` | Azure deployment name | For Azure |
-| `GENUI_PROVIDER` | Default provider: `openai` or `azureopenai` | No |
+| `GOOGLE_AI_API_KEY` | Your Google AI Studio API key | For Gemini |
+| `GOOGLE_AI_MODEL` | Gemini model name (default: `gemini-1.5-flash`) | No |
+| `GENUI_PROVIDER` | Default provider: `openai`, `azureopenai`, or `gemini` | No |
 
 ## API Usage
 

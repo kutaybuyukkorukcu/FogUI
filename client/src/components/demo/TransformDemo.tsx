@@ -53,6 +53,10 @@ export function TransformDemo() {
     {
       label: 'Weather',
       text: 'Weather in Tokyo: Currently 18°C with partly cloudy skies. Humidity at 65%. Wind from the east at 12 km/h. Forecast: High of 22°C, Low of 14°C.'
+    },
+    {
+      label: 'Composable (Nested)',
+      text: 'Create a dashboard layout with a Title "Employee Status". Inside, create a grid with 2 columns. Column 1: A card "Active Staff" with value "12". Column 2: A card "On Leave" with value "2". Below that, add a full-width callout warning "Holiday season approaching".'
     }
   ];
 

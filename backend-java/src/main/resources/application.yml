@@ -46,7 +46,7 @@ spring:
 # Google AI (Gemini) - Uses OpenAI-compatible API endpoint
 google-ai:
   api-key: ${GOOGLE_AI_API_KEY:}
-  model: ${GOOGLE_AI_MODEL:gemini-1.5-flash}
+  model: ${GOOGLE_AI_MODEL:gemini-2.5-flash}
 
 # GenUI configuration
 genui:
