@@ -14,7 +14,8 @@ import com.azure.ai.openai.OpenAIClientBuilder;
 import com.azure.core.credential.AzureKeyCredential;
 
 /**
- * Factory for creating Spring AI ChatClient instances from user-provided API keys (BYOK).
+ * Factory for creating Spring AI ChatClient instances from user-provided API
+ * keys (BYOK).
  * This enables runtime configuration of LLM providers based on request headers.
  */
 @Slf4j
@@ -22,7 +23,8 @@ import com.azure.core.credential.AzureKeyCredential;
 public class ChatClientFactory {
 
     /**
-     * Creates a ChatClient configured with the specified LLM provider and credentials
+     * Creates a ChatClient configured with the specified LLM provider and
+     * credentials
      */
     public ChatClient createClient(LLMProviderConfig config) {
         return switch (config.getProvider()) {
@@ -57,7 +59,7 @@ public class ChatClientFactory {
             throw new IllegalArgumentException("Azure OpenAI requires deployment name");
         }
 
-        log.info("Creating Azure OpenAI client with endpoint: {}, deployment: {}", 
+        log.info("Creating Azure OpenAI client with endpoint: {}, deployment: {}",
                 config.getEndpoint(), config.getDeploymentName());
 
         // Build Azure OpenAI client builder (not client) - Spring AI needs the builder
@@ -76,13 +78,14 @@ public class ChatClientFactory {
     }
 
     private ChatClient createGoogleClient(LLMProviderConfig config) {
-        String model = config.getModel() != null ? config.getModel() : "gemini-1.5-flash";
+        String model = config.getModel() != null ? config.getModel() : "gemini-2.5-flash";
         log.info("Creating Google AI (Gemini) client with model: {} via OpenAI-compatible API", model);
 
         // Google AI Studio provides an OpenAI-compatible API endpoint
-        // This works with the free API key from AI Studio without needing full GCP credentials
+        // This works with the free API key from AI Studio without needing full GCP
+        // credentials
         String googleAiBaseUrl = "https://generativelanguage.googleapis.com/v1beta/openai";
-        
+
         var api = new OpenAiApi(googleAiBaseUrl, config.getApiKey());
 
         var options = OpenAiChatOptions.builder()
