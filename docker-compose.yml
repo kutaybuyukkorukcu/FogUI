@@ -39,6 +39,9 @@ services:
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
       - AZURE_OPENAI_DEPLOYMENT_NAME=${AZURE_OPENAI_DEPLOYMENT_NAME}
+      # Google AI (Gemini) Configuration
+      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
+      - GOOGLE_AI_MODEL=${GOOGLE_AI_MODEL:-gemini-2.5-flash}
     depends_on:
       db:
         condition: service_healthy

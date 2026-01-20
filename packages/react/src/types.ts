@@ -94,6 +94,7 @@ export interface ComponentBlock {
   type: 'component';
   componentType: string;
   props: Record<string, unknown>;
+  children?: ComponentBlock[];
 }
 
 export interface FogUIResponse {

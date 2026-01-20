@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import type { GenUIConfig } from './types';
+import type { PartialComponentRegistry } from './types/components';
 
 /**
  * GenUI Platform API endpoint
@@ -10,6 +11,7 @@ const GENUI_API_ENDPOINT = 'https://api.genui.dev';
 interface GenUIContextValue {
   apiKey: string;
   endpoint: string;
+  components: PartialComponentRegistry;
 }
 
 const GenUIContext = createContext<GenUIContextValue | null>(null);
@@ -18,8 +20,25 @@ export interface GenUIProviderProps {
   children: React.ReactNode;
   /**
    * Your GenUI API key (get it from https://genui.dev/dashboard)
+   * Optional for demo/development mode
    */
-  apiKey: string;
+  apiKey?: string;
+  /**
+   * Custom component overrides for design system compatibility.
+   * Any component not specified will use FogUI's default Tailwind renderer.
+   * 
+   * @example
+   * ```tsx
+   * <GenUIProvider
+   *   apiKey="xxx"
+   *   components={{
+   *     card: MyMUICard,
+   *     list: MyAntList,
+   *   }}
+   * >
+   * ```
+   */
+  components?: PartialComponentRegistry;
 }
 
 /**
@@ -38,9 +57,13 @@ export interface GenUIProviderProps {
  * }
  * ```
  */
-export function GenUIProvider({ children, apiKey }: GenUIProviderProps) {
-  if (!apiKey) {
-    console.warn('[GenUI] API key is required. Get one at https://genui.dev/dashboard');
+export function GenUIProvider({ 
+  children, 
+  apiKey = '',
+  components = {},
+}: GenUIProviderProps) {
+  if (!apiKey && !import.meta.env.DEV) {
+    console.warn('[GenUI] API key is required in production. Get one at https://genui.dev/dashboard');
   }
 
   // Use environment variable in development, production endpoint otherwise
@@ -51,7 +74,8 @@ export function GenUIProvider({ children, apiKey }: GenUIProviderProps) {
   const value = useMemo<GenUIContextValue>(() => ({
     apiKey,
     endpoint,
-  }), [apiKey, endpoint]);
+    components,
+  }), [apiKey, endpoint, components]);
 
   return (
     <GenUIContext.Provider value={value}>
@@ -71,3 +95,4 @@ export function useGenUIContext(): GenUIContextValue {
   }
   return context;
 }
+
