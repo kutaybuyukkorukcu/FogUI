@@ -27,32 +27,17 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  # Spring AI - Vertex AI Gemini (Primary LLM)
   ai:
-    openai:
-      api-key: ${OPENAI_API_KEY:}
-      chat:
-        options:
-          model: gpt-4o-mini
-          temperature: 0.7
-    azure:
-      openai:
-        api-key: ${AZURE_OPENAI_API_KEY:}
-        endpoint: ${AZURE_OPENAI_ENDPOINT:}
-        chat:
-          options:
-            deployment-name: ${AZURE_OPENAI_DEPLOYMENT_NAME:gpt-4o-mini}
-            temperature: 0.7
-
-# Google AI (Gemini) - Uses OpenAI-compatible API endpoint
-google-ai:
-  api-key: ${GOOGLE_AI_API_KEY:}
-  model: ${GOOGLE_AI_MODEL:gemini-2.5-flash}
-
-# GenUI configuration
-genui:
-  default-provider: ${GENUI_PROVIDER:openai}
-  transform:
-    model: ${GENUI_TRANSFORM_MODEL:gpt-4o-mini}
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GOOGLE_CLOUD_PROJECT:}
+          location: ${GOOGLE_CLOUD_LOCATION:us-central1}
+          model: ${GOOGLE_AI_MODEL:gemini-2.5-flash-lite}
+          chat:
+            options:
+              temperature: 0.7
 
 # JWT Configuration
 jwt:
