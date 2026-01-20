@@ -40,6 +40,12 @@ public class ContentBlock {
     private Object props;
 
     /**
+     * For recursive nesting (e.g. Container component)
+     */
+    @JsonProperty("children")
+    private java.util.List<ContentBlock> children;
+
+    /**
      * Create a text block
      */
     public static ContentBlock text(String value) {

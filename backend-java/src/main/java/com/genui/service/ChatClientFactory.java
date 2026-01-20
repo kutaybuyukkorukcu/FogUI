@@ -1,128 +1,60 @@
 package com.genui.service;
 
-import com.genui.model.openai.LLMProvider;
-import com.genui.model.openai.LLMProviderConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
-import org.springframework.ai.azure.openai.AzureOpenAiChatModel;
-import org.springframework.ai.azure.openai.AzureOpenAiChatOptions;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatModel;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import com.azure.ai.openai.OpenAIClientBuilder;
-import com.azure.core.credential.AzureKeyCredential;
 
 /**
- * Factory for creating Spring AI ChatClient instances from user-provided API keys (BYOK).
- * This enables runtime configuration of LLM providers based on request headers.
+ * Factory for creating Spring AI ChatClient instances.
+ * Simplified to Gemini-only support - the primary LLM for FogUI backend.
  */
 @Slf4j
 @Service
 public class ChatClientFactory {
 
-    /**
-     * Creates a ChatClient configured with the specified LLM provider and credentials
-     */
-    public ChatClient createClient(LLMProviderConfig config) {
-        return switch (config.getProvider()) {
-            case OPENAI -> createOpenAiClient(config);
-            case AZURE_OPENAI -> createAzureOpenAiClient(config);
-            case ANTHROPIC -> throw new UnsupportedOperationException(
-                    "Anthropic support requires additional configuration. Use OpenAI-compatible endpoint.");
-            case GOOGLE -> throw new UnsupportedOperationException(
-                    "Google AI support requires additional configuration.");
-        };
-    }
+    private final VertexAiGeminiChatModel geminiChatModel;
 
-    private ChatClient createOpenAiClient(LLMProviderConfig config) {
-        log.info("Creating OpenAI client with model: {}", config.getModel());
+    @Value("${spring.ai.vertex.ai.gemini.model:gemini-2.5-flash-lite}")
+    private String defaultModel;
 
-        var api = new OpenAiApi(config.getApiKey());
-
-        var options = OpenAiChatOptions.builder()
-                .withModel(config.getModel())
-                .withTemperature(0.7)
-                .build();
-
-        var chatModel = new OpenAiChatModel(api, options);
-
-        return ChatClient.builder(chatModel).build();
-    }
-
-    private ChatClient createAzureOpenAiClient(LLMProviderConfig config) {
-        if (config.getEndpoint() == null || config.getEndpoint().isEmpty()) {
-            throw new IllegalArgumentException("Azure OpenAI requires endpoint");
-        }
-        if (config.getDeploymentName() == null || config.getDeploymentName().isEmpty()) {
-            throw new IllegalArgumentException("Azure OpenAI requires deployment name");
-        }
-
-        log.info("Creating Azure OpenAI client with endpoint: {}, deployment: {}", 
-                config.getEndpoint(), config.getDeploymentName());
-
-        // Build Azure OpenAI client builder (not client) - Spring AI needs the builder
-        var azureClientBuilder = new OpenAIClientBuilder()
-                .endpoint(config.getEndpoint())
-                .credential(new AzureKeyCredential(config.getApiKey()));
-
-        var options = AzureOpenAiChatOptions.builder()
-                .withDeploymentName(config.getDeploymentName())
-                .withTemperature(0.7)
-                .build();
-
-        var chatModel = new AzureOpenAiChatModel(azureClientBuilder, options);
-
-        return ChatClient.builder(chatModel).build();
+    @Autowired
+    public ChatClientFactory(VertexAiGeminiChatModel geminiChatModel) {
+        this.geminiChatModel = geminiChatModel;
+        log.info("ChatClientFactory initialized with Gemini support");
     }
 
     /**
-     * Extracts provider configuration from request headers
+     * Creates a ChatClient configured with Gemini.
+     * Uses the auto-configured VertexAiGeminiChatModel from Spring AI.
      */
-    public LLMProviderConfig extractConfig(
-            String llmApiKey,
-            String model,
-            String llmProvider,
-            String azureEndpoint,
-            String azureDeployment) {
-
-        if (llmApiKey == null || llmApiKey.isEmpty()) {
-            return null;
-        }
-
-        // Auto-detect provider from API key format if not specified
-        var provider = detectProvider(llmApiKey, llmProvider);
-
-        return LLMProviderConfig.builder()
-                .provider(provider)
-                .apiKey(llmApiKey)
-                .model(model)
-                .endpoint(azureEndpoint)
-                .deploymentName(azureDeployment != null ? azureDeployment : model)
-                .build();
+    public ChatClient createClient() {
+        log.info("Creating Gemini ChatClient with model: {}", defaultModel);
+        return ChatClient.builder(geminiChatModel).build();
     }
 
-    private LLMProvider detectProvider(String apiKey, String providerHint) {
-        // If provider explicitly specified
-        if (providerHint != null && !providerHint.isEmpty()) {
-            return switch (providerHint.toLowerCase()) {
-                case "openai" -> LLMProvider.OPENAI;
-                case "azure", "azureopenai", "azure-openai" -> LLMProvider.AZURE_OPENAI;
-                case "anthropic", "claude" -> LLMProvider.ANTHROPIC;
-                case "google", "gemini" -> LLMProvider.GOOGLE;
-                default -> LLMProvider.OPENAI;
-            };
-        }
+    /**
+     * Creates a ChatClient with custom options.
+     * 
+     * @param model       The Gemini model to use (e.g., "gemini-2.5-flash-lite",
+     *                    "gemini-2.5-pro")
+     * @param temperature The temperature for response generation (0.0 - 1.0)
+     */
+    public ChatClient createClient(String model, Double temperature) {
+        log.info("Creating Gemini ChatClient with model: {}, temperature: {}", model, temperature);
 
-        // Auto-detect from key format
-        if (apiKey.startsWith("sk-")) {
-            return LLMProvider.OPENAI;
-        }
-        if (apiKey.startsWith("sk-ant-")) {
-            return LLMProvider.ANTHROPIC;
-        }
+        var options = VertexAiGeminiChatOptions.builder()
+                .withModel(model != null ? model : defaultModel)
+                .withTemperature(temperature != null ? temperature : 0.7)
+                .build();
 
-        // Default to OpenAI
-        return LLMProvider.OPENAI;
+        // Create a new model with custom options
+        // Note: In production, you might want to cache these instances
+        return ChatClient.builder(geminiChatModel)
+                .defaultOptions(options)
+                .build();
     }
 }

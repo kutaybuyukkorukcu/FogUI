@@ -1,28 +1,51 @@
+import { useMemo } from 'react';
 import { CardRenderer } from './CardRenderer';
 import { ChartRenderer } from './ChartRenderer';
 import type { ComponentBlock } from '../../types';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import { ContainerRenderer } from './ContainerRenderer';
 import { FormRenderer } from './FormRenderer';
 import { ListRenderer } from './ListRenderer';
 import { TableRenderer } from './TableRenderer';
+import { useGenUIContext } from '../../lib/genui-sdk/GenUIProvider';
 
 /**
- * Registry mapping component types to their React implementations.
- * This enables dynamic component rendering based on componentType from the backend.
- * 
- * All components are generic and work with any data domain.
+ * Default component implementations using Tailwind CSS.
+ * These are used when customers don't provide their own overrides.
  */
-const COMPONENT_REGISTRY: Record<string, React.ComponentType<unknown>> = {
-  // Generic components - work with any data
+export const DEFAULT_COMPONENTS: Record<string, React.ComponentType<unknown>> = {
+  // Base semantic components (5 core types)
+  text: (({ value, variant }: { value: string; variant?: string }) => {
+    const className = variant === 'heading' 
+      ? 'text-xl font-bold' 
+      : variant === 'caption' 
+        ? 'text-sm text-gray-500' 
+        : 'text-base';
+    return <p className={className}>{value}</p>;
+  }) as React.ComponentType<unknown>,
   card: CardRenderer as React.ComponentType<unknown>,
   list: ListRenderer as React.ComponentType<unknown>,
   table: TableRenderer as React.ComponentType<unknown>,
-  chart: ChartRenderer as React.ComponentType<unknown>,
+  container: ContainerRenderer as React.ComponentType<unknown>,
   
-  // Interactive components
+  // Extended components (can be overridden or ignored)
+  chart: ChartRenderer as React.ComponentType<unknown>,
   form: FormRenderer as React.ComponentType<unknown>,
   confirmation: ConfirmationDialog as React.ComponentType<unknown>,
 };
+
+/**
+ * Hook to get merged component registry.
+ * Custom components from GenUIProvider override defaults.
+ */
+export function useComponentRegistry(): Record<string, React.ComponentType<unknown>> {
+  const { components: customComponents } = useGenUIContext();
+  
+  return useMemo(() => ({
+    ...DEFAULT_COMPONENTS,
+    ...(customComponents as Record<string, React.ComponentType<unknown>>),
+  }), [customComponents]);
+}
 
 interface DynamicComponentProps {
   block: ComponentBlock;
@@ -31,11 +54,12 @@ interface DynamicComponentProps {
 
 /**
  * DynamicComponent - Renders a component based on componentType from the registry.
- * Falls back to JSON display if component type is not found.
+ * Uses custom overrides from GenUIProvider if available, otherwise falls back to defaults.
  */
 export const DynamicComponent = ({ block, sendMessage }: DynamicComponentProps) => {
+  const registry = useComponentRegistry();
   const { componentType, props } = block;
-  const Component = COMPONENT_REGISTRY[componentType];
+  const Component = registry[componentType];
 
   if (!Component) {
     console.warn(`Unknown component type: ${componentType}`);
@@ -49,9 +73,13 @@ export const DynamicComponent = ({ block, sendMessage }: DynamicComponentProps) 
     );
   }
 
-  // Pass the entire props object to the component along with sendMessage
-  // Our components will receive the props as their data
+  // Pass the entire props object to the component along with sendMessage and children
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const componentProps = { ...(props as Record<string, unknown>), sendMessage } as any;
+  const componentProps = { 
+    ...(props as Record<string, unknown>), 
+    children: block.children,
+    sendMessage 
+  } as any;
   return <Component {...componentProps} />;
 };
+

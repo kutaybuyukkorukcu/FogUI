@@ -1,0 +1,1 @@
+- Always start the implementation on the backend and then mock the frontend if the API cannot be reached.

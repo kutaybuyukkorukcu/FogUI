@@ -45,7 +45,7 @@ export function useGenUI(): UseGenUIReturn {
     setError(null);
 
     try {
-      const response = await fetch(`${endpoint}/genui/transform`, {
+      const response = await fetch(`${endpoint}/fogui/transform`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ export function useGenUI(): UseGenUIReturn {
     setError(null);
 
     try {
-      const response = await fetch(`${endpoint}/genui/transform/stream`, {
+      const response = await fetch(`${endpoint}/fogui/transform/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

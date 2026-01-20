@@ -1,10 +1,7 @@
 package com.genui.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.genui.entity.User;
-import com.genui.model.openai.LLMProvider;
-import com.genui.model.openai.LLMProviderConfig;
 import com.genui.model.transform.TransformRequest;
 import com.genui.model.transform.TransformResponse;
 import com.genui.repository.UserRepository;
@@ -27,8 +24,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -58,23 +53,8 @@ public class TransformController {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    @Value("${spring.ai.openai.api-key:}")
-    private String openAiKey;
-
-    @Value("${spring.ai.azure.openai.api-key:}")
-    private String azureKey;
-
-    @Value("${spring.ai.azure.openai.endpoint:}")
-    private String azureEndpoint;
-
-    @Value("${spring.ai.azure.openai.chat.options.deployment-name:}")
-    private String azureDeployment;
-
-    @Value("${genui.transform.model:gpt-4o-mini}")
-    private String transformModel;
-
-    @Value("${genui.default-provider:openai}")
-    private String defaultProvider;
+    @Value("${spring.ai.vertex.ai.gemini.model:gemini-2.5-flash-lite}")
+    private String geminiModel;
 
     /**
      * POST /genui/transform
@@ -96,14 +76,7 @@ public class TransformController {
         long startTime = System.currentTimeMillis();
 
         try {
-            var config = getTransformLLMConfig();
-            if (config == null) {
-                return ResponseEntity.status(503)
-                        .body(TransformResponse
-                                .error("Transform service not configured. Set OPENAI_API_KEY or Azure credentials."));
-            }
-
-            var chatClient = chatClientFactory.createClient(config);
+            var chatClient = chatClientFactory.createClient();
 
             // Build context hints from request
             String contextHints = null;
@@ -145,7 +118,7 @@ public class TransformController {
 
             var usage = TransformResponse.TransformUsage.builder()
                     .transformTokens(estimatedTokens)
-                    .model(config.getModel())
+                    .model(geminiModel)
                     .processingTimeMs(processingTime)
                     .estimatedCost(estimatedCost)
                     .build();
@@ -188,17 +161,8 @@ public class TransformController {
                     return;
                 }
 
-                var config = getTransformLLMConfig();
-                if (config == null) {
-                    emitter.send(SseEmitter.event()
-                            .name("error")
-                            .data("{\"error\": \"Transform service not configured\"}"));
-                    emitter.complete();
-                    return;
-                }
-
                 long startTime = System.currentTimeMillis();
-                var chatClient = chatClientFactory.createClient(config);
+                var chatClient = chatClientFactory.createClient();
 
                 String contextHints = null;
                 if (request.getContext() != null && request.getContext().getInstructions() != null) {
@@ -271,30 +235,4 @@ public class TransformController {
         return emitter;
     }
 
-    /**
-     * Get LLM config for transformation.
-     * Uses our own API key (not customer's) since this is our service.
-     */
-    private LLMProviderConfig getTransformLLMConfig() {
-        if ("openai".equalsIgnoreCase(defaultProvider) && openAiKey != null && !openAiKey.isBlank()) {
-            return LLMProviderConfig.builder()
-                    .provider(LLMProvider.OPENAI)
-                    .apiKey(openAiKey)
-                    .model(transformModel)
-                    .build();
-        }
-
-        if ("azureopenai".equalsIgnoreCase(defaultProvider) && azureKey != null && !azureKey.isBlank()) {
-            return LLMProviderConfig.builder()
-                    .provider(LLMProvider.AZURE_OPENAI)
-                    .apiKey(azureKey)
-                    .endpoint(azureEndpoint)
-                    .deploymentName(azureDeployment.isBlank() ? transformModel : azureDeployment)
-                    .model(azureDeployment.isBlank() ? transformModel : azureDeployment)
-                    .build();
-        }
-
-        log.warn("No LLM provider configured for transform service");
-        return null;
-    }
 }
