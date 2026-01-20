@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-01-20
+
+### Added
+- **Container Children Support** - `ComponentBlock.children` for nested/recursive component structures
+- **Foundational Test Suite** - 18 tests covering FogUIProvider and types
+- **5 Base Component Types** - Simplified to: text, card, list, table, container
+
+### Changed
+- Simplified component architecture for better design system compatibility
+- Container component now properly supports nested children
+
 ## [0.2.0] - 2026-01-06
 
 ### Added
