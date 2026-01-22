@@ -18,7 +18,7 @@ docker build -t fogui-backend .
 # Run with environment variables
 docker run -p 5001:5001 \
   -e OPENAI_API_KEY=your-key-here \
-  genui-backend
+  fogui-backend
 ```
 
 ### Option 2: Using Maven
