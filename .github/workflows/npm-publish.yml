@@ -36,9 +36,9 @@ jobs:
       - name: Build package
         run: npm run build
 
-      # Uses OIDC trusted publishing - no token needed!
+      # Uses OIDC trusted publishing - configure on npmjs.com first!
       - name: Publish to NPM
-        run: npm publish --access public
+        run: npm publish --access public --provenance
 
       - name: Generate publish summary
         run: |
