@@ -5,9 +5,7 @@ on:
     tags:
       - 'v*.*.*'
 
-# Required for OIDC trusted publishing
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -30,9 +28,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: packages/react/package-lock.json
 
-      - name: Upgrade npm for OIDC trusted publishing
-        run: npm install -g npm@latest
-        working-directory: .
 
       - name: Install dependencies
         run: npm ci
@@ -40,9 +35,11 @@ jobs:
       - name: Build package
         run: npm run build
 
-      # Uses OIDC trusted publishing - configure on npmjs.com first!
+      # Uses Granular Access Token (private repo can't use OIDC provenance)
       - name: Publish to NPM
-        run: npm publish --access public --provenance
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Generate publish summary
         run: |
@@ -51,7 +48,7 @@ jobs:
           echo "**Package:** \`@fogui/react\`" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔐 Published using OIDC Trusted Publishing" >> $GITHUB_STEP_SUMMARY
+          echo "🔐 Published using Granular Access Token" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Install with:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
