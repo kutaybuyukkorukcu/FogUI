@@ -1,6 +1,6 @@
-# GenUI Backend (Spring Boot)
+# FogUI Backend (Spring Boot)
 
-Spring Boot + Spring AI backend for the GenUI platform.
+Spring Boot + Spring AI backend for the FogUI platform.
 
 ## Prerequisites
 
