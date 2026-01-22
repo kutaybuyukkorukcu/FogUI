@@ -13,7 +13,7 @@ Spring Boot + Spring AI backend for the FogUI platform.
 
 ```bash
 # Build the image
-docker build -t genui-backend .
+docker build -t fogui-backend .
 
 # Run with environment variables
 docker run -p 5001:5001 \
