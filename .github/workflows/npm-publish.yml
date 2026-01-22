@@ -30,6 +30,10 @@ jobs:
           cache: 'npm'
           cache-dependency-path: packages/react/package-lock.json
 
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@latest
+        working-directory: .
+
       - name: Install dependencies
         run: npm ci
 
