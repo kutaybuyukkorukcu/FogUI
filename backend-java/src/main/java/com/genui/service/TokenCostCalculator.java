@@ -9,55 +9,44 @@ import java.math.RoundingMode;
 import java.util.Map;
 
 /**
- * Calculates token costs for various LLM models.
- * Prices are per 1 million tokens (as of December 2024).
+ * Calculates token costs for Gemini models.
+ * Prices are per 1 million tokens (as of January 2025).
+ * 
+ * FogUI backend uses Gemini exclusively - this calculator
+ * is simplified to only support Gemini model pricing.
  */
 @Service
 public class TokenCostCalculator {
 
-    // Pricing per 1M tokens (input, output) in USD
-    private static final Map<String, PricingTier> MODEL_PRICING = Map.ofEntries(
-            // OpenAI models
-            Map.entry("gpt-4o", new PricingTier(new BigDecimal("2.50"), new BigDecimal("10.00"))),
-            Map.entry("gpt-4o-2024-11-20", new PricingTier(new BigDecimal("2.50"), new BigDecimal("10.00"))),
-            Map.entry("gpt-4o-2024-08-06", new PricingTier(new BigDecimal("2.50"), new BigDecimal("10.00"))),
-            Map.entry("gpt-4o-mini", new PricingTier(new BigDecimal("0.15"), new BigDecimal("0.60"))),
-            Map.entry("gpt-4o-mini-2024-07-18", new PricingTier(new BigDecimal("0.15"), new BigDecimal("0.60"))),
-            Map.entry("gpt-4-turbo", new PricingTier(new BigDecimal("10.00"), new BigDecimal("30.00"))),
-            Map.entry("gpt-4-turbo-preview", new PricingTier(new BigDecimal("10.00"), new BigDecimal("30.00"))),
-            Map.entry("gpt-4", new PricingTier(new BigDecimal("30.00"), new BigDecimal("60.00"))),
-            Map.entry("gpt-4-32k", new PricingTier(new BigDecimal("60.00"), new BigDecimal("120.00"))),
-            Map.entry("gpt-3.5-turbo", new PricingTier(new BigDecimal("0.50"), new BigDecimal("1.50"))),
-            Map.entry("gpt-3.5-turbo-16k", new PricingTier(new BigDecimal("3.00"), new BigDecimal("4.00"))),
+    // Gemini pricing per 1M tokens (input, output) in USD
+    // Source: https://ai.google.dev/pricing
+    private static final Map<String, PricingTier> GEMINI_PRICING = Map.of(
+            // Gemini 2.5 models
+            "gemini-2.5-flash-lite", new PricingTier(new BigDecimal("0.075"), new BigDecimal("0.30")),
+            "gemini-2.5-flash", new PricingTier(new BigDecimal("0.15"), new BigDecimal("0.60")),
+            "gemini-2.5-pro", new PricingTier(new BigDecimal("1.25"), new BigDecimal("5.00")),
 
-            // Azure OpenAI (same as OpenAI for standard deployments)
-            Map.entry("gpt-4.1-mini", new PricingTier(new BigDecimal("0.15"), new BigDecimal("0.60"))),
-            Map.entry("gpt-4.1", new PricingTier(new BigDecimal("2.50"), new BigDecimal("10.00"))),
+            // Gemini 2.0 models
+            "gemini-2.0-flash", new PricingTier(new BigDecimal("0.10"), new BigDecimal("0.40")),
+            "gemini-2.0-flash-lite", new PricingTier(new BigDecimal("0.075"), new BigDecimal("0.30")),
 
-            // o1 models (reasoning)
-            Map.entry("o1-preview", new PricingTier(new BigDecimal("15.00"), new BigDecimal("60.00"))),
-            Map.entry("o1-mini", new PricingTier(new BigDecimal("3.00"), new BigDecimal("12.00"))),
+            // Gemini 1.5 models (legacy)
+            "gemini-1.5-flash", new PricingTier(new BigDecimal("0.075"), new BigDecimal("0.30")),
+            "gemini-1.5-pro", new PricingTier(new BigDecimal("1.25"), new BigDecimal("5.00")));
 
-            // Claude models (for future support)
-            Map.entry("claude-3-5-sonnet-20241022", new PricingTier(new BigDecimal("3.00"), new BigDecimal("15.00"))),
-            Map.entry("claude-3-5-haiku-20241022", new PricingTier(new BigDecimal("0.80"), new BigDecimal("4.00"))),
-            Map.entry("claude-3-opus-20240229", new PricingTier(new BigDecimal("15.00"), new BigDecimal("75.00")))
-    );
-
-    // Default pricing for unknown models (conservative estimate)
+    // Default pricing for unknown Gemini models
     private static final PricingTier DEFAULT_PRICING = new PricingTier(
-            new BigDecimal("1.00"),
-            new BigDecimal("3.00")
-    );
+            new BigDecimal("0.15"), // Conservative estimate
+            new BigDecimal("0.60"));
 
     private static final BigDecimal ONE_MILLION = new BigDecimal("1000000");
 
     /**
-     * Calculate cost for a given usage
+     * Calculate cost for a given usage.
      */
     public CostInfo calculateCost(String model, int promptTokens, int completionTokens) {
         var normalizedModel = normalizeModelName(model);
-        var pricing = MODEL_PRICING.getOrDefault(normalizedModel, DEFAULT_PRICING);
+        var pricing = GEMINI_PRICING.getOrDefault(normalizedModel, DEFAULT_PRICING);
 
         // Calculate cost (pricing is per 1M tokens)
         var promptCost = new BigDecimal(promptTokens)
@@ -78,7 +67,7 @@ public class TokenCostCalculator {
     }
 
     /**
-     * Build complete usage info with cost
+     * Build complete usage info with cost.
      */
     public UsageInfo buildUsageInfo(String model, int promptTokens, int completionTokens) {
         return UsageInfo.builder()
@@ -90,49 +79,25 @@ public class TokenCostCalculator {
     }
 
     /**
-     * Normalize model name for pricing lookup
+     * Normalize model name for pricing lookup.
      */
     private String normalizeModelName(String model) {
-        // Handle Azure deployment names that might differ
-        var normalized = model.toLowerCase().trim();
-
-        // Common Azure deployment name mappings
-        if (normalized.contains("gpt-4o-mini") || normalized.contains("gpt-4.1-mini")) {
-            return "gpt-4o-mini";
+        if (model == null || model.isBlank()) {
+            return "gemini-2.5-flash-lite"; // Default model
         }
-        if (normalized.contains("gpt-4o") || normalized.contains("gpt-4.1")) {
-            return "gpt-4o";
-        }
-        if (normalized.contains("gpt-4-turbo")) {
-            return "gpt-4-turbo";
-        }
-        if (normalized.contains("gpt-4-32k")) {
-            return "gpt-4-32k";
-        }
-        if (normalized.contains("gpt-4")) {
-            return "gpt-4";
-        }
-        if (normalized.contains("gpt-3.5-turbo-16k")) {
-            return "gpt-3.5-turbo-16k";
-        }
-        if (normalized.contains("gpt-3.5")) {
-            return "gpt-3.5-turbo";
-        }
-
-        return normalized;
+        return model.toLowerCase().trim();
     }
 
     /**
-     * Estimate token count for a string (rough approximation: ~4 chars per token for English)
-     * This is used when we can't get actual token counts from the API
+     * Estimate token count for a string (rough approximation: ~4 chars per token
+     * for English).
+     * This is used when we can't get actual token counts from the API.
      */
     public static int estimateTokenCount(String text) {
         if (text == null || text.isEmpty()) {
             return 0;
         }
-
         // Rough estimation: ~4 characters per token for English text
-        // This is a simplification - actual tokenization varies by model
         return (int) Math.ceil(text.length() / 4.0);
     }
 
