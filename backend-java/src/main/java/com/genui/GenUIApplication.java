@@ -6,10 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@SpringBootApplication(exclude = {
-        org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration.class,
-        org.springframework.ai.autoconfigure.azure.openai.AzureOpenAiAutoConfiguration.class
-})
+@SpringBootApplication
 public class GenUIApplication {
 
     public static void main(String[] args) {
