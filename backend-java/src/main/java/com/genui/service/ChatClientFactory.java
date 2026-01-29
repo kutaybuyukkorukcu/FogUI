@@ -2,58 +2,57 @@ package com.genui.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatModel;
-import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
+import org.springframework.ai.google.genai.GoogleGenAiChatModel;
+import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
  * Factory for creating Spring AI ChatClient instances.
- * Simplified to Gemini-only support - the primary LLM for FogUI backend.
+ * Simplified to Gemini-only support via Google AI Studio API.
  */
 @Slf4j
 @Service
 public class ChatClientFactory {
 
-    private final VertexAiGeminiChatModel geminiChatModel;
+    private final GoogleGenAiChatModel chatModel;
 
-    @Value("${spring.ai.vertex.ai.gemini.model:gemini-2.5-flash-lite}")
+    @Value("${spring.ai.google.genai.chat.options.model:gemini-2.0-flash}")
     private String defaultModel;
 
     @Autowired
-    public ChatClientFactory(VertexAiGeminiChatModel geminiChatModel) {
-        this.geminiChatModel = geminiChatModel;
-        log.info("ChatClientFactory initialized with Gemini support");
+    public ChatClientFactory(GoogleGenAiChatModel chatModel) {
+        this.chatModel = chatModel;
+        log.info("ChatClientFactory initialized with Google GenAI (Google AI Studio) support");
     }
 
     /**
-     * Creates a ChatClient configured with Gemini.
-     * Uses the auto-configured VertexAiGeminiChatModel from Spring AI.
+     * Creates a ChatClient configured with Google GenAI (Gemini).
+     * Uses the auto-configured GoogleGenAiChatModel from Spring AI.
      */
     public ChatClient createClient() {
-        log.info("Creating Gemini ChatClient with model: {}", defaultModel);
-        return ChatClient.builder(geminiChatModel).build();
+        log.info("Creating Google GenAI ChatClient with model: {}", defaultModel);
+        return ChatClient.builder(chatModel).build();
     }
 
     /**
      * Creates a ChatClient with custom options.
      * 
-     * @param model       The Gemini model to use (e.g., "gemini-2.5-flash-lite",
-     *                    "gemini-2.5-pro")
+     * @param model       The Gemini model to use (e.g., "gemini-2.0-flash",
+     *                    "gemini-2.0-flash-lite")
      * @param temperature The temperature for response generation (0.0 - 1.0)
      */
     public ChatClient createClient(String model, Double temperature) {
-        log.info("Creating Gemini ChatClient with model: {}, temperature: {}", model, temperature);
+        log.info("Creating Google GenAI ChatClient with model: {}, temperature: {}", model, temperature);
 
-        var options = VertexAiGeminiChatOptions.builder()
-                .withModel(model != null ? model : defaultModel)
-                .withTemperature(temperature != null ? temperature : 0.7)
+        var options = GoogleGenAiChatOptions.builder()
+                .model(model != null ? model : defaultModel)
+                .temperature(temperature != null ? temperature : 0.7)
                 .build();
 
-        // Create a new model with custom options
-        // Note: In production, you might want to cache these instances
-        return ChatClient.builder(geminiChatModel)
+        // Create a new client with custom options
+        return ChatClient.builder(chatModel)
                 .defaultOptions(options)
                 .build();
     }

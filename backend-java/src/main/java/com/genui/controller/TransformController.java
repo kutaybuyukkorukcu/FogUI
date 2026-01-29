@@ -53,7 +53,7 @@ public class TransformController {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    @Value("${spring.ai.vertex.ai.gemini.model:gemini-2.5-flash-lite}")
+    @Value("${spring.ai.google.genai.chat.options.model:gemini-2.0-flash}")
     private String geminiModel;
 
     /**

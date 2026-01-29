@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <spring-ai.version>1.0.0-M4</spring-ai.version>
+        <spring-ai.version>1.1.0-M2</spring-ai.version>
     </properties>
 
     <dependencies>
@@ -35,10 +35,10 @@
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
-        <!-- Spring AI - Google Vertex AI Gemini (Primary LLM) -->
+        <!-- Spring AI - Google GenAI (Google AI Studio with API Key) -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-vertex-ai-gemini-spring-boot-starter</artifactId>
+            <artifactId>spring-ai-starter-model-google-genai</artifactId>
         </dependency>
 
         <!-- Lombok for reducing boilerplate -->
