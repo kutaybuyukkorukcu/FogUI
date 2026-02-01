@@ -63,3 +63,14 @@ logging:
     com.genui: DEBUG
     org.springframework.ai: DEBUG
     org.springframework.security: DEBUG
+
+# Sentry Error Monitoring
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:development}
+  traces-sample-rate: 1.0
+  send-default-pii: false
+  exception-resolver-order: -2147483647
+  logging:
+    minimum-event-level: error
+    minimum-breadcrumb-level: info
