@@ -1,16 +1,22 @@
-# Dashboard Backlog
+# FogUI Backlog
 
-> Features planned for FogUI Dashboard post-MVP
+> Product roadmap and feature backlog for FogUI
 
 ---
 
-## 🎯 MVP Status (In Progress)
+## ✅ MVP Complete
 
-### ✅ Core Features
+### Core Features
 - [x] Authentication (Login/Register/Logout)
 - [x] API Key Management (Create, List, Revoke)
-- [ ] Usage Display (Request count, quota)
-- [ ] Account Settings (Email, password)
+- [x] Usage Display (Request count, quota, remaining)
+- [x] Account Settings (Email update, profile view)
+- [x] `@fogui/react` SDK (FogUIProvider, useFogUI, FogUIRenderer)
+- [x] Backend API (`/v1/chat/completions`, `/fogui/transform`)
+- [x] SSE Streaming support
+- [x] Docker + GitHub Actions CI/CD
+- [x] NPM package publishing automation
+- [x] VPS deployment (Coolify)
 
 ---
 
@@ -90,6 +96,18 @@
 ---
 
 ### 🌟 Nice-to-Have (Future)
+
+#### CLI & SDK Tooling
+- [ ] **`@fogui/cli`** - CLI tool for project scaffolding
+  - `npx fogui init` - Initialize FogUI in existing project
+  - `npx fogui add <adapter>` - Add design system adapter
+  - Auto-detect TypeScript, Tailwind, existing design system
+- [ ] **Adapter Templates**
+  - Shadcn/Radix adapter (scaffold into user's project)
+  - Material UI adapter
+  - Ant Design adapter
+  - Custom/Empty adapter (for enterprise design systems)
+- [ ] **Chart Components** - Integrate with chart libraries (Recharts, Chart.js)
 
 #### Advanced Analytics
 - [ ] Real-time dashboard with WebSocket updates
