@@ -20,11 +20,21 @@ spring:
 
   ai:
     openai:
-      api-key: test-api-key
+      api-key: test-openai-api-key
       base-url: https://api.groq.com/openai
       chat:
         options:
           model: llama-3.3-70b-versatile
+    google:
+      genai:
+        api-key: test-google-api-key
+        chat:
+          options:
+            model: gemini-2.5-flash
+
+fogui:
+  ai:
+    provider: openai
 
 jwt:
   secret: test-jwt-secret-key-that-is-at-least-32-characters-long

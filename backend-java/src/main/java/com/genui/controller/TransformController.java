@@ -53,9 +53,6 @@ public class TransformController {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    @Value("${spring.ai.openai.chat.options.model:llama-3.3-70b-versatile}")
-    private String defaultModel;
-
     /**
      * POST /genui/transform
      * Transform raw LLM text into structured UI components.
@@ -118,7 +115,7 @@ public class TransformController {
 
             var usage = TransformResponse.TransformUsage.builder()
                     .transformTokens(estimatedTokens)
-                    .model(defaultModel)
+                    .model(chatClientFactory.getActiveModelName())
                     .processingTimeMs(processingTime)
                     .estimatedCost(estimatedCost)
                     .build();

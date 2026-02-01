@@ -33,27 +33,56 @@ GROQ_API_KEY=your-key ./mvnw spring-boot:run
 
 ## Configuration
 
-Set these environment variables:
+The backend supports multiple LLM providers. Set `AI_PROVIDER` to choose between them:
+
+### Provider Selection
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GROQ_API_KEY` | Your Groq API key (get free at console.groq.com) | Required |
-| `AI_BASE_URL` | API base URL | `https://api.groq.com/openai` |
-| `AI_MODEL` | Model to use | `llama-3.3-70b-versatile` |
+| `AI_PROVIDER` | Provider to use: `openai` or `gemini` | `openai` |
 
-### Using Other Providers
+### OpenAI-Compatible Providers (Groq, OpenRouter, OpenAI)
 
-The backend uses OpenAI-compatible API, so you can use any compatible provider:
+When `AI_PROVIDER=openai` (default):
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GROQ_API_KEY` or `OPENAI_API_KEY` | API key | Required |
+| `OPENAI_BASE_URL` | API base URL | `https://api.groq.com/openai` |
+| `OPENAI_MODEL` | Model to use | `llama-3.3-70b-versatile` |
 
 ```bash
-# For OpenRouter
-AI_BASE_URL=https://openrouter.ai/api/v1
-GROQ_API_KEY=your-openrouter-key
+# Groq (default, 1000 req/day free)
+AI_PROVIDER=openai
+GROQ_API_KEY=your-groq-key
 
-# For OpenAI
-AI_BASE_URL=https://api.openai.com/v1
-GROQ_API_KEY=your-openai-key
-AI_MODEL=gpt-4o-mini
+# OpenRouter
+AI_PROVIDER=openai
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_API_KEY=your-openrouter-key
+OPENAI_MODEL=meta-llama/llama-3.3-70b-instruct
+
+# OpenAI
+AI_PROVIDER=openai
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_API_KEY=your-openai-key
+OPENAI_MODEL=gpt-4o-mini
+```
+
+### Google Gemini
+
+When `AI_PROVIDER=gemini`:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GOOGLE_AI_API_KEY` | Google AI Studio API key | Required |
+| `GOOGLE_AI_MODEL` | Model to use | `gemini-2.5-flash` |
+
+```bash
+# Gemini (20 req/day free)
+AI_PROVIDER=gemini
+GOOGLE_AI_API_KEY=your-google-ai-key
+GOOGLE_AI_MODEL=gemini-2.5-flash
 ```
 
 ## API Usage

@@ -35,10 +35,16 @@
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
-        <!-- Spring AI - OpenAI Compatible (supports Groq, OpenRouter, etc.) -->
+        <!-- Spring AI - OpenAI Compatible (supports Groq, OpenRouter, OpenAI, etc.) -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-openai</artifactId>
+        </dependency>
+
+        <!-- Spring AI - Google GenAI (Google AI Studio / Gemini) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-google-genai</artifactId>
         </dependency>
 
         <!-- Lombok for reducing boilerplate -->
