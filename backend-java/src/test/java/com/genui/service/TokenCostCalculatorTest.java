@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for TokenCostCalculator.
- * Tests cost calculation logic for Gemini models.
+ * Tests cost calculation logic for multi-provider models (Gemini, Groq, OpenAI, etc.).
  */
 @DisplayName("TokenCostCalculator")
 class TokenCostCalculatorTest {
@@ -61,14 +61,14 @@ class TokenCostCalculatorTest {
         }
 
         @Test
-        @DisplayName("should use default pricing for unknown Gemini model")
-        void shouldUseDefaultPricingForUnknownGeminiModel() {
-            // Default: $0.15/1M input, $0.60/1M output
-            CostInfo cost = calculator.calculateCost("gemini-3.0-ultra", 1000000, 1000000);
+        @DisplayName("should use default pricing for unknown model")
+        void shouldUseDefaultPricingForUnknownModel() {
+            // Default: $0.50/1M input, $1.50/1M output
+            CostInfo cost = calculator.calculateCost("unknown-future-model", 1000000, 1000000);
 
             assertNotNull(cost);
-            assertEquals(0, new BigDecimal("0.150000").compareTo(cost.getPromptCost()));
-            assertEquals(0, new BigDecimal("0.600000").compareTo(cost.getCompletionCost()));
+            assertEquals(0, new BigDecimal("0.500000").compareTo(cost.getPromptCost()));
+            assertEquals(0, new BigDecimal("1.500000").compareTo(cost.getCompletionCost()));
         }
 
         @Test
@@ -92,12 +92,39 @@ class TokenCostCalculatorTest {
         }
 
         @Test
-        @DisplayName("should default to gemini-2.5-flash-lite for null model")
+        @DisplayName("should default to llama-3.3-70b-versatile for null model")
         void shouldDefaultForNullModel() {
             CostInfo cost = calculator.calculateCost(null, 1000, 500);
 
             assertNotNull(cost);
-            assertEquals("gemini-2.5-flash-lite", cost.getModel());
+            assertEquals("llama-3.3-70b-versatile", cost.getModel());
+        }
+
+        @Test
+        @DisplayName("should calculate cost for Groq llama model")
+        void shouldCalculateCostForGroqLlama() {
+            // llama-3.3-70b-versatile: $0.59/1M input, $0.79/1M output
+            CostInfo cost = calculator.calculateCost("llama-3.3-70b-versatile", 1000000, 500000);
+
+            assertNotNull(cost);
+            assertEquals("USD", cost.getCurrency());
+            assertEquals("llama-3.3-70b-versatile", cost.getModel());
+
+            // 1M tokens * $0.59 / 1M = $0.59
+            assertEquals(0, new BigDecimal("0.590000").compareTo(cost.getPromptCost()));
+            // 500K tokens * $0.79 / 1M = $0.395
+            assertEquals(0, new BigDecimal("0.395000").compareTo(cost.getCompletionCost()));
+        }
+
+        @Test
+        @DisplayName("should calculate cost for OpenAI gpt-4o-mini")
+        void shouldCalculateCostForGpt4oMini() {
+            // gpt-4o-mini: $0.15/1M input, $0.60/1M output
+            CostInfo cost = calculator.calculateCost("gpt-4o-mini", 1000000, 1000000);
+
+            assertNotNull(cost);
+            assertEquals(0, new BigDecimal("0.150000").compareTo(cost.getPromptCost()));
+            assertEquals(0, new BigDecimal("0.600000").compareTo(cost.getCompletionCost()));
         }
     }
 
