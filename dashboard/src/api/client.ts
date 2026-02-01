@@ -48,7 +48,7 @@ export const api = {
 export interface ApiKey {
   id: string;
   name: string;
-  key: string;
+  fullKey?: string; // Only present on creation
   keyPrefix: string;
   lastUsedAt?: string;
   createdAt: string;

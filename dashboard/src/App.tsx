@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import SettingsPage from './pages/SettingsPage';
+import UsagePage from './pages/UsagePage';
 import { useAuthStore } from './store/authStore';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
       <Route element={isAuthenticated ? <Layout /> : <Navigate to="/login" />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/api-keys" element={<ApiKeysPage />} />
+        <Route path="/usage" element={<UsagePage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
 

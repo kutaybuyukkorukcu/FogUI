@@ -61,6 +61,21 @@ public final class TransformPrompts {
       5. **Container** - For layout and grouping (SUPPORTS NESTING)
          {"type": "component", "componentType": "container", "props": {"layout": "stack|grid", "columns": 2, "gap": "sm|md|lg"}, "children": [...]}
 
+      6. **Chart** - For data visualization
+         {"type": "component", "componentType": "chart", "props": {"title": "Title", "chartData": [{"name": "A", "value": 10}, {"name": "B", "value": 20}]}}
+
+      7. **Form** - For user input and data collection
+         {"type": "component", "componentType": "form", "props": {"title": "Title", "fields": [{"name": "email", "label": "Email", "type": "email", "required": true}, {"name": "age", "label": "Age", "type": "number"}]}}
+
+      8. **Confirmation** - For critical actions requiring user approval
+         {"type": "component", "componentType": "confirmation", "props": {"title": "Are you sure?", "message": "This action cannot be undone.", "confirmText": "Delete", "variant": "danger", "data": {"recordId": "123"}}}
+
+      9. **Accordion** - For collapsible sections, FAQs, or details
+         {"type": "component", "componentType": "accordion", "props": {"items": [{"title": "Section 1", "content": "Details here..."}, {"title": "Section 2", "content": "More info..."}]}}
+
+      10. **Code Block** - For displaying code snippets
+          {"type": "component", "componentType": "code", "props": {"language": "python", "code": "print('Hello')", "filename": "script.py"}}
+
       ## Composition Pattern
       For complex layouts like KPI dashboards, use Container with Card children:
       {

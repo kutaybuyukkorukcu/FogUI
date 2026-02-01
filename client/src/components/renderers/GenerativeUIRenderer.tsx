@@ -1,4 +1,5 @@
 import type { ContentBlock, GenerativeUIResponse } from '../../types';
+import { useGenUIContext } from '../../lib/genui-sdk/GenUIProvider';
 
 import { DynamicComponent } from './ComponentRegistry';
 import { ThinkingList } from './ThinkingIndicator';
@@ -25,6 +26,10 @@ export const GenerativeUIRenderer = ({
   isStreaming = false,
   sendMessage,
 }: GenerativeUIRendererProps) => {
+  const { onAction } = useGenUIContext();
+  
+  // Use sendMessage prop if provided, otherwise fallback to onAction from context
+  const handleAction = sendMessage || ((msg: string) => onAction?.('message', msg));
   
   // Handle empty or invalid response
   if (!response) {
@@ -65,7 +70,7 @@ export const GenerativeUIRenderer = ({
       {response.content && response.content.length > 0 && (
         <div className="space-y-3">
           {response.content.map((block, index) => (
-            <ContentBlockRenderer key={index} block={block} sendMessage={sendMessage} />
+            <ContentBlockRenderer key={index} block={block} sendMessage={handleAction} />
           ))}
         </div>
       )}

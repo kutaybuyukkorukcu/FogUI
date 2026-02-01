@@ -89,10 +89,10 @@ export default function ApiKeysPage() {
                 <p className="font-semibold">Save this key - it won't be shown again:</p>
                 <div className="mt-2 flex items-center space-x-2">
                   <code className="flex-1 bg-green-100 px-3 py-2 rounded text-sm font-mono">
-                    {newlyCreated.key}
+                    {newlyCreated.fullKey}
                   </code>
                   <button
-                    onClick={() => copyToClipboard(newlyCreated.key)}
+                    onClick={() => copyToClipboard(newlyCreated.fullKey || '')}
                     className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                   >
                     Copy
