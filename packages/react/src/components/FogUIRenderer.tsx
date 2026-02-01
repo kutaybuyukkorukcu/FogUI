@@ -4,7 +4,7 @@ import { DynamicComponent, defaultComponentRegistry, mergeRegistries } from './C
 import React from 'react';
 import { useFogUIContext } from '../FogUIProvider';
 
-interface FogUIRendererProps {
+export interface FogUIRendererProps {
   /**
    * The FogUIResponse to render
    */
@@ -23,6 +23,11 @@ interface FogUIRendererProps {
    * Custom styles for the container
    */
   style?: React.CSSProperties;
+  /**
+   * Optional callback for component actions.
+   * If provided, overrides the context's onAction handler.
+   */
+  onAction?: (action: any) => void;
 }
 
 /**
@@ -48,15 +53,29 @@ interface FogUIRendererProps {
  * />
  * ```
  */
-export function FogUIRenderer({ response, componentRegistry, className, style }: FogUIRendererProps) {
+export function FogUIRenderer({ response, componentRegistry, className, style, onAction }: FogUIRendererProps) {
   // Try to get registry from context (set in FogUIProvider)
   let contextRegistry: Record<string, React.ComponentType<any>> | undefined;
+  let contextOnAction: ((action: string, data?: unknown) => void) | undefined;
+  
   try {
     const context = useFogUIContext();
     contextRegistry = context.componentRegistry;
+    contextOnAction = context.onAction;
   } catch {
     // Not inside FogUIProvider, use defaults
   }
+
+  // Handle actions: prefer prop > context > no-op
+  const handleAction = onAction || ((action: any) => {
+    if (typeof action === 'string') {
+      contextOnAction?.('message', action);
+    } else if (action && typeof action === 'object' && 'type' in action) {
+      contextOnAction?.(action.type, action);
+    } else {
+      contextOnAction?.('action', action);
+    }
+  });
 
   // Merge: prop registry > context registry > default registry
   const registry = mergeRegistries(defaultComponentRegistry, contextRegistry, componentRegistry);
@@ -72,6 +91,7 @@ export function FogUIRenderer({ response, componentRegistry, className, style }:
           key={index} 
           block={block} 
           registry={registry}
+          onAction={handleAction}
         />
       ))}
     </div>
@@ -81,9 +101,10 @@ export function FogUIRenderer({ response, componentRegistry, className, style }:
 interface ContentBlockRendererProps {
   block: ContentBlock;
   registry: Record<string, React.ComponentType<any>>;
+  onAction?: (action: any) => void;
 }
 
-function ContentBlockRenderer({ block, registry }: ContentBlockRendererProps) {
+function ContentBlockRenderer({ block, registry, onAction }: ContentBlockRendererProps) {
   if (block.type === 'text') {
     return (
       <div style={{ marginBottom: '12px', lineHeight: 1.6 }}>
@@ -98,7 +119,7 @@ function ContentBlockRenderer({ block, registry }: ContentBlockRendererProps) {
   }
 
   if (block.type === 'component') {
-    return <DynamicComponent block={block} registry={registry} />;
+    return <DynamicComponent block={block} registry={registry} onAction={onAction} />;
   }
 
   return null;

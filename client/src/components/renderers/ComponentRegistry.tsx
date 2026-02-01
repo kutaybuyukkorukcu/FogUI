@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
+import { AccordionRenderer } from './AccordionRenderer';
 import { CardRenderer } from './CardRenderer';
 import { ChartRenderer } from './ChartRenderer';
+import { CodeBlockRenderer } from './CodeBlockRenderer';
 import type { ComponentBlock } from '../../types';
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { ContainerRenderer } from './ContainerRenderer';
@@ -32,6 +34,8 @@ export const DEFAULT_COMPONENTS: Record<string, React.ComponentType<unknown>> = 
   chart: ChartRenderer as React.ComponentType<unknown>,
   form: FormRenderer as React.ComponentType<unknown>,
   confirmation: ConfirmationDialog as React.ComponentType<unknown>,
+  accordion: AccordionRenderer as React.ComponentType<unknown>,
+  code: CodeBlockRenderer as React.ComponentType<unknown>,
 };
 
 /**

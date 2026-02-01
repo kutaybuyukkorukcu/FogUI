@@ -1,7 +1,7 @@
 package com.genui.service;
 
-import com.genui.model.openai.CostInfo;
-import com.genui.model.openai.UsageInfo;
+import com.genui.model.transform.CostInfo;
+import com.genui.model.transform.UsageInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
