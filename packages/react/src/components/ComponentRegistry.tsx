@@ -179,13 +179,16 @@ function DefaultChart({ title, chartData }: { title?: string; chartData?: any[] 
 }
 
 // Form Component
-function DefaultForm({ title, description, fields, submitText = 'Submit', sendMessage }: any) {
+function DefaultForm({ title, description, fields, submitText = 'Submit', onAction }: any) {
   const [formData, setFormData] = React.useState<Record<string, any>>({});
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (sendMessage) {
-      sendMessage(`FORM_SUBMIT:${JSON.stringify(formData)}`);
+    if (onAction) {
+      onAction({
+        type: 'FORM_SUBMIT',
+        formData
+      });
     } else {
       console.log('Form submitted:', formData);
     }
@@ -290,9 +293,12 @@ function DefaultCodeBlock({ code, language, filename }: { code: string; language
 }
 
 // Confirmation Dialog Component
-function DefaultConfirmation({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', variant, data, sendMessage }: any) {
+function DefaultConfirmation({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', variant, data, onAction }: any) {
   const handleConfirm = () => {
-     if (sendMessage) sendMessage(`CONFIRM:${JSON.stringify(data || {})}`);
+     if (onAction) onAction({
+       type: 'CONFIRM',
+       data: data || {}
+     });
   };
 
   const isDanger = variant === 'danger';
@@ -338,13 +344,13 @@ export const defaultComponentRegistry: Record<string, React.ComponentType<any>> 
 interface DynamicComponentProps {
   block: ComponentBlock;
   registry?: Record<string, React.ComponentType<any>>;
-  sendMessage?: (message: string) => void;
+  onAction?: (action: any) => void;
 }
 
 /**
  * DynamicComponent - Renders a component based on componentType.
  */
-export function DynamicComponent({ block, registry = defaultComponentRegistry, sendMessage }: DynamicComponentProps) {
+export function DynamicComponent({ block, registry = defaultComponentRegistry, onAction }: DynamicComponentProps) {
   const { componentType, props } = block;
   const Component = registry[componentType];
 
@@ -359,6 +365,6 @@ export function DynamicComponent({ block, registry = defaultComponentRegistry, s
     );
   }
 
-  // Pass sendMessage to the component
-  return <Component {...props} sendMessage={sendMessage} />;
+  // Pass onAction to the component
+  return <Component {...props} onAction={onAction} />;
 }

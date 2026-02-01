@@ -26,10 +26,10 @@ export default function UsagePage() {
   if (!stats) return null;
 
   const { currentPeriod } = stats;
-  const usagePercent = Math.min(
-    (currentPeriod.transforms / currentPeriod.quota) * 100,
-    100
-  );
+  
+  const usagePercent = currentPeriod.quota > 0
+    ? Math.min((currentPeriod.transforms / currentPeriod.quota) * 100, 100)
+    : (currentPeriod.quota === 0 && currentPeriod.transforms > 0 ? 100 : 0);
 
   return (
     <div className="space-y-6">

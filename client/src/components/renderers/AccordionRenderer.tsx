@@ -1,7 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { Card } from '../ui/card';
-import { cn } from '../../lib/utils'; // Assuming this utility exists or I should check App.tsx imports
 
 // Fallback utility if not present
 function classNames(...classes: (string | undefined | null | false)[]) {
