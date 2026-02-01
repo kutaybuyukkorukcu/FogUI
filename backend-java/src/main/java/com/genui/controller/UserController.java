@@ -40,8 +40,12 @@ public class UserController {
 
         if (request.getEmail() != null && !request.getEmail().isBlank()
                 && !request.getEmail().equals(user.getEmail())) {
-            // Basic check to prevent duplicate emails would be needed here if valid
-            // keeping it simple: update email
+
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.CONFLICT, "Email already in use");
+            }
+
             user.setEmail(request.getEmail());
         }
 
