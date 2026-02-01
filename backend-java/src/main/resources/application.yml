@@ -27,15 +27,15 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-  # Spring AI - Google GenAI (Google AI Studio with API Key)
+  # Spring AI - OpenAI Compatible (Groq, OpenRouter, OpenAI, etc.)
   ai:
-    google:
-      genai:
-        api-key: ${GOOGLE_AI_API_KEY:}
-        chat:
-          options:
-            model: ${GOOGLE_AI_MODEL:gemini-2.5-flash}
-            temperature: 0.7
+    openai:
+      api-key: ${GROQ_API_KEY:}
+      base-url: ${AI_BASE_URL:https://api.groq.com/openai}
+      chat:
+        options:
+          model: ${AI_MODEL:llama-3.3-70b-versatile}
+          temperature: 0.7
 
 # JWT Configuration
 jwt:
