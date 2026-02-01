@@ -137,6 +137,18 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Sentry for error monitoring -->
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+            <version>7.22.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-logback</artifactId>
+            <version>7.22.0</version>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
@@ -164,6 +176,75 @@
                         </exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+
+            <!-- JaCoCo for test coverage (SonarCloud integration) -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Copy dependencies for SonarCloud Java analysis -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/dependency</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Sentry Maven Plugin for release tracking and source context -->
+            <plugin>
+                <groupId>io.sentry</groupId>
+                <artifactId>sentry-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <debugSentryCli>false</debugSentryCli>
+                    <org>${env.SENTRY_ORG}</org>
+                    <project>${env.SENTRY_PROJECT_BACKEND}</project>
+                    <authToken>${env.SENTRY_AUTH_TOKEN}</authToken>
+                    <!-- Automatically create releases -->
+                    <release>${project.version}</release>
+                    <!-- Upload source context for better stack traces -->
+                    <includeSourceContext>true</includeSourceContext>
+                    <!-- Skip in local development if env vars not set -->
+                    <skip>${env.CI == null}</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>upload-sentry-sourcecontext</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>uploadSourceBundle</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
