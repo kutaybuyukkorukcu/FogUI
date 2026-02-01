@@ -69,7 +69,7 @@ dashboard/
 
 ## Features
 
-### ✅ Implemented (MVP)
+### ✅ Implemented (MVP Complete)
 
 - **Authentication**
   - Login with email/password
@@ -83,19 +83,18 @@ dashboard/
   - Revoke keys
   - Copy newly created keys
 
-- **Dashboard**
-  - Usage stats (needs backend implementation)
-  - Quota display
-  - Quick start guide
+- **Usage & Quota**
+  - Display current period transforms
+  - Show remaining quota
+  - Usage history table
 
-### 🚧 In Progress
-
-- **Usage Endpoint** - Backend needs to implement `GET /api/usage/stats`
-- **Settings Page** - Account management features
+- **Settings**
+  - View profile information
+  - Update email address
 
 ### 📋 Backlog
 
-See [DASHBOARD_BACKLOG.md](../docs/DASHBOARD_BACKLOG.md) for full roadmap.
+See [BACKLOG.md](../docs/BACKLOG.md) for full roadmap.
 
 ## Backend Integration
 
@@ -108,9 +107,9 @@ The dashboard expects these endpoints:
 | `/api/keys` | GET | ✅ Implemented |
 | `/api/keys` | POST | ✅ Implemented |
 | `/api/keys/:id` | DELETE | ✅ Implemented |
-| `/api/usage/stats` | GET | ⚠️ Need to implement |
-| `/api/user/profile` | GET | ⚠️ Need to implement |
-| `/api/user/profile` | PUT | ⚠️ Need to implement |
+| `/api/usage/stats` | GET | ✅ Implemented |
+| `/api/user/profile` | GET | ✅ Implemented |
+| `/api/user/profile` | PUT | ✅ Implemented |
 
 ## Deployment
 
