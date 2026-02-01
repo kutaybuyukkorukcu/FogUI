@@ -29,3 +29,8 @@ build/
 # Logs
 *.log
 logs/
+
+# AI/LLM Tools (may contain API keys)
+opencode.jsonc
+.opencode/
+.agents/
