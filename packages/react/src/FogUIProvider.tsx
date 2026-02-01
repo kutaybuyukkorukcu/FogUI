@@ -14,6 +14,7 @@ interface FogUIContextValue {
   apiKey: string;
   endpoint: string;
   componentRegistry?: ComponentRegistry;
+  onAction?: (action: string, data?: unknown) => void;
 }
 
 const FogUIContext = createContext<FogUIContextValue | null>(null);
@@ -48,6 +49,10 @@ export interface FogUIProviderProps {
    * ```
    */
   components?: ComponentRegistry;
+  /**
+   * Global handler for component actions (e.g. form submissions, button clicks)
+   */
+  onAction?: (action: string, data?: unknown) => void;
 }
 
 /**
@@ -103,7 +108,7 @@ export interface FogUIProviderProps {
  * </FogUIProvider>
  * ```
  */
-export function FogUIProvider({ children, apiKey, endpoint, components }: FogUIProviderProps) {
+export function FogUIProvider({ children, apiKey, endpoint, components, onAction }: FogUIProviderProps) {
   if (!apiKey) {
     console.warn('[FogUI] API key is required. Get one at https://fogui.dev/dashboard');
   }
@@ -112,7 +117,8 @@ export function FogUIProvider({ children, apiKey, endpoint, components }: FogUIP
     apiKey,
     endpoint: endpoint || FOGUI_API_ENDPOINT,
     componentRegistry: components,
-  }), [apiKey, endpoint, components]);
+    onAction,
+  }), [apiKey, endpoint, components, onAction]);
 
   return (
     <FogUIContext.Provider value={value}>

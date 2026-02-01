@@ -4,7 +4,7 @@ import { DynamicComponent, defaultComponentRegistry, mergeRegistries } from './C
 import React from 'react';
 import { useFogUIContext } from '../FogUIProvider';
 
-interface FogUIRendererProps {
+export interface FogUIRendererProps {
   /**
    * The FogUIResponse to render
    */
@@ -23,6 +23,11 @@ interface FogUIRendererProps {
    * Custom styles for the container
    */
   style?: React.CSSProperties;
+  /**
+   * Optional callback for component actions.
+   * If provided, overrides the context's onAction handler.
+   */
+  sendMessage?: (message: string) => void;
 }
 
 /**
@@ -48,15 +53,21 @@ interface FogUIRendererProps {
  * />
  * ```
  */
-export function FogUIRenderer({ response, componentRegistry, className, style }: FogUIRendererProps) {
+export function FogUIRenderer({ response, componentRegistry, className, style, sendMessage }: FogUIRendererProps) {
   // Try to get registry from context (set in FogUIProvider)
   let contextRegistry: Record<string, React.ComponentType<any>> | undefined;
+  let contextOnAction: ((action: string, data?: unknown) => void) | undefined;
+  
   try {
     const context = useFogUIContext();
     contextRegistry = context.componentRegistry;
+    contextOnAction = context.onAction;
   } catch {
     // Not inside FogUIProvider, use defaults
   }
+
+  // Handle actions: prefer prop > context > no-op
+  const handleAction = sendMessage || ((msg: string) => contextOnAction?.('message', msg));
 
   // Merge: prop registry > context registry > default registry
   const registry = mergeRegistries(defaultComponentRegistry, contextRegistry, componentRegistry);
@@ -72,6 +83,7 @@ export function FogUIRenderer({ response, componentRegistry, className, style }:
           key={index} 
           block={block} 
           registry={registry}
+          sendMessage={handleAction}
         />
       ))}
     </div>
@@ -81,9 +93,10 @@ export function FogUIRenderer({ response, componentRegistry, className, style }:
 interface ContentBlockRendererProps {
   block: ContentBlock;
   registry: Record<string, React.ComponentType<any>>;
+  sendMessage?: (message: string) => void;
 }
 
-function ContentBlockRenderer({ block, registry }: ContentBlockRendererProps) {
+function ContentBlockRenderer({ block, registry, sendMessage }: ContentBlockRendererProps) {
   if (block.type === 'text') {
     return (
       <div style={{ marginBottom: '12px', lineHeight: 1.6 }}>
@@ -98,7 +111,7 @@ function ContentBlockRenderer({ block, registry }: ContentBlockRendererProps) {
   }
 
   if (block.type === 'component') {
-    return <DynamicComponent block={block} registry={registry} />;
+    return <DynamicComponent block={block} registry={registry} sendMessage={sendMessage} />;
   }
 
   return null;

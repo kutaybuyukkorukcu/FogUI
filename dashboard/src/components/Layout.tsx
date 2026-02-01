@@ -44,6 +44,16 @@ export default function Layout() {
                   API Keys
                 </Link>
                 <Link
+                  to="/usage"
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    isActive('/usage')
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  Usage
+                </Link>
+                <Link
                   to="/settings"
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
                     isActive('/settings')
