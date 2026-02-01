@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import type { GenUIConfig } from './types';
 import type { PartialComponentRegistry } from './types/components';
 
 /**
@@ -12,6 +11,7 @@ interface GenUIContextValue {
   apiKey: string;
   endpoint: string;
   components: PartialComponentRegistry;
+  onAction?: (action: string, data?: unknown) => void;
 }
 
 const GenUIContext = createContext<GenUIContextValue | null>(null);
@@ -23,6 +23,10 @@ export interface GenUIProviderProps {
    * Optional for demo/development mode
    */
   apiKey?: string;
+  /**
+   * Global handler for component actions (e.g. form submissions, button clicks)
+   */
+  onAction?: (action: string, data?: unknown) => void;
   /**
    * Custom component overrides for design system compatibility.
    * Any component not specified will use FogUI's default Tailwind renderer.
@@ -61,6 +65,7 @@ export function GenUIProvider({
   children, 
   apiKey = '',
   components = {},
+  onAction,
 }: GenUIProviderProps) {
   if (!apiKey && !import.meta.env.DEV) {
     console.warn('[GenUI] API key is required in production. Get one at https://genui.dev/dashboard');
@@ -75,7 +80,8 @@ export function GenUIProvider({
     apiKey,
     endpoint,
     components,
-  }), [apiKey, endpoint, components]);
+    onAction,
+  }), [apiKey, endpoint, components, onAction]);
 
   return (
     <GenUIContext.Provider value={value}>

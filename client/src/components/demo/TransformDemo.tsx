@@ -1,16 +1,22 @@
 import { useState } from 'react';
-import { useGenUI, GenUIRenderer } from '../../lib/genui-sdk';
+import { useGenUI, GenUIRenderer, GenUIProvider } from '../../lib/genui-sdk';
 import type { GenerativeUIResponse } from '../../types';
 
+interface ActionLogItem {
+  timestamp: string;
+  message: string;
+}
+
 /**
- * TransformDemo - Demonstrates using the GenUI SDK to transform any text.
- * 
- * This shows how a developer would integrate GenUI with their own LLM:
- * 1. Call your LLM (OpenAI, Claude, etc.) with your own API key
- * 2. Pass the LLM output to GenUI's transform()
- * 3. Render the result with GenUIRenderer
+ * TransformDemoContent - The inner component using useGenUI
  */
-export function TransformDemo() {
+function TransformDemoContent({ 
+  actionLog, 
+  onClearLog 
+}: { 
+  actionLog: ActionLogItem[]; 
+  onClearLog: () => void;
+}) {
   const { transform, isLoading, error, clearError } = useGenUI();
   const [input, setInput] = useState('');
   const [result, setResult] = useState<GenerativeUIResponse | null>(null);
@@ -39,24 +45,44 @@ export function TransformDemo() {
 
   const examples = [
     {
+      label: 'Text',
+      text: 'Explain what Generative UI is in 2-3 sentences.'
+    },
+    {
+      label: 'Card',
+      text: 'Show me a single card for "Revenue Limit" with a value of "$50,000" and an alert message "Approaching limit".'
+    },
+    {
       label: 'List',
-      text: 'The top 5 programming languages in 2024 are: 1. Python - known for AI/ML, 2. JavaScript - web development, 3. TypeScript - type-safe JS, 4. Go - cloud infrastructure, 5. Rust - systems programming.'
+      text: 'The top 5 programming languages in 2024 are: 1. Python, 2. JavaScript, 3. TypeScript, 4. Go, 5. Rust.'
     },
     {
-      label: 'Comparison',
-      text: 'React vs Vue comparison: React has 220k GitHub stars, uses JSX, backed by Meta. Vue has 45k stars, uses templates, backed by community. Both support TypeScript and have great ecosystems.'
+      label: 'Table',
+      text: 'Create a table of "Recent Transactions": 1. Stripe ($120.00, Completed), 2. AWS ($450.50, Pending), 3. GitHub ($7.00, Completed), 4. Vercel ($20.00, Completed).'
     },
     {
-      label: 'Metrics',
-      text: 'Q4 2024 Results: Revenue $4.2M (up 23%), Active Users 45,000 (up 15%), Churn Rate 2.1% (down 0.5%), NPS Score 72 (up 8 points).'
+      label: 'Container (Grid)',
+      text: 'Create a dashboard grid with 2 columns. Column 1: A card for "Active Users" (1,234). Column 2: A card for "New Signups" (56). Below them, a text summary "Growth is steady".'
     },
     {
-      label: 'Weather',
-      text: 'Weather in Tokyo: Currently 18°C with partly cloudy skies. Humidity at 65%. Wind from the east at 12 km/h. Forecast: High of 22°C, Low of 14°C.'
+      label: 'Chart',
+      text: 'Visualise the monthly revenue for Q1: January ($12k), February ($15k), March ($18k).'
     },
     {
-      label: 'Composable (Nested)',
-      text: 'Create a dashboard layout with a Title "Employee Status". Inside, create a grid with 2 columns. Column 1: A card "Active Staff" with value "12". Column 2: A card "On Leave" with value "2". Below that, add a full-width callout warning "Holiday season approaching".'
+      label: 'Form',
+      text: 'Create a feedback form with fields: Name (text), Email (email), Rating (number), and Comments (textarea).'
+    },
+    {
+      label: 'Confirmation',
+      text: 'Ask for confirmation to delete the project "Project X". It has 5 files and 2 members. This is a dangerous action.'
+    },
+    {
+      label: 'Accordion',
+      text: 'Create an FAQ accordion with 2 questions: "What is FogUI?" (Answer: A library...), "Is it free?" (Answer: Yes...).'
+    },
+    {
+      label: 'Code Block',
+      text: 'Show a React component code snippet for a simple Button component.'
     }
   ];
 
@@ -129,29 +155,72 @@ export function TransformDemo() {
         </div>
       )}
 
+      {/* Action Log (New) */}
+      {actionLog.length > 0 && (
+        <div className="mt-8 bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400">
+          <div className="flex justify-between items-center mb-2 border-b border-slate-700 pb-2">
+            <h3 className="font-bold text-white">Action Log (Simulating Backend)</h3>
+            <button 
+              onClick={onClearLog} 
+              className="text-xs text-gray-400 hover:text-white"
+            >
+              Clear
+            </button>
+          </div>
+          <div className="space-y-1 max-h-40 overflow-auto">
+            {actionLog.map((log, i) => (
+              <div key={i} className="break-all">
+                <span className="text-gray-500">[{log.timestamp}]</span> {log.message}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Code example */}
       <div className="mt-12 p-4 bg-gray-900 rounded-lg">
         <p className="text-gray-400 text-sm mb-2">Integration Example:</p>
         <pre className="text-green-400 text-sm overflow-auto">
-{`import { useGenUI, GenUIRenderer } from '@genui/react';
+{`import { useGenUI, GenUIRenderer, GenUIProvider } from '@genui/react';
 
-function MyChat() {
-  const { transform } = useGenUI();
+function App() {
+  // Global action handler (e.g. for forms)
+  const handleAction = (action, data) => {
+    console.log('Action:', action, data);
+  };
 
-  // 1. Call YOUR LLM (with your own API key)
-  const llmResponse = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: userMessage }]
-  });
-
-  // 2. Transform with GenUI
-  const ui = await transform(llmResponse.choices[0].message.content);
-
-  // 3. Render
-  return <GenUIRenderer response={ui.result} />;
+  return (
+    <GenUIProvider apiKey="..." onAction={handleAction}>
+      <MyChat />
+    </GenUIProvider>
+  );
 }`}
         </pre>
       </div>
     </div>
+  );
+}
+
+/**
+ * TransformDemo - Wrapper that provides the GenUI context
+ */
+export function TransformDemo() {
+  const [actionLog, setActionLog] = useState<ActionLogItem[]>([]);
+
+  const handleMessage = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setActionLog(prev => [{ timestamp, message }, ...prev]);
+  };
+
+  return (
+    <GenUIProvider 
+      apiKey="fog_live_fd99e52897802439471d967d0c276444"
+      onAction={(action, data) => handleMessage(`${action}: ${data ? JSON.stringify(data) : 'void'}`)}
+    >
+      <TransformDemoContent 
+        actionLog={actionLog} 
+        onClearLog={() => setActionLog([])} 
+      />
+    </GenUIProvider>
   );
 }
