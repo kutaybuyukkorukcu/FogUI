@@ -17,7 +17,7 @@ docker build -t fogui-backend .
 
 # Run with environment variables
 docker run -p 5001:5001 \
-  -e OPENAI_API_KEY=your-key-here \
+  -e GROQ_API_KEY=your-groq-key-here \
   fogui-backend
 ```
 
@@ -28,22 +28,33 @@ docker run -p 5001:5001 \
 ./mvnw spring-boot:run
 
 # Or with environment variables
-OPENAI_API_KEY=your-key ./mvnw spring-boot:run
+GROQ_API_KEY=your-key ./mvnw spring-boot:run
 ```
 
 ## Configuration
 
 Set these environment variables:
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `OPENAI_API_KEY` | Your OpenAI API key | For OpenAI |
-| `AZURE_OPENAI_API_KEY` | Your Azure OpenAI API key | For Azure |
-| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint URL | For Azure |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | Azure deployment name | For Azure |
-| `GOOGLE_AI_API_KEY` | Your Google AI Studio API key | For Gemini |
-| `GOOGLE_AI_MODEL` | Gemini model name (default: `gemini-1.5-flash`) | No |
-| `GENUI_PROVIDER` | Default provider: `openai`, `azureopenai`, or `gemini` | No |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GROQ_API_KEY` | Your Groq API key (get free at console.groq.com) | Required |
+| `AI_BASE_URL` | API base URL | `https://api.groq.com/openai` |
+| `AI_MODEL` | Model to use | `llama-3.3-70b-versatile` |
+
+### Using Other Providers
+
+The backend uses OpenAI-compatible API, so you can use any compatible provider:
+
+```bash
+# For OpenRouter
+AI_BASE_URL=https://openrouter.ai/api/v1
+GROQ_API_KEY=your-openrouter-key
+
+# For OpenAI
+AI_BASE_URL=https://api.openai.com/v1
+GROQ_API_KEY=your-openai-key
+AI_MODEL=gpt-4o-mini
+```
 
 ## API Usage
 

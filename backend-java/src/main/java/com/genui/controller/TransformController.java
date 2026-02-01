@@ -53,8 +53,8 @@ public class TransformController {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    @Value("${spring.ai.google.genai.chat.options.model:gemini-2.0-flash}")
-    private String geminiModel;
+    @Value("${spring.ai.openai.chat.options.model:llama-3.3-70b-versatile}")
+    private String defaultModel;
 
     /**
      * POST /genui/transform
@@ -118,7 +118,7 @@ public class TransformController {
 
             var usage = TransformResponse.TransformUsage.builder()
                     .transformTokens(estimatedTokens)
-                    .model(geminiModel)
+                    .model(defaultModel)
                     .processingTimeMs(processingTime)
                     .estimatedCost(estimatedCost)
                     .build();
