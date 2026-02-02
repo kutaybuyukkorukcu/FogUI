@@ -1,16 +1,18 @@
 package com.genui.service;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.google.genai.GoogleGenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit tests for ChatClientFactory.
@@ -88,6 +90,120 @@ class ChatClientFactoryTest {
             String provider = factory.getActiveProvider();
 
             assertEquals("gemini", provider);
+        }
+    }
+
+    @Nested
+    @DisplayName("createClient success paths")
+    class CreateClientSuccess {
+
+        @Test
+        @DisplayName("should create ChatClient with OpenAI model")
+        void shouldCreateChatClientWithOpenAiModel() {
+            OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
+            ChatClientFactory factory = new ChatClientFactory(mockOpenAiModel, null);
+            ReflectionTestUtils.setField(factory, "provider", "openai");
+            ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4");
+
+            ChatClient client = factory.createClient();
+
+            assertNotNull(client);
+        }
+
+        @Test
+        @DisplayName("should create ChatClient with Gemini model")
+        void shouldCreateChatClientWithGeminiModel() {
+            GoogleGenAiChatModel mockGeminiModel = mock(GoogleGenAiChatModel.class);
+            ChatClientFactory factory = new ChatClientFactory(null, mockGeminiModel);
+            ReflectionTestUtils.setField(factory, "provider", "gemini");
+            ReflectionTestUtils.setField(factory, "geminiModel", "gemini-2.5-flash");
+
+            ChatClient client = factory.createClient();
+
+            assertNotNull(client);
+        }
+    }
+
+    @Nested
+    @DisplayName("createClient with custom options success paths")
+    class CreateClientWithOptionsSuccess {
+
+        @Test
+        @DisplayName("should create OpenAI client with custom model and temperature")
+        void shouldCreateOpenAiClientWithCustomOptions() {
+            OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
+            ChatClientFactory factory = new ChatClientFactory(mockOpenAiModel, null);
+            ReflectionTestUtils.setField(factory, "provider", "openai");
+            ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4");
+
+            ChatClient client = factory.createClient("gpt-4-turbo", 0.5);
+
+            assertNotNull(client);
+        }
+
+        @Test
+        @DisplayName("should create Gemini client with custom model and temperature")
+        void shouldCreateGeminiClientWithCustomOptions() {
+            GoogleGenAiChatModel mockGeminiModel = mock(GoogleGenAiChatModel.class);
+            ChatClientFactory factory = new ChatClientFactory(null, mockGeminiModel);
+            ReflectionTestUtils.setField(factory, "provider", "gemini");
+            ReflectionTestUtils.setField(factory, "geminiModel", "gemini-pro");
+
+            ChatClient client = factory.createClient("gemini-2.5-pro", 0.3);
+
+            assertNotNull(client);
+        }
+
+        @Test
+        @DisplayName("should use default model when null is passed for OpenAI")
+        void shouldUseDefaultModelWhenNullForOpenAi() {
+            OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
+            ChatClientFactory factory = new ChatClientFactory(mockOpenAiModel, null);
+            ReflectionTestUtils.setField(factory, "provider", "openai");
+            ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4");
+
+            ChatClient client = factory.createClient(null, 0.7);
+
+            assertNotNull(client);
+        }
+
+        @Test
+        @DisplayName("should use default model when null is passed for Gemini")
+        void shouldUseDefaultModelWhenNullForGemini() {
+            GoogleGenAiChatModel mockGeminiModel = mock(GoogleGenAiChatModel.class);
+            ChatClientFactory factory = new ChatClientFactory(null, mockGeminiModel);
+            ReflectionTestUtils.setField(factory, "provider", "gemini");
+            ReflectionTestUtils.setField(factory, "geminiModel", "gemini-pro");
+
+            ChatClient client = factory.createClient(null, 0.7);
+
+            assertNotNull(client);
+        }
+
+        @Test
+        @DisplayName("should use default temperature when null is passed for OpenAI")
+        void shouldUseDefaultTemperatureWhenNullForOpenAi() {
+            OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
+            ChatClientFactory factory = new ChatClientFactory(mockOpenAiModel, null);
+            ReflectionTestUtils.setField(factory, "provider", "openai");
+            ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4");
+
+            ChatClient client = factory.createClient("gpt-4", null);
+
+            assertNotNull(client);
+        }
+
+        @Test
+        @DisplayName("should use default temperature when null is passed for Gemini")
+        void shouldUseDefaultTemperatureWhenNullForGemini() {
+            GoogleGenAiChatModel mockGeminiModel = mock(GoogleGenAiChatModel.class);
+            ChatClientFactory factory = new ChatClientFactory(null, mockGeminiModel);
+            ReflectionTestUtils.setField(factory, "provider", "gemini");
+            ReflectionTestUtils.setField(factory, "geminiModel", "gemini-pro");
+
+            ChatClient client = factory.createClient("gemini-pro", null);
+
+            assertNotNull(client);
         }
     }
 
