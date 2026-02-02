@@ -19,18 +19,22 @@ spring:
     enabled: false
 
   ai:
-    vertex:
-      ai:
-        gemini:
-          project-id: test-project
-          location: us-central1
-          model: gemini-2.5-flash-lite
-
+    openai:
+      api-key: test-openai-api-key
+      base-url: https://api.groq.com/openai
+      chat:
+        options:
+          model: llama-3.3-70b-versatile
     google:
       genai:
-        api-key: dummy_key
-        project-id: test-project
-        location: us-central1
+        api-key: test-google-api-key
+        chat:
+          options:
+            model: gemini-2.5-flash
+
+fogui:
+  ai:
+    provider: openai
 
 jwt:
   secret: test-jwt-secret-key-that-is-at-least-32-characters-long

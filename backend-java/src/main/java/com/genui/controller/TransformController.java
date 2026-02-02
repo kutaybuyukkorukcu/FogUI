@@ -53,9 +53,6 @@ public class TransformController {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    @Value("${spring.ai.google.genai.chat.options.model:gemini-2.0-flash}")
-    private String geminiModel;
-
     /**
      * POST /genui/transform
      * Transform raw LLM text into structured UI components.
@@ -118,7 +115,7 @@ public class TransformController {
 
             var usage = TransformResponse.TransformUsage.builder()
                     .transformTokens(estimatedTokens)
-                    .model(geminiModel)
+                    .model(chatClientFactory.getActiveModelName())
                     .processingTimeMs(processingTime)
                     .estimatedCost(estimatedCost)
                     .build();

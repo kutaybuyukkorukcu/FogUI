@@ -17,7 +17,7 @@ docker build -t fogui-backend .
 
 # Run with environment variables
 docker run -p 5001:5001 \
-  -e OPENAI_API_KEY=your-key-here \
+  -e GROQ_API_KEY=your-groq-key-here \
   fogui-backend
 ```
 
@@ -28,22 +28,62 @@ docker run -p 5001:5001 \
 ./mvnw spring-boot:run
 
 # Or with environment variables
-OPENAI_API_KEY=your-key ./mvnw spring-boot:run
+GROQ_API_KEY=your-key ./mvnw spring-boot:run
 ```
 
 ## Configuration
 
-Set these environment variables:
+The backend supports multiple LLM providers. Set `AI_PROVIDER` to choose between them:
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `OPENAI_API_KEY` | Your OpenAI API key | For OpenAI |
-| `AZURE_OPENAI_API_KEY` | Your Azure OpenAI API key | For Azure |
-| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint URL | For Azure |
-| `AZURE_OPENAI_DEPLOYMENT_NAME` | Azure deployment name | For Azure |
-| `GOOGLE_AI_API_KEY` | Your Google AI Studio API key | For Gemini |
-| `GOOGLE_AI_MODEL` | Gemini model name (default: `gemini-1.5-flash`) | No |
-| `GENUI_PROVIDER` | Default provider: `openai`, `azureopenai`, or `gemini` | No |
+### Provider Selection
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AI_PROVIDER` | Provider to use: `openai` or `gemini` | `openai` |
+
+### OpenAI-Compatible Providers (Groq, OpenRouter, OpenAI)
+
+When `AI_PROVIDER=openai` (default):
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GROQ_API_KEY` or `OPENAI_API_KEY` | API key | Required |
+| `OPENAI_BASE_URL` | API base URL | `https://api.groq.com/openai` |
+| `OPENAI_MODEL` | Model to use | `llama-3.3-70b-versatile` |
+
+```bash
+# Groq (default, 1000 req/day free)
+AI_PROVIDER=openai
+GROQ_API_KEY=your-groq-key
+
+# OpenRouter
+AI_PROVIDER=openai
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_API_KEY=your-openrouter-key
+OPENAI_MODEL=meta-llama/llama-3.3-70b-instruct
+
+# OpenAI
+AI_PROVIDER=openai
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_API_KEY=your-openai-key
+OPENAI_MODEL=gpt-4o-mini
+```
+
+### Google Gemini
+
+When `AI_PROVIDER=gemini`:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GOOGLE_AI_API_KEY` | Google AI Studio API key | Required |
+| `GOOGLE_AI_MODEL` | Model to use | `gemini-2.5-flash` |
+
+```bash
+# Gemini (20 req/day free)
+AI_PROVIDER=gemini
+GOOGLE_AI_API_KEY=your-google-ai-key
+GOOGLE_AI_MODEL=gemini-2.5-flash
+```
 
 ## API Usage
 
