@@ -25,6 +25,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -232,6 +233,148 @@ class TransformControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.usage").exists())
                     .andExpect(jsonPath("$.usage.processingTimeMs").exists());
+        }
+
+        @Test
+        @DisplayName("should transform content with context hints")
+        void shouldTransformContentWithContextHints() throws Exception {
+            String llmResponse = """
+                    <genui>
+                    {
+                        "thinking": [{"message": "Using context hints", "status": "complete"}],
+                        "content": [
+                            {
+                                "type": "component",
+                                "componentType": "chart",
+                                "props": {"type": "bar", "data": []}
+                            }
+                        ]
+                    }
+                    </genui>
+                    """;
+            mockChatClient(llmResponse);
+
+            TransformRequest request = new TransformRequest();
+            request.setContent("Show sales data for Q1");
+
+            TransformRequest.TransformContext context = new TransformRequest.TransformContext();
+            context.setIntent("data-visualization");
+            context.setPreferredComponents(java.util.List.of("chart", "table"));
+            context.setInstructions("Use bar charts for comparisons");
+            request.setContext(context);
+
+            mockMvc.perform(post("/fogui/transform")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.result.content[0].componentType").value("chart"));
+        }
+
+        @Test
+        @DisplayName("should increment user usage after successful transform")
+        void shouldIncrementUserUsageAfterTransform() throws Exception {
+            String llmResponse = """
+                    <genui>
+                    {
+                        "thinking": [],
+                        "content": [{"type": "text", "value": "Test"}]
+                    }
+                    </genui>
+                    """;
+            mockChatClient(llmResponse);
+
+            int initialUsage = testUser.getUsedThisMonth();
+
+            TransformRequest request = new TransformRequest();
+            request.setContent("Test content");
+
+            mockMvc.perform(post("/fogui/transform")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
+
+            // Verify usage was incremented
+            User updatedUser = userRepository.findById(testUser.getId()).orElseThrow();
+            assertEquals(initialUsage + 1, updatedUser.getUsedThisMonth());
+        }
+
+        @Test
+        @DisplayName("should return 500 when LLM fails")
+        void shouldReturn500WhenLlmFails() throws Exception {
+            // Mock ChatClient to throw exception
+            when(chatClientFactory.createClient()).thenThrow(new RuntimeException("LLM service unavailable"));
+
+            TransformRequest request = new TransformRequest();
+            request.setContent("Some content");
+
+            mockMvc.perform(post("/fogui/transform")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.error").exists());
+        }
+
+        @Test
+        @DisplayName("should return fallback text response for unparseable LLM output")
+        void shouldReturnFallbackForUnparseableLlmOutput() throws Exception {
+            // Return invalid/unparseable content - parser wraps as fallback text
+            String invalidResponse = "This is plain text, not valid genui format";
+            mockChatClient(invalidResponse);
+
+            TransformRequest request = new TransformRequest();
+            request.setContent("Some content");
+
+            mockMvc.perform(post("/fogui/transform")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.result.metadata.fallback").value(true))
+                    .andExpect(jsonPath("$.result.content[0].type").value("text"));
+        }
+
+        @Test
+        @DisplayName("should include model name in usage response")
+        void shouldIncludeModelNameInUsage() throws Exception {
+            String llmResponse = """
+                    <genui>
+                    {
+                        "thinking": [],
+                        "content": [{"type": "text", "value": "Test"}]
+                    }
+                    </genui>
+                    """;
+            mockChatClient(llmResponse);
+            when(chatClientFactory.getActiveModelName()).thenReturn("gpt-4");
+
+            TransformRequest request = new TransformRequest();
+            request.setContent("Test content");
+
+            mockMvc.perform(post("/fogui/transform")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.usage.model").value("gpt-4"));
+        }
+
+        @Test
+        @DisplayName("should handle whitespace-only content as blank")
+        void shouldHandleWhitespaceOnlyContent() throws Exception {
+            TransformRequest request = new TransformRequest();
+            request.setContent("   \n\t  ");
+
+            mockMvc.perform(post("/fogui/transform")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Content is required"));
         }
     }
 
