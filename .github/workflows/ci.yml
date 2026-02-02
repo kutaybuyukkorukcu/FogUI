@@ -34,12 +34,14 @@ jobs:
         run: ./mvnw -B verify
 
       - name: Package with Sentry source context upload
-        run: ./mvnw -B package -DskipTests dependency:copy-dependencies
+        run: |
+          ./mvnw -B package -DskipTests dependency:copy-dependencies \
+            -Dsentry.org=${{ secrets.SENTRY_ORG }} \
+            -Dsentry.project=${{ secrets.SENTRY_PROJECT_BACKEND }} \
+            -Dsentry.authToken=${{ secrets.SENTRY_AUTH_TOKEN }} \
+            -Dsentry.skip=false
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT_BACKEND: ${{ secrets.SENTRY_PROJECT_BACKEND }}
-          CI: true
 
       - name: Upload backend artifacts
         uses: actions/upload-artifact@v4
