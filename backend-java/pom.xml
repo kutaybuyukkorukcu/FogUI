@@ -20,6 +20,11 @@
     <properties>
         <java.version>21</java.version>
         <spring-ai.version>1.1.0-M2</spring-ai.version>
+        <!-- Sentry properties (passed via -D flags in CI, empty by default for local dev) -->
+        <sentry.org></sentry.org>
+        <sentry.project></sentry.project>
+        <sentry.authToken></sentry.authToken>
+        <sentry.skip>true</sentry.skip>
     </properties>
 
     <dependencies>
@@ -225,16 +230,16 @@
                 <version>0.0.8</version>
                 <extensions>true</extensions>
                 <configuration>
-                    <debugSentryCli>false</debugSentryCli>
-                    <org>${env.SENTRY_ORG}</org>
-                    <project>${env.SENTRY_PROJECT_BACKEND}</project>
-                    <authToken>${env.SENTRY_AUTH_TOKEN}</authToken>
+                    <debugSentryCli>true</debugSentryCli>
+                    <org>${sentry.org}</org>
+                    <project>${sentry.project}</project>
+                    <authToken>${sentry.authToken}</authToken>
                     <!-- Automatically create releases -->
                     <release>${project.version}</release>
                     <!-- Upload source context for better stack traces -->
                     <includeSourceContext>true</includeSourceContext>
-                    <!-- Skip in local development if env vars not set -->
-                    <skip>${env.CI == null}</skip>
+                    <!-- Skip unless explicitly enabled via -Dsentry.skip=false -->
+                    <skip>${sentry.skip}</skip>
                 </configuration>
                 <executions>
                     <execution>
