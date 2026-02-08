@@ -12,6 +12,21 @@ FogUI is a full-stack generative UI platform. The core of the project is in `bac
 
 ## 2. Build, Lint, and Test Commands
 
+### 2.0 Code Coverage Requirements
+
+This project enforces **80% code coverage** through SonarCloud quality gates. The following modules are analyzed:
+
+**SonarCloud Configuration** (see `sonar-project.properties`):
+- **Backend** (`backend-java`): Java code coverage via JaCoCo
+  - Report path: `target/site/jacoco/jacoco.xml`
+  - Coverage target: 80% minimum
+- **React Package** (`packages/react`): TypeScript coverage via Vitest/Istanbul
+  - Report path: `coverage/lcov.info`
+  - Coverage target: 80% minimum
+- **Excluded**: `dashboard` app (not prioritized for coverage)
+
+**Important**: When modifying code, ensure tests are added/updated to maintain coverage above 80%.
+
 ### 2.1. Backend (`backend-java`)
 
 - **Run Application**:
@@ -35,6 +50,8 @@ FogUI is a full-stack generative UI platform. The core of the project is in `bac
   ```bash
   cd backend-java && ./mvnw -B package -DskipTests
   ```
+
+**Note**: See Section 2.0 for coverage requirements. Run tests with `./mvnw test jacoco:report` to generate local coverage reports.
 
 ### 2.2. Frontend Package (`packages/react`)
 

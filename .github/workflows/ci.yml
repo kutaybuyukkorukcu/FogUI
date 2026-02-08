@@ -48,11 +48,11 @@ jobs:
         with:
           name: backend-build
           path: |
-            backend-java/target/classes
-            backend-java/target/test-classes
-            backend-java/target/site/jacoco
-            backend-java/target/surefire-reports
-            backend-java/target/dependency
+            target/classes
+            target/test-classes
+            target/site/jacoco
+            target/surefire-reports
+            target/dependency
           retention-days: 1
 
   # ================================
@@ -165,7 +165,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: backend-build
-          path: backend-java/target
+          path: backend-java
 
       - name: Download frontend coverage
         uses: actions/download-artifact@v4
