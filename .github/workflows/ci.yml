@@ -166,7 +166,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: backend-build
-          path: .
+          path: backend-java/target
 
       - name: Download frontend coverage
         uses: actions/download-artifact@v4
