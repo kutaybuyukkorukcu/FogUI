@@ -95,7 +95,7 @@ public class ApiKeyController {
      * Revoke an API key.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> revokeKey(
+    public ResponseEntity<Map<String, String>> revokeKey(
             @AuthenticationPrincipal ApiKeyUserDetails userDetails,
             @PathVariable UUID id) {
 
@@ -117,7 +117,7 @@ public class ApiKeyController {
      * Rotate an API key (revoke old, create new).
      */
     @PostMapping("/{id}/rotate")
-    public ResponseEntity<?> rotateKey(
+    public ResponseEntity<ApiKeyResponse> rotateKey(
             @AuthenticationPrincipal ApiKeyUserDetails userDetails,
             @PathVariable UUID id) {
 
@@ -131,7 +131,7 @@ public class ApiKeyController {
                     apiKeyRepository.save(oldKey);
 
                     // Create new key with same settings
-                    String prefix = oldKey.getTestMode() ? TEST_PREFIX : LIVE_PREFIX;
+                    String prefix = Boolean.TRUE.equals(oldKey.getTestMode()) ? TEST_PREFIX : LIVE_PREFIX;
                     String randomPart = generateSecureRandomHex(32);
                     String fullKey = prefix + randomPart;
                     String keyHash = ApiKeyAuthenticationFilter.hashApiKey(fullKey);
@@ -150,8 +150,7 @@ public class ApiKeyController {
 
                     return ResponseEntity.ok(ApiKeyResponse.fromWithFullKey(newKey, fullKey));
                 })
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(null));
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
     /**

@@ -147,89 +147,120 @@ public class TransformController {
     @PostMapping(value = "/transform/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter transformStream(@RequestBody TransformRequest request) {
         SseEmitter emitter = new SseEmitter(120000L); // 2 min timeout
-
-        executor.execute(() -> {
-            try {
-                if (request.getContent() == null || request.getContent().isBlank()) {
-                    emitter.send(SseEmitter.event()
-                            .name("error")
-                            .data("{\"error\": \"Content is required\"}"));
-                    emitter.complete();
-                    return;
-                }
-
-                long startTime = System.currentTimeMillis();
-                var chatClient = chatClientFactory.createClient();
-
-                String contextHints = null;
-                if (request.getContext() != null && request.getContext().getInstructions() != null) {
-                    contextHints = request.getContext().getInstructions();
-                }
-
-                var prompt = new Prompt(
-                        new SystemMessage(TransformPrompts.TRANSFORM_SYSTEM_PROMPT),
-                        new UserMessage(TransformPrompts.buildTransformPrompt(request.getContent(), contextHints)));
-                var fullContent = new StringBuilder();
-
-                chatClient.prompt(prompt)
-                        .stream()
-                        .content()
-                        .doOnNext(chunk -> {
-                            fullContent.append(chunk);
-                            try {
-                                emitter.send(SseEmitter.event()
-                                        .name("chunk")
-                                        .data(chunk));
-                            } catch (IOException e) {
-                                log.error("Error sending chunk", e);
-                            }
-                        })
-                        .doOnComplete(() -> {
-                            try {
-                                // Parse and send final result
-                                var uiResponse = responseParser.parse(fullContent.toString());
-                                if (uiResponse != null) {
-                                    emitter.send(SseEmitter.event()
-                                            .name("result")
-                                            .data(objectMapper.writeValueAsString(uiResponse)));
-                                }
-
-                                // Send usage
-                                long processingTime = System.currentTimeMillis() - startTime;
-                                int tokens = (request.getContent().length() + fullContent.length()) / 4;
-                                emitter.send(SseEmitter.event()
-                                        .name("usage")
-                                        .data("{\"transformTokens\":" + tokens + ",\"processingTimeMs\":"
-                                                + processingTime + "}"));
-
-                                emitter.send(SseEmitter.event().data("[DONE]"));
-                                emitter.complete();
-
-                            } catch (Exception e) {
-                                log.error("Error completing stream", e);
-                                emitter.completeWithError(e);
-                            }
-                        })
-                        .doOnError(error -> {
-                            log.error("Stream error", error);
-                            emitter.completeWithError(error);
-                        })
-                        .subscribe();
-
-            } catch (Exception ex) {
-                log.error("Transform stream error", ex);
-                try {
-                    emitter.send(SseEmitter.event()
-                            .name("error")
-                            .data("{\"error\": \"" + ex.getMessage() + "\"}"));
-                    emitter.complete();
-                } catch (IOException e) {
-                    emitter.completeWithError(e);
-                }
-            }
-        });
-
+        executor.execute(() -> processStreamRequest(request, emitter));
         return emitter;
+    }
+
+    private void processStreamRequest(TransformRequest request, SseEmitter emitter) {
+        if (!validateRequest(request, emitter)) {
+            return;
+        }
+
+        long startTime = System.currentTimeMillis();
+        try {
+            var chatClient = chatClientFactory.createClient();
+            var prompt = buildStreamPrompt(request);
+            var fullContent = new StringBuilder();
+
+            chatClient.prompt(prompt)
+                    .stream()
+                    .content()
+                    .doOnNext(chunk -> handleStreamChunk(chunk, emitter, fullContent))
+                    .doOnComplete(() -> handleStreamComplete(emitter, fullContent, request, startTime))
+                    .doOnError(error -> handleStreamError(error, emitter))
+                    .subscribe();
+
+        } catch (Exception ex) {
+            handleProcessError(ex, emitter);
+        }
+    }
+
+    private boolean validateRequest(TransformRequest request, SseEmitter emitter) {
+        if (request.getContent() == null || request.getContent().isBlank()) {
+            sendErrorAndComplete(emitter, "Content is required");
+            return false;
+        }
+        return true;
+    }
+
+    private void sendErrorAndComplete(SseEmitter emitter, String errorMessage) {
+        try {
+            var errorJson = objectMapper.createObjectNode();
+            errorJson.put("error", errorMessage);
+            emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data(objectMapper.writeValueAsString(errorJson)));
+            emitter.complete();
+        } catch (IOException e) {
+            emitter.completeWithError(e);
+        }
+    }
+
+    private Prompt buildStreamPrompt(TransformRequest request) {
+        String contextHints = extractContextHints(request);
+        return new Prompt(
+                new SystemMessage(TransformPrompts.TRANSFORM_SYSTEM_PROMPT),
+                new UserMessage(TransformPrompts.buildTransformPrompt(request.getContent(), contextHints)));
+    }
+
+    private String extractContextHints(TransformRequest request) {
+        if (request.getContext() != null && request.getContext().getInstructions() != null) {
+            return request.getContext().getInstructions();
+        }
+        return null;
+    }
+
+    private void handleStreamChunk(String chunk, SseEmitter emitter, StringBuilder fullContent) {
+        fullContent.append(chunk);
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("chunk")
+                    .data(chunk));
+        } catch (IOException e) {
+            log.error("Error sending chunk", e);
+        }
+    }
+
+    private void handleStreamComplete(SseEmitter emitter, StringBuilder fullContent, TransformRequest request, long startTime) {
+        try {
+            sendStreamResult(emitter, fullContent.toString());
+            sendStreamUsage(emitter, request, fullContent, startTime);
+            emitter.send(SseEmitter.event().data("[DONE]"));
+            emitter.complete();
+        } catch (Exception e) {
+            log.error("Error completing stream", e);
+            emitter.completeWithError(e);
+        }
+    }
+
+    private void sendStreamResult(SseEmitter emitter, String content) throws IOException {
+        var uiResponse = responseParser.parse(content);
+        if (uiResponse != null) {
+            emitter.send(SseEmitter.event()
+                    .name("result")
+                    .data(objectMapper.writeValueAsString(uiResponse)));
+        }
+    }
+
+    private void sendStreamUsage(SseEmitter emitter, TransformRequest request, StringBuilder fullContent, long startTime) throws IOException {
+        long processingTime = System.currentTimeMillis() - startTime;
+        int tokens = (request.getContent().length() + fullContent.length()) / 4;
+        var usageJson = objectMapper.createObjectNode();
+        usageJson.put("transformTokens", tokens);
+        usageJson.put("processingTimeMs", processingTime);
+        emitter.send(SseEmitter.event()
+                .name("usage")
+                .data(objectMapper.writeValueAsString(usageJson)));
+    }
+
+    private void handleStreamError(Throwable error, SseEmitter emitter) {
+        log.error("Stream error", error);
+        emitter.completeWithError(error);
+    }
+
+    private void handleProcessError(Exception ex, SseEmitter emitter) {
+        log.error("Transform stream error", ex);
+        sendErrorAndComplete(emitter, ex.getMessage());
     }
 
 }
