@@ -185,9 +185,11 @@ public class TransformController {
 
     private void sendErrorAndComplete(SseEmitter emitter, String errorMessage) {
         try {
+            var errorJson = objectMapper.createObjectNode();
+            errorJson.put("error", errorMessage);
             emitter.send(SseEmitter.event()
                     .name("error")
-                    .data("{\"error\": \"" + errorMessage + "\"}"));
+                    .data(objectMapper.writeValueAsString(errorJson)));
             emitter.complete();
         } catch (IOException e) {
             emitter.completeWithError(e);
@@ -243,9 +245,12 @@ public class TransformController {
     private void sendStreamUsage(SseEmitter emitter, TransformRequest request, StringBuilder fullContent, long startTime) throws IOException {
         long processingTime = System.currentTimeMillis() - startTime;
         int tokens = (request.getContent().length() + fullContent.length()) / 4;
+        var usageJson = objectMapper.createObjectNode();
+        usageJson.put("transformTokens", tokens);
+        usageJson.put("processingTimeMs", processingTime);
         emitter.send(SseEmitter.event()
                 .name("usage")
-                .data("{\"transformTokens\":" + tokens + ",\"processingTimeMs\":" + processingTime + "}"));
+                .data(objectMapper.writeValueAsString(usageJson)));
     }
 
     private void handleStreamError(Throwable error, SseEmitter emitter) {
