@@ -4,7 +4,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.google.genai.GoogleGenAiChatModel;
@@ -217,7 +216,7 @@ class ChatClientFactoryTest {
             ChatClientFactory factory = new ChatClientFactory(null, null);
             ReflectionTestUtils.setField(factory, "provider", "openai");
 
-            assertThrows(IllegalStateException.class, () -> factory.createClient());
+            assertThrows(IllegalStateException.class, factory::createClient);
         }
 
         @Test
@@ -226,7 +225,7 @@ class ChatClientFactoryTest {
             ChatClientFactory factory = new ChatClientFactory(null, null);
             ReflectionTestUtils.setField(factory, "provider", "gemini");
 
-            assertThrows(IllegalStateException.class, () -> factory.createClient());
+            assertThrows(IllegalStateException.class, factory::createClient);
         }
 
         @Test
@@ -237,7 +236,7 @@ class ChatClientFactoryTest {
 
             IllegalStateException exception = assertThrows(
                     IllegalStateException.class,
-                    () -> factory.createClient()
+                    factory::createClient
             );
 
             assertTrue(exception.getMessage().contains("OpenAI") ||
@@ -252,7 +251,7 @@ class ChatClientFactoryTest {
 
             IllegalStateException exception = assertThrows(
                     IllegalStateException.class,
-                    () -> factory.createClient()
+                    factory::createClient
             );
 
             assertTrue(exception.getMessage().contains("Gemini") ||

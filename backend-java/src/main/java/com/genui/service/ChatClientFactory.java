@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class ChatClientFactory {
 
+    private static final String GEMINI_PROVIDER = "gemini";
+
     private final OpenAiChatModel openAiChatModel;
     private final GoogleGenAiChatModel geminiChatModel;
 
@@ -61,7 +63,7 @@ public class ChatClientFactory {
     public ChatClient createClient(String model, Double temperature) {
         log.info("Creating ChatClient with provider: {}, model: {}, temperature: {}", provider, model, temperature);
 
-        if ("gemini".equalsIgnoreCase(provider)) {
+        if (GEMINI_PROVIDER.equalsIgnoreCase(provider)) {
             return createGeminiClient(model, temperature);
         } else {
             return createOpenAiClient(model, temperature);
@@ -72,7 +74,7 @@ public class ChatClientFactory {
      * Returns the name of the currently active model.
      */
     public String getActiveModelName() {
-        return "gemini".equalsIgnoreCase(provider) ? geminiModel : openAiModel;
+        return GEMINI_PROVIDER.equalsIgnoreCase(provider) ? geminiModel : openAiModel;
     }
 
     /**
@@ -83,7 +85,7 @@ public class ChatClientFactory {
     }
 
     private ChatModel getActiveModel() {
-        if ("gemini".equalsIgnoreCase(provider)) {
+        if (GEMINI_PROVIDER.equalsIgnoreCase(provider)) {
             if (geminiChatModel == null) {
                 throw new IllegalStateException("Gemini provider selected but GOOGLE_AI_API_KEY not configured");
             }
