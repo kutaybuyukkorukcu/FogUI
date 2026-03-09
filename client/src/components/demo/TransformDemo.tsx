@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { useGenUI, GenUIRenderer, GenUIProvider } from '../../lib/genui-sdk';
+import { GenUIProvider, GenUIRenderer, useGenUI } from '../../lib/genui-sdk';
+
 import type { GenerativeUIResponse } from '../../types';
+import { useState } from 'react';
 
 interface ActionLogItem {
   timestamp: string;
@@ -214,7 +215,8 @@ export function TransformDemo() {
 
   return (
     <GenUIProvider 
-      apiKey="fog_live_fd99e52897802439471d967d0c276444"
+      apiKey="fog_live_ba4359c228000683e279724b78e1f768"
+      // apiKey="fog_live_fd99e52897802439471d967d0c276444"
       onAction={(action, data) => handleMessage(`${action}: ${data ? JSON.stringify(data) : 'void'}`)}
     >
       <TransformDemoContent 

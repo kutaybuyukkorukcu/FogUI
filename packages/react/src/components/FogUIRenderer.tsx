@@ -1,72 +1,17 @@
-import type { ContentBlock, FogUIResponse } from '../types';
-import { DynamicComponent, defaultComponentRegistry, mergeRegistries } from './ComponentRegistry';
-
 import React from 'react';
-import { useFogUIContext } from '../FogUIProvider';
+import type { ContentBlock, FogUIResponse } from '../types';
+import { useFogUIContext } from '../providers/FogUIProvider';
 
 export interface FogUIRendererProps {
-  /**
-   * The FogUIResponse to render
-   */
   response: FogUIResponse;
-  /**
-   * Custom component registry to override context/default components.
-   * If not provided, uses the registry from FogUIProvider (if any),
-   * falling back to defaultComponentRegistry.
-   */
-  componentRegistry?: Record<string, React.ComponentType<any>>;
-  /**
-   * Custom className for the container
-   */
   className?: string;
-  /**
-   * Custom styles for the container
-   */
   style?: React.CSSProperties;
-  /**
-   * Optional callback for component actions.
-   * If provided, overrides the context's onAction handler.
-   */
   onAction?: (action: any) => void;
 }
 
-/**
- * FogUIRenderer - Renders a FogUIResponse as React components.
- * 
- * Uses the component registry from FogUIProvider if configured,
- * otherwise falls back to default components.
- * 
- * @example Basic usage
- * ```tsx
- * import { FogUIRenderer } from '@fogui/react';
- * 
- * function Chat({ response }) {
- *   return <FogUIRenderer response={response} />;
- * }
- * ```
- * 
- * @example With inline component override
- * ```tsx
- * <FogUIRenderer 
- *   response={response} 
- *   componentRegistry={{ card: MySpecialCard }}
- * />
- * ```
- */
-export function FogUIRenderer({ response, componentRegistry, className, style, onAction }: FogUIRendererProps) {
-  // Try to get registry from context (set in FogUIProvider)
-  let contextRegistry: Record<string, React.ComponentType<any>> | undefined;
-  let contextOnAction: ((action: string, data?: unknown) => void) | undefined;
-  
-  try {
-    const context = useFogUIContext();
-    contextRegistry = context.componentRegistry;
-    contextOnAction = context.onAction;
-  } catch {
-    // Not inside FogUIProvider, use defaults
-  }
+export function FogUIRenderer({ response, className, style, onAction }: FogUIRendererProps) {
+  const { adapter, onAction: contextOnAction } = useFogUIContext();
 
-  // Handle actions: prefer prop > context > no-op
   const handleAction = onAction || ((action: any) => {
     if (typeof action === 'string') {
       contextOnAction?.('message', action);
@@ -77,9 +22,6 @@ export function FogUIRenderer({ response, componentRegistry, className, style, o
     }
   });
 
-  // Merge: prop registry > context registry > default registry
-  const registry = mergeRegistries(defaultComponentRegistry, contextRegistry, componentRegistry);
-
   if (!response || !response.content) {
     return null;
   }
@@ -87,10 +29,10 @@ export function FogUIRenderer({ response, componentRegistry, className, style, o
   return (
     <div className={className} style={style}>
       {response.content.map((block, index) => (
-        <ContentBlockRenderer 
-          key={index} 
-          block={block} 
-          registry={registry}
+        <ContentBlockRenderer
+          key={index}
+          block={block}
+          registry={adapter.components}
           onAction={handleAction}
         />
       ))}
@@ -119,7 +61,18 @@ function ContentBlockRenderer({ block, registry, onAction }: ContentBlockRendere
   }
 
   if (block.type === 'component') {
-    return <DynamicComponent block={block} registry={registry} onAction={onAction} />;
+    const Component = registry[block.component];
+    if (Component) {
+      return <Component {...block.props} onAction={onAction} />;
+    }
+    // Fallback for unmapped component
+    const UnmappedComponent = () => (
+      <div data-fogui-unmapped="true" style={{ padding: '10px', border: '1px solid red', color: 'red' }}>
+        Unmapped component: "{block.component}". Please add it to your adapter.
+      </div>
+    );
+    console.warn(`[FogUI] Unmapped component: "${block.component}". Please add it to your adapter.`);
+    return <UnmappedComponent />;
   }
 
   return null;

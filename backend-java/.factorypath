@@ -171,4 +171,9 @@
     <factorypathentry kind="VARJAR" id="M2_REPO/com/auth0/java-jwt/4.4.0/java-jwt-4.4.0.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/org/springframework/security/spring-security-core/6.4.2/spring-security-core-6.4.2.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/org/springframework/security/spring-security-crypto/6.4.2/spring-security-crypto-6.4.2.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/io/sentry/sentry-spring-boot-starter-jakarta/7.22.0/sentry-spring-boot-starter-jakarta-7.22.0.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/io/sentry/sentry-spring-boot-jakarta/7.22.0/sentry-spring-boot-jakarta-7.22.0.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/io/sentry/sentry-spring-jakarta/7.22.0/sentry-spring-jakarta-7.22.0.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/io/sentry/sentry-logback/7.22.0/sentry-logback-7.22.0.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/io/sentry/sentry/7.22.0/sentry-7.22.0.jar" enabled="true" runInBatchMode="false"/>
 </factorypath>
