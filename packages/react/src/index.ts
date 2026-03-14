@@ -1,13 +1,15 @@
 // Provider & Context
 export { FogUIProvider, useFogUIContext, createAdapter } from './providers/FogUIProvider';
-export type { FogUIProviderProps, Adapter } from './providers/FogUIProvider';
+export type { FogUIProviderProps } from './providers/FogUIProvider';
 
 // Main Hook
 export { useFogUI } from './useFogUI';
 
 // Types
 export * from './types';
-export * from './types/canonical';
+export * from './types/schema';
+export * from './types/adapter';
+export * from './types/schema.zod';
 
 // Components
 export { FogUIRenderer } from './components/FogUIRenderer';

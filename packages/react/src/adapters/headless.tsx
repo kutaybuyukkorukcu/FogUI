@@ -4,7 +4,6 @@ import { createAdapter } from '../providers/FogUIProvider';
 const Button: React.FC<any> = ({ children, ...props }) => <button {...props}>{children}</button>;
 const Card: React.FC<any> = ({ children, ...props }) => <div {...props}>{children}</div>;
 const Input: React.FC<any> = (props) => <input {...props} />;
-const Label: React.FC<any> = ({ children, ...props }) => <label {...props}>{children}</label>;
 const Badge: React.FC<any> = ({ children, ...props }) => <div {...props}>{children}</div>;
 const Stack: React.FC<any> = ({ children, ...props }) => <div {...props}>{children}</div>;
 const Grid: React.FC<any> = ({ children, ...props }) => <div {...props}>{children}</div>;
@@ -28,7 +27,6 @@ export const headlessAdapter = createAdapter({
         Button,
         Card,
         Input,
-        Label,
         Badge,
         Stack,
         Grid,

@@ -73,6 +73,8 @@ export interface StreamEvent {
   data: unknown;
 }
 
+export * from './types/schema';
+
 // ============================================
 // FogUI Response Types
 // ============================================

@@ -2,6 +2,8 @@ import React from 'react';
 import type { ContentBlock, FogUIResponse } from '../types';
 import { useFogUIContext } from '../providers/FogUIProvider';
 
+import { Adapter } from '../types/adapter';
+
 export interface FogUIRendererProps {
   response: FogUIResponse;
   className?: string;
@@ -40,11 +42,15 @@ export function FogUIRenderer({ response, className, style, onAction }: FogUIRen
   );
 }
 
+type ComponentRegistry = Adapter['components'];
+
 interface ContentBlockRendererProps {
   block: ContentBlock;
-  registry: Record<string, React.ComponentType<any>>;
+  registry: ComponentRegistry;
   onAction?: (action: any) => void;
 }
+
+import { FogUIComponent } from '../types';
 
 function ContentBlockRenderer({ block, registry, onAction }: ContentBlockRendererProps) {
   if (block.type === 'text') {
@@ -61,17 +67,18 @@ function ContentBlockRenderer({ block, registry, onAction }: ContentBlockRendere
   }
 
   if (block.type === 'component') {
-    const Component = registry[block.component];
+    const componentType = block.componentType as FogUIComponent['componentType'];
+    const Component = registry[componentType];
     if (Component) {
       return <Component {...block.props} onAction={onAction} />;
     }
     // Fallback for unmapped component
     const UnmappedComponent = () => (
       <div data-fogui-unmapped="true" style={{ padding: '10px', border: '1px solid red', color: 'red' }}>
-        Unmapped component: "{block.component}". Please add it to your adapter.
+        Unmapped component: &quot;{block.componentType}&quot;. Please add it to your adapter.
       </div>
     );
-    console.warn(`[FogUI] Unmapped component: "${block.component}". Please add it to your adapter.`);
+    console.warn(`[FogUI] Unmapped component: "${block.componentType}". Please add it to your adapter.`);
     return <UnmappedComponent />;
   }
 

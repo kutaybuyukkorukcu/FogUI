@@ -28,5 +28,5 @@
  * @packageDocumentation
  */
 
-export { createShadcnAdapter, type ShadcnComponents } from './shadcn';
-export { createHeadlessAdapter, type HeadlessConfig } from './headless';
+export { shadcnAdapter } from './shadcn';
+export { headlessAdapter } from './headless';

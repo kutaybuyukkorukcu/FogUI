@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
+import { Adapter } from '../types/adapter';
 import { headlessAdapter } from '../adapters/headless';
 
 /**
@@ -6,10 +7,7 @@ import { headlessAdapter } from '../adapters/headless';
  */
 const FOGUI_API_ENDPOINT = 'https://api.virtuoapps.com';
 
-export interface Adapter {
-  components: Record<string, React.ComponentType<any>>;
-  // mapProps function can be added in Phase 2
-}
+
 
 export const createAdapter = (adapter: Adapter): Adapter => adapter;
 

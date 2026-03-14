@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { FogUIProvider, useFogUIContext } from '../FogUIProvider';
+import { FogUIProvider, useFogUIContext } from '../providers/FogUIProvider';
 
 /**
  * Foundational tests for FogUIProvider.
@@ -45,7 +45,7 @@ describe('FogUIProvider', () => {
         <div>
           <span data-testid="apiKey">{context.apiKey}</span>
           <span data-testid="endpoint">{context.endpoint}</span>
-          <span data-testid="hasRegistry">{context.componentRegistry ? 'yes' : 'no'}</span>
+          <span data-testid="hasRegistry">{context.adapter ? 'yes' : 'no'}</span>
         </div>
       );
     };
@@ -81,12 +81,10 @@ describe('FogUIProvider', () => {
     });
 
     it('should provide component registry when specified', () => {
-      const customComponents = {
-        card: () => <div>Custom Card</div>,
-      };
+      
 
       render(
-        <FogUIProvider apiKey="test" components={customComponents}>
+        <FogUIProvider apiKey="test" adapter={{ components: { Card: () => <div>Custom Card</div> } }}>
           <ContextConsumer />
         </FogUIProvider>
       );
@@ -97,10 +95,10 @@ describe('FogUIProvider', () => {
 
   describe('Component Registry (Design System Compatibility)', () => {
     const RegistryConsumer = () => {
-      const { componentRegistry } = useFogUIContext();
-      if (!componentRegistry) return <div>No registry</div>;
+      const { adapter } = useFogUIContext();
+      if (!adapter) return <div>No registry</div>;
       
-      const CardComponent = componentRegistry['card'];
+      const CardComponent = adapter.components['Card'];
       return CardComponent ? <CardComponent title="Test" /> : <div>No card</div>;
     };
 
@@ -110,7 +108,7 @@ describe('FogUIProvider', () => {
       );
 
       render(
-        <FogUIProvider apiKey="test" components={{ card: CustomCard }}>
+        <FogUIProvider apiKey="test" adapter={{ components: { Card: CustomCard } }}>
           <RegistryConsumer />
         </FogUIProvider>
       );
@@ -124,12 +122,12 @@ describe('FogUIProvider', () => {
       const CustomTable = () => <div data-testid="table">Table</div>;
 
       const MultiConsumer = () => {
-        const { componentRegistry } = useFogUIContext();
-        if (!componentRegistry) return null;
+        const { adapter } = useFogUIContext();
+        if (!adapter) return null;
         
-        const Card = componentRegistry['card'];
-        const List = componentRegistry['list'];
-        const Table = componentRegistry['table'];
+        const Card = adapter.components['Card'];
+        const List = adapter.components['List'];
+        const Table = adapter.components['Table'];
         
         return (
           <>
@@ -143,10 +141,12 @@ describe('FogUIProvider', () => {
       render(
         <FogUIProvider 
           apiKey="test" 
-          components={{ 
-            card: CustomCard, 
-            list: CustomList, 
-            table: CustomTable 
+          adapter={{ 
+            components: { 
+              Card: CustomCard, 
+              List: CustomList, 
+              Table: CustomTable 
+            } 
           }}
         >
           <MultiConsumer />
@@ -166,15 +166,15 @@ describe('FogUIProvider', () => {
       );
 
       const ContainerConsumer = () => {
-        const { componentRegistry } = useFogUIContext();
-        if (!componentRegistry) return null;
+        const { adapter } = useFogUIContext();
+        if (!adapter) return null;
         
-        const Container = componentRegistry['container'];
+        const Container = adapter.components['Stack'];
         return Container ? <Container layout="grid">Content</Container> : null;
       };
 
       render(
-        <FogUIProvider apiKey="test" components={{ container: CustomContainer }}>
+        <FogUIProvider apiKey="test" adapter={{ components: { Stack: CustomContainer } }}>
           <ContainerConsumer />
         </FogUIProvider>
       );
@@ -195,11 +195,11 @@ describe('FogUIProvider', () => {
       );
 
       const NestedConsumer = () => {
-        const { componentRegistry } = useFogUIContext();
-        if (!componentRegistry) return null;
+        const { adapter } = useFogUIContext();
+        if (!adapter) return null;
         
-        const Container = componentRegistry['container'];
-        const Card = componentRegistry['card'];
+        const Container = adapter.components['Stack'];
+        const Card = adapter.components['Card'];
         
         return Container ? (
           <Container>
@@ -212,9 +212,11 @@ describe('FogUIProvider', () => {
       render(
         <FogUIProvider 
           apiKey="test" 
-          components={{ 
-            container: CustomContainer, 
-            card: CustomCard 
+          adapter={{ 
+            components: { 
+              Stack: CustomContainer, 
+              Card: CustomCard 
+            } 
           }}
         >
           <NestedConsumer />

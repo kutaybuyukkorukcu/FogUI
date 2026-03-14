@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { useFogUIContext } from './FogUIProvider';
+import { useFogUIContext } from './providers/FogUIProvider';
+import { fogUIResponseSchema } from './types/schema.zod';
 import type { TransformOptions, TransformResult, UseFogUIReturn, StreamEvent } from './types';
 
 /**
@@ -66,7 +67,20 @@ export function useFogUI(): UseFogUIReturn {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      const result: TransformResult = await response.json();
+      const json = await response.json();
+      const validation = fogUIResponseSchema.safeParse(json.result);
+
+      if (!validation.success) {
+        const validationError = 'API response validation failed';
+        setError(validationError);
+        console.error(validation.error.issues);
+        return { success: false, error: validationError };
+      }
+
+      const result: TransformResult = {
+        ...json,
+        result: validation.data,
+      };
       
       if (!result.success) {
         setError(result.error || 'Transformation failed');
@@ -142,16 +156,26 @@ export function useFogUI(): UseFogUIReturn {
               continue;
             }
 
-            if (data) {
-              try {
-                const parsed = JSON.parse(data);
-                yield { type: currentEvent as StreamEvent['type'], data: parsed };
-              } catch {
-                if (currentEvent === 'chunk') {
-                  yield { type: 'chunk', data };
+              if (data) {
+                try {
+                  const parsed = JSON.parse(data);
+                  if (currentEvent === 'result') {
+                    const validation = fogUIResponseSchema.safeParse(parsed);
+                    if (validation.success) {
+                      yield { type: 'result', data: validation.data };
+                    } else {
+                      console.error(validation.error.issues);
+                      yield { type: 'error', data: { error: 'Stream validation failed' } };
+                    }
+                  } else {
+                    yield { type: currentEvent as StreamEvent['type'], data: parsed };
+                  }
+                } catch {
+                  if (currentEvent === 'chunk') {
+                    yield { type: 'chunk', data };
+                  }
                 }
               }
-            }
           }
         }
       }
