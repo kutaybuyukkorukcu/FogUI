@@ -6,7 +6,8 @@ import React from 'react';
 import { fogUIResponseSchema } from '../types/schema.zod';
 
 // Mock fetch
-global.fetch = vi.fn();
+const fetchMock = vi.fn();
+globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 const createFetchResponse = (data: any, ok = true) => {
   return Promise.resolve({
@@ -44,7 +45,7 @@ describe('useFogUI', () => {
       }
     };
     const validatedResponse = fogUIResponseSchema.parse(mockResponse.result);
-    (fetch as vi.Mock).mockReturnValue(createFetchResponse({ ...mockResponse, result: validatedResponse }));
+    fetchMock.mockReturnValue(createFetchResponse({ ...mockResponse, result: validatedResponse }));
     
     const { result } = renderHook(() => useFogUI(), { wrapper });
     
@@ -59,7 +60,7 @@ describe('useFogUI', () => {
   });
 
   it('should handle API errors during transformation', async () => {
-    (fetch as vi.Mock).mockReturnValue(createFetchResponse({ error: 'API Error' }, false));
+    fetchMock.mockReturnValue(createFetchResponse({ error: 'API Error' }, false));
 
     const { result } = renderHook(() => useFogUI(), { wrapper });
 
@@ -74,7 +75,7 @@ describe('useFogUI', () => {
 
   it('should handle validation errors in the response', async () => {
     const invalidResponse = { success: true, result: { content: [{ type: 'invalid' }] } };
-    (fetch as vi.Mock).mockReturnValue(createFetchResponse(invalidResponse));
+    fetchMock.mockReturnValue(createFetchResponse(invalidResponse));
     
     const { result } = renderHook(() => useFogUI(), { wrapper });
     
@@ -94,7 +95,7 @@ describe('useFogUI', () => {
       }
     };
     const validatedResponse = fogUIResponseSchema.parse(mockResponse.result);
-    (fetch as vi.Mock).mockReturnValue(createFetchResponse({ ...mockResponse, result: validatedResponse }));
+    fetchMock.mockReturnValue(createFetchResponse({ ...mockResponse, result: validatedResponse }));
 
     const { result } = renderHook(() => useFogUI(), { wrapper });
 

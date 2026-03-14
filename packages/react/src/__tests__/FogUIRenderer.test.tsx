@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import React from 'react';
+
 import { FogUIProvider } from '../providers/FogUIProvider';
 import { FogUIRenderer } from '../components/FogUIRenderer';
 import type { FogUIResponse } from '../types';
@@ -93,7 +93,7 @@ describe('FogUIRenderer', () => {
   it('should fire the onAction callback when a component triggers it', () => {
     const onActionMock = vi.fn();
 
-    const ActionButton = ({ onAction, label }: { onAction: (action: string) => void; label: string }) => (
+    const ActionButton = ({ onAction, label }: { onAction: (action: string, data?: any) => void; label: string }) => (
       <button onClick={() => onAction('button-clicked', { from: 'test' })}>{label}</button>
     );
 
