@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class UsageStatsTest {
     @Nested
     @DisplayName("CurrentPeriod")
-    public class CurrentPeriodTests {
+    class CurrentPeriodTests {
         @Test
         @DisplayName("should build CurrentPeriod correctly")
         void shouldBuildCurrentPeriodCorrectly() {
@@ -67,7 +67,7 @@ public class UsageStatsTest {
     }
     @Nested
     @DisplayName("DailyUsage")
-    public class DailyUsageTests {
+    class DailyUsageTests {
 
         @Test
         @DisplayName("should build DailyUsage correctly")
@@ -95,7 +95,7 @@ public class UsageStatsTest {
 
     @Nested
     @DisplayName("UsageStats")
-    public class UsageStatsMainTests {
+    class UsageStatsMainTests {
 
         @Test
         @DisplayName("should build complete UsageStats")

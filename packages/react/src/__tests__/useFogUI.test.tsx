@@ -255,8 +255,9 @@ describe('useFogUI', () => {
         intent: 'assistant',
         instructions: 'Return concise UI',
       });
-      for await (const _event of stream) {
-        // Exhaust stream
+      for await (const event of stream) {
+        console.log(event);
+        // exhaust stream without processing events
       }
     });
 

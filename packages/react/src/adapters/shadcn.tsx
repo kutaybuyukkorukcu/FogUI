@@ -1,7 +1,5 @@
+import React from 'react';
 import { createAdapter } from '../utils';
-
-// @ts-nocheck
-// This file must be .tsx for JSX parsing
 
 // MVP: Only support shadcn/tailwind primitives, no dynamic className interpolation
 
@@ -89,20 +87,43 @@ const Form: React.FC<any> = ({ children, ...props }) => {
     );
 };
 
+// Tailwind JIT-safe class mappings
+const gapClasses: Record<number, string> = {
+  2: 'gap-2',
+  4: 'gap-4',
+  6: 'gap-6',
+  8: 'gap-8',
+  10: 'gap-10',
+};
+
+const gridColClasses: Record<number, string> = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
+};
+
 const Stack: React.FC<any> = ({ children, direction = 'vertical', gap = 4, ...props }) => {
-    return (
-        <div className={`flex ${direction === 'horizontal' ? 'flex-row' : 'flex-col'} gap-${gap}`} {...props}>
-            {children}
-        </div>
-    );
+  return (
+    <div
+      className={`flex ${direction === 'horizontal' ? 'flex-row' : 'flex-col'} ${gapClasses[gap] || 'gap-4'}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
 };
 
 const Grid: React.FC<any> = ({ children, columns = 2, gap = 4, ...props }) => {
-    return (
-        <div className={`grid grid-cols-${columns} gap-${gap}`} {...props}>
-            {children}
-        </div>
-    );
+  return (
+    <div
+      className={`grid ${(gridColClasses[columns] || 'grid-cols-2')} ${(gapClasses[gap] || 'gap-4')}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
 };
 
 const Tabs: React.FC<any> = ({ children, ...props }) => {
