@@ -16,80 +16,55 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @DisplayName("UsageStats")
 class UsageStatsTest {
-        @Nested
-        @DisplayName("CurrentPeriod")
-        class CurrentPeriodTests {
+    @Nested
+    @DisplayName("CurrentPeriod")
+    class CurrentPeriodTests {
+        @Test
+        @DisplayName("should build CurrentPeriod correctly")
+        void shouldBuildCurrentPeriodCorrectly() {
+            UsageStats.CurrentPeriod period = UsageStats.CurrentPeriod.builder()
+                    .transforms(50)
+                    .quota(100)
+                    .remaining(50)
+                    .build();
 
-                @Test
-                @DisplayName("should build CurrentPeriod correctly")
-                void shouldBuildCurrentPeriodCorrectly() {
-                        UsageStats.CurrentPeriod period = UsageStats.CurrentPeriod.builder()
-                                        .transforms(50)
-                                        .quota(100)
-                                        .remaining(50)
-                                        .build();
+            assertEquals(50, period.getTransforms());
+            assertEquals(100, period.getQuota());
+            assertEquals(50, period.getRemaining());
+        }
 
-                        assertEquals(50, period.getTransforms());
-                        assertEquals(100, period.getQuota());
-                        assertEquals(50, period.getRemaining());
-                }
+        @Test
+        @DisplayName("should build CurrentPeriod with zero values")
+        void shouldBuildCurrentPeriodWithZeroValues() {
+            UsageStats.CurrentPeriod period = UsageStats.CurrentPeriod.builder()
+                    .transforms(0)
+                    .quota(0)
+                    .remaining(0)
+                    .build();
+            assertEquals(0, period.getTransforms());
+            assertEquals(0, period.getQuota());
+            assertEquals(0, period.getRemaining());
+        }
 
-                @Test
-                @DisplayName("should handle zero values")
-                void shouldHandleZeroValues() {
-                        UsageStats.CurrentPeriod period = UsageStats.CurrentPeriod.builder()
-                                        .transforms(0)
-                                        .quota(0)
-                                        @Nested
-                                        @DisplayName("CurrentPeriod")
-                                        class CurrentPeriodTests {
+        @Test
+        @DisplayName("should handle unlimited quota (-1)")
+        void shouldHandleUnlimitedQuota() {
+            UsageStats.CurrentPeriod period = UsageStats.CurrentPeriod.builder()
+                    .transforms(999)
+                    .quota(-1)
+                    .remaining(-1)
+                    .build();
 
-                                                @Test
-                                                @DisplayName("should build CurrentPeriod correctly")
-                                                void shouldBuildCurrentPeriodCorrectly() {
-                                                        UsageStats.CurrentPeriod period = UsageStats.CurrentPeriod.builder()
-                                                                        .transforms(50)
-                                                                        .quota(100)
-                                                                        .remaining(50)
-                                                                        .build();
+            assertEquals(-1, period.getQuota());
+            assertEquals(-1, period.getRemaining());
+        }
 
-                                                        assertEquals(50, period.getTransforms());
-                                                        assertEquals(100, period.getQuota());
-                                                        assertEquals(50, period.getRemaining());
-                                                }
-
-                                                @Test
-                                                @DisplayName("should handle zero values")
-                                                void shouldHandleZeroValues() {
-                                                        UsageStats.CurrentPeriod period = UsageStats.CurrentPeriod.builder()
-                                                                        .transforms(0)
-                                                                        .quota(0)
-                                                                        .remaining(0)
-                                                                        .build();
-                                                        assertEquals(0, period.getTransforms());
-                                                        assertEquals(0, period.getQuota());
-                                                        assertEquals(0, period.getRemaining());
-                                                }
-
-                                                @Test
-                                                @DisplayName("should handle unlimited quota (-1)")
-                                                void shouldHandleUnlimitedQuota() {
-                                                        UsageStats.CurrentPeriod period = UsageStats.CurrentPeriod.builder()
-                                                                        .transforms(999)
-                                                                        .quota(-1)
-                                                                        .remaining(-1)
-                                                                        .build();
-
-                                                        assertEquals(-1, period.getQuota());
-                                                        assertEquals(-1, period.getRemaining());
-                                                }
-                                        }
-
-                                        @Test
-                                        @DisplayName("dummy test to satisfy SonarQube S2187")
-                                        void dummyTest() {
-                                                assertTrue(true);
-                                        }
+        @Test
+        @DisplayName("dummy test to satisfy SonarQube S2187")
+        void dummyTest() {
+            assertTrue(true);
+        }
+    }
     @Nested
     @DisplayName("DailyUsage")
     class DailyUsageTests {
