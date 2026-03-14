@@ -1,7 +1,5 @@
+import React from 'react';
 import { createAdapter } from '../utils';
-
-// @ts-nocheck
-// This file must be .tsx for JSX parsing
 
 // MVP: Only support shadcn/tailwind primitives, no dynamic className interpolation
 

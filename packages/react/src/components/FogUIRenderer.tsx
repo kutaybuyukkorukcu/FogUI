@@ -9,7 +9,7 @@ export interface FogUIRendererProps {
   readonly response: FogUIResponse;
   readonly className?: string;
   readonly style?: React.CSSProperties;
-  readonly onAction?: (action: any) => void;
+  readonly onAction?: (action: string, data?: unknown) => void;
 }
 
 export function FogUIRenderer({ response, className, style, onAction }: FogUIRendererProps) {
@@ -41,7 +41,7 @@ type ComponentRegistry = Adapter['components'];
 interface ContentBlockRendererProps {
   readonly block: Readonly<ContentBlock>;
   readonly registry: Readonly<ComponentRegistry>;
-  readonly onAction?: (action: any) => void;
+  readonly onAction?: (action: string, data?: unknown) => void;
   readonly adapter: Readonly<Adapter>;
 }
 
