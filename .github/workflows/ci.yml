@@ -91,7 +91,6 @@ jobs:
 
       - name: Run tests with coverage
         run: npm run test -- --coverage
-        continue-on-error: true  # Don't fail if tests don't exist yet
 
       - name: Build package
         run: npm run build
@@ -173,7 +172,12 @@ jobs:
         with:
           name: frontend-coverage
           path: packages/react/coverage
-        continue-on-error: true
+
+      - name: Verify frontend LCOV exists
+        run: |
+          ls -la packages/react/coverage
+          test -f packages/react/coverage/lcov.info
+          head -n 20 packages/react/coverage/lcov.info
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
