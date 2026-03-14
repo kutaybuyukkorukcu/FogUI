@@ -24,6 +24,7 @@ Thumbs.db
 # Build outputs
 dist/
 build/
+packages/react/coverage/
 *.jar
 
 # Logs

@@ -1,187 +1,153 @@
-/**
- * Shadcn/Radix UI Adapter for FogUI
- * 
- * This adapter creates a component registry that maps FogUI component types
- * to Shadcn UI components. Since Shadcn components are copied into your project
- * (not installed from npm), you pass your components to createShadcnAdapter().
- * 
- * @example
- * ```tsx
- * import { FogUIProvider } from '@fogui/react';
- * import { createShadcnAdapter } from '@fogui/react/adapters';
- * 
- * // Import YOUR Shadcn components
- * import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
- * import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
- * import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
- * 
- * const components = createShadcnAdapter({
- *   Card, CardHeader, CardContent, CardTitle, CardDescription,
- *   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
- *   Alert, AlertTitle, AlertDescription,
- * });
- * 
- * function App() {
- *   return (
- *     <FogUIProvider apiKey="fog_xxx" components={components}>
- *       <Chat />
- *     </FogUIProvider>
- *   );
- * }
- * ```
- */
-
 import React from 'react';
-import type { ComponentRegistry, CardProps, ListProps, TableProps, CalloutProps } from '../components/ComponentRegistry';
+import { createAdapter } from '../utils';
 
-/**
- * The Shadcn components you need to provide.
- * All are optional - only provide what you have installed.
- */
-export interface ShadcnComponents {
-  // Card components
-  Card?: React.ComponentType<any>;
-  CardHeader?: React.ComponentType<any>;
-  CardContent?: React.ComponentType<any>;
-  CardTitle?: React.ComponentType<any>;
-  CardDescription?: React.ComponentType<any>;
-  CardFooter?: React.ComponentType<any>;
-  
-  // Table components
-  Table?: React.ComponentType<any>;
-  TableHeader?: React.ComponentType<any>;
-  TableBody?: React.ComponentType<any>;
-  TableRow?: React.ComponentType<any>;
-  TableHead?: React.ComponentType<any>;
-  TableCell?: React.ComponentType<any>;
-  
-  // Alert components (for callouts)
-  Alert?: React.ComponentType<any>;
-  AlertTitle?: React.ComponentType<any>;
-  AlertDescription?: React.ComponentType<any>;
-  
-  // Badge (for tags/labels)
-  Badge?: React.ComponentType<any>;
-  
-  // Scroll area (for lists)
-  ScrollArea?: React.ComponentType<any>;
-}
+// MVP: Only support shadcn/tailwind primitives, no dynamic className interpolation
 
-/**
- * Creates a FogUI component registry from Shadcn components.
- * 
- * @param components - Your Shadcn UI components
- * @returns A ComponentRegistry for use with FogUIProvider
- */
-export function createShadcnAdapter(components: ShadcnComponents): ComponentRegistry {
-  const {
-    Card,
-    CardHeader,
-    CardContent,
-    CardTitle,
-    CardDescription,
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell,
-    Alert,
-    AlertTitle,
-    AlertDescription,
-    ScrollArea,
-  } = components;
+const Button: React.FC<any> = ({ children, ...props }) => {
+  return (
+    <button
+      className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
 
-  const registry: ComponentRegistry = {};
+const Card: React.FC<any> = ({ children, title, description }) => {
+  return (
+    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+      <div className="flex flex-col space-y-1.5 p-6">
+        {title && (
+          <h3 className="text-2xl font-semibold leading-none tracking-tight">{title}</h3>
+        )}
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      </div>
+      <div className="p-6 pt-0">{children}</div>
+    </div>
+  );
+};
 
-  // Card component
-  if (Card) {
-    registry.card = ({ title, description, data }: CardProps) => {
-      return React.createElement(Card, { className: 'mb-4' },
-        (title || description) && React.createElement(CardHeader || 'div', null,
-          title && React.createElement(CardTitle || 'h3', null, title),
-          description && React.createElement(CardDescription || 'p', null, description)
-        ),
-        data && React.createElement(CardContent || 'div', null,
-          React.createElement('dl', { className: 'grid gap-2' },
-            Object.entries(data).map(([key, value]) =>
-              React.createElement('div', { key, className: 'flex justify-between' },
-                React.createElement('dt', { className: 'text-muted-foreground' }, key),
-                React.createElement('dd', { className: 'font-medium' }, String(value))
-              )
-            )
-          )
-        )
-      );
-    };
-  }
+const Input: React.FC<any> = (props) => {
+  return (
+    <input
+      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      {...props}
+    />
+  );
+};
 
-  // Table component
-  if (Table && TableHeader && TableBody && TableRow && TableHead && TableCell) {
-    registry.table = ({ columns, rows, title }: TableProps) => {
-      const tableContent = React.createElement(Table, null,
-        React.createElement(TableHeader, null,
-          React.createElement(TableRow, null,
-            columns.map((col) => React.createElement(TableHead, { key: col }, col))
-          )
-        ),
-        React.createElement(TableBody, null,
-          rows.map((row, i) =>
-            React.createElement(TableRow, { key: i },
-              columns.map((col) =>
-                React.createElement(TableCell, { key: col }, String(row[col] ?? ''))
-              )
-            )
-          )
-        )
-      );
+const Badge: React.FC<any> = ({ children, ...props }) => {
+  return (
+    <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" {...props}>
+      {children}
+    </div>
+  );
+};
 
-      if (title) {
-        return React.createElement('div', { className: 'mb-4' },
-          React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, title),
-          tableContent
-        );
-      }
-
-      return tableContent;
-    };
-  }
-
-  // List component
-  registry.list = ({ title, items, ordered }: ListProps) => {
-    const ListTag = ordered ? 'ol' : 'ul';
-    const listContent = React.createElement(ListTag, { className: ordered ? 'list-decimal pl-5' : 'list-disc pl-5' },
-      items.map((item, i) =>
-        React.createElement('li', { key: i, className: 'mb-1' },
-          typeof item === 'object' ? JSON.stringify(item) : String(item)
-        )
-      )
+const Table: React.FC<any> = ({ headers, rows }) => {
+    return (
+      <div className="relative w-full overflow-auto">
+        <table className="w-full caption-bottom text-sm">
+          <thead className="[&_tr]:border-b">
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+              {headers.map((header: string) => (
+                <th key={header} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">{header}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="[&_tr:last-child]:border-0">
+            {rows.map((row: any[]) => (
+              <tr key={JSON.stringify(row)} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                {row.map((cell: any) => (
+                  <td key={typeof cell === 'string' ? cell : JSON.stringify(cell)} className="p-4 align-middle [&:has([role=checkbox])]:pr-0">{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     );
+};
 
-    const content = title
-      ? React.createElement('div', { className: 'mb-4' },
-          React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, title),
-          listContent
-        )
-      : listContent;
+const List: React.FC<any> = ({ items, ordered }) => {
+    const ListEl = ordered ? 'ol' : 'ul';
+    return (
+      <ListEl className={`my-6 ml-6 ${ordered ? 'list-decimal' : 'list-disc'} [&>li]:mt-2`}>
+        {items.map((item: string) => (
+          <li key={typeof item === 'string' ? item : JSON.stringify(item)}>{item}</li>
+        ))}
+      </ListEl>
+    );
+};
 
-    return ScrollArea
-      ? React.createElement(ScrollArea, { className: 'max-h-64' }, content)
-      : content;
-  };
+const Form: React.FC<any> = ({ children, ...props }) => {
+    return (
+        <form {...props}>{children}</form>
+    );
+};
 
-  // Callout/Alert component
-  if (Alert) {
-    registry.callout = ({ title, message, variant = 'info' }: CalloutProps) => {
-      // Map FogUI variants to Shadcn Alert variants
-      const alertVariant = variant === 'error' || variant === 'warning' ? 'destructive' : 'default';
-      
-      return React.createElement(Alert, { variant: alertVariant, className: 'mb-4' },
-        title && React.createElement(AlertTitle || 'h4', null, title),
-        React.createElement(AlertDescription || 'p', null, message)
-      );
-    };
-  }
+// Tailwind JIT-safe class mappings
+const gapClasses: Record<number, string> = {
+  2: 'gap-2',
+  4: 'gap-4',
+  6: 'gap-6',
+  8: 'gap-8',
+  10: 'gap-10',
+};
 
-  return registry;
-}
+const gridColClasses: Record<number, string> = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
+};
+
+const Stack: React.FC<any> = ({ children, direction = 'vertical', gap = 4, ...props }) => {
+  return (
+    <div
+      className={`flex ${direction === 'horizontal' ? 'flex-row' : 'flex-col'} ${gapClasses[gap] || 'gap-4'}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
+
+const Grid: React.FC<any> = ({ children, columns = 2, gap = 4, ...props }) => {
+  return (
+    <div
+      className={`grid ${(gridColClasses[columns] || 'grid-cols-2')} ${(gapClasses[gap] || 'gap-4')}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
+
+const Tabs: React.FC<any> = ({ children, ...props }) => {
+    return (
+        <div {...props}>
+            {/* This is a simplified version. A real implementation would need a more complex state management for tabs. */}
+            {children}
+        </div>
+    );
+};
+
+
+
+export const shadcnAdapter = createAdapter({
+  components: {
+    Button,
+    Card,
+    Input,
+    Badge,
+    Table,
+    List,
+    Form,
+    Stack,
+    Grid,
+    Tabs,
+  },
+});

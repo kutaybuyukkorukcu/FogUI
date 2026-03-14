@@ -63,6 +63,11 @@ logging:
     com.genui: DEBUG
     org.springframework.ai: DEBUG
     org.springframework.security: DEBUG
+    org.springframework.web.client: DEBUG
+    org.springframework.http.client: DEBUG
+    org.springframework.http: DEBUG
+    org.apache.hc.client: DEBUG
+    org.apache.catalina: DEBUG
 
 # Sentry Error Monitoring
 sentry:

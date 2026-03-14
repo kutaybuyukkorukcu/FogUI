@@ -1,117 +1,66 @@
-import type { ContentBlock, FogUIResponse } from '../types';
-import { DynamicComponent, defaultComponentRegistry, mergeRegistries } from './ComponentRegistry';
-
 import React from 'react';
-import { useFogUIContext } from '../FogUIProvider';
+import type { ContentBlock, FogUIResponse } from '../types';
+import { FogUIComponent } from '../types';
+import { useFogUIContext } from '../providers/FogUIProvider';
+
+import { Adapter } from '../types/adapter';
 
 export interface FogUIRendererProps {
-  /**
-   * The FogUIResponse to render
-   */
-  response: FogUIResponse;
-  /**
-   * Custom component registry to override context/default components.
-   * If not provided, uses the registry from FogUIProvider (if any),
-   * falling back to defaultComponentRegistry.
-   */
-  componentRegistry?: Record<string, React.ComponentType<any>>;
-  /**
-   * Custom className for the container
-   */
-  className?: string;
-  /**
-   * Custom styles for the container
-   */
-  style?: React.CSSProperties;
-  /**
-   * Optional callback for component actions.
-   * If provided, overrides the context's onAction handler.
-   */
-  onAction?: (action: any) => void;
+  readonly response: FogUIResponse;
+  readonly className?: string;
+  readonly style?: React.CSSProperties;
+  readonly onAction?: (action: string, data?: unknown) => void;
 }
 
-/**
- * FogUIRenderer - Renders a FogUIResponse as React components.
- * 
- * Uses the component registry from FogUIProvider if configured,
- * otherwise falls back to default components.
- * 
- * @example Basic usage
- * ```tsx
- * import { FogUIRenderer } from '@fogui/react';
- * 
- * function Chat({ response }) {
- *   return <FogUIRenderer response={response} />;
- * }
- * ```
- * 
- * @example With inline component override
- * ```tsx
- * <FogUIRenderer 
- *   response={response} 
- *   componentRegistry={{ card: MySpecialCard }}
- * />
- * ```
- */
-export function FogUIRenderer({ response, componentRegistry, className, style, onAction }: FogUIRendererProps) {
-  // Try to get registry from context (set in FogUIProvider)
-  let contextRegistry: Record<string, React.ComponentType<any>> | undefined;
-  let contextOnAction: ((action: string, data?: unknown) => void) | undefined;
-  
-  try {
-    const context = useFogUIContext();
-    contextRegistry = context.componentRegistry;
-    contextOnAction = context.onAction;
-  } catch {
-    // Not inside FogUIProvider, use defaults
-  }
+export function FogUIRenderer({ response, className, style, onAction }: FogUIRendererProps) {
+  const { adapter, onAction: contextOnAction } = useFogUIContext();
 
-  // Handle actions: prefer prop > context > no-op
-  const handleAction = onAction || ((action: any) => {
-    if (typeof action === 'string') {
-      contextOnAction?.('message', action);
-    } else if (action && typeof action === 'object' && 'type' in action) {
-      contextOnAction?.(action.type, action);
-    } else {
-      contextOnAction?.('action', action);
-    }
-  });
+  const handleAction = onAction || contextOnAction;
 
-  // Merge: prop registry > context registry > default registry
-  const registry = mergeRegistries(defaultComponentRegistry, contextRegistry, componentRegistry);
-
-  if (!response || !response.content) {
+  if (!response?.content) {
     return null;
   }
 
   return (
     <div className={className} style={style}>
-      {response.content.map((block, index) => (
-        <ContentBlockRenderer 
-          key={index} 
-          block={block} 
-          registry={registry}
+      {response.content.map((block) => (
+        <ContentBlockRenderer
+          key={getBlockKey(block)}
+          block={block}
+          registry={adapter.components}
           onAction={handleAction}
+          adapter={adapter}
         />
       ))}
     </div>
   );
 }
 
+type ComponentRegistry = Adapter['components'];
+
 interface ContentBlockRendererProps {
-  block: ContentBlock;
-  registry: Record<string, React.ComponentType<any>>;
-  onAction?: (action: any) => void;
+  readonly block: Readonly<ContentBlock>;
+  readonly registry: Readonly<ComponentRegistry>;
+  readonly onAction?: (action: string, data?: unknown) => void;
+  readonly adapter: Readonly<Adapter>;
 }
 
-function ContentBlockRenderer({ block, registry, onAction }: ContentBlockRendererProps) {
+function getBlockKey(block: ContentBlock): string {
   if (block.type === 'text') {
+    return `text:${block.value}`;
+  }
+  return `component:${block.componentType}:${JSON.stringify(block.props)}:${JSON.stringify(block.children ?? [])}`;
+}
+
+function ContentBlockRenderer({ block, registry, onAction, adapter }: ContentBlockRendererProps) {
+  if (block.type === 'text') {
+    const lines = block.value.split('\n');
     return (
       <div style={{ marginBottom: '12px', lineHeight: 1.6 }}>
-        {block.value.split('\n').map((line, i) => (
-          <React.Fragment key={i}>
+        {lines.map((line, i) => (
+          <React.Fragment key={line + '-' + i}>
             {line}
-            {i < block.value.split('\n').length - 1 && <br />}
+            {i < lines.length - 1 && <br />}
           </React.Fragment>
         ))}
       </div>
@@ -119,8 +68,42 @@ function ContentBlockRenderer({ block, registry, onAction }: ContentBlockRendere
   }
 
   if (block.type === 'component') {
-    return <DynamicComponent block={block} registry={registry} onAction={onAction} />;
+    const componentType = block.componentType as FogUIComponent['componentType'];
+    const Component = registry[componentType];
+
+    if (Component) {
+      const restProps = Object.fromEntries(
+        Object.entries(block.props).filter(([key]) => key !== 'children')
+      );
+      const mappedProps = adapter.mapProps ? adapter.mapProps(componentType, restProps) : restProps;
+
+      return (
+        <Component {...mappedProps} onAction={onAction}>
+          {block.children?.map((childBlock) => (
+            <ContentBlockRenderer
+              key={getBlockKey(childBlock)}
+              block={childBlock}
+              registry={registry}
+              onAction={onAction}
+              adapter={adapter}
+            />
+          ))}
+        </Component>
+      );
+    }
+
+    console.warn(`[FogUI] Unmapped component: "${block.componentType}". Please add it to your adapter.`);
+    return <UnmappedComponent componentType={block.componentType} />;
   }
 
   return null;
+}
+
+// Move UnmappedComponent out of parent
+function UnmappedComponent({ componentType }: Readonly<{ componentType: string }>) {
+  return (
+    <div data-fogui-unmapped="true" style={{ padding: '10px', border: '1px solid red', color: 'red' }}>
+      Unmapped component: &quot;{componentType}&quot;. Please add it to your adapter.
+    </div>
+  );
 }
