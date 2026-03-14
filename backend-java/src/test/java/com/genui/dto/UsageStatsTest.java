@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests builder patterns and nested classes.
  */
 @DisplayName("UsageStats")
-class UsageStatsTest {
+public class UsageStatsTest {
     @Nested
     @DisplayName("CurrentPeriod")
-    class CurrentPeriodTests {
+    public class CurrentPeriodTests {
         @Test
         @DisplayName("should build CurrentPeriod correctly")
         void shouldBuildCurrentPeriodCorrectly() {
@@ -67,7 +67,7 @@ class UsageStatsTest {
     }
     @Nested
     @DisplayName("DailyUsage")
-    class DailyUsageTests {
+    public class DailyUsageTests {
 
         @Test
         @DisplayName("should build DailyUsage correctly")
@@ -95,7 +95,7 @@ class UsageStatsTest {
 
     @Nested
     @DisplayName("UsageStats")
-    class UsageStatsMainTests {
+    public class UsageStatsMainTests {
 
         @Test
         @DisplayName("should build complete UsageStats")

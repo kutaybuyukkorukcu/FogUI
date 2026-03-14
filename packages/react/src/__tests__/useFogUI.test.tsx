@@ -218,6 +218,58 @@ describe('useFogUI', () => {
     expect(events).toContainEqual({ type: 'done', data: null });
   });
 
+  it('should ignore invalid JSON for non-chunk stream events', async () => {
+    const lines = [
+      'event: usage\n',
+      'data: not-json\n\n',
+      'event: done\n',
+      'data: [DONE]\n\n',
+    ];
+
+    fetchMock.mockReturnValue(createStreamingResponse(lines));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    const events: Array<{ type: string; data: unknown }> = [];
+    await waitFor(async () => {
+      const stream = result.current.transformStream('stream content');
+      for await (const event of stream) {
+        events.push(event);
+      }
+    });
+
+    // Invalid JSON for non-chunk events is ignored; done must still arrive.
+    expect(events).toEqual([{ type: 'done', data: null }]);
+  });
+
+  it('should include stream context when intent/instructions options are provided', async () => {
+    const lines = [
+      'event: done\n',
+      'data: [DONE]\n\n',
+    ];
+
+    fetchMock.mockReturnValue(createStreamingResponse(lines));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    await waitFor(async () => {
+      const stream = result.current.transformStream('stream prompt', {
+        intent: 'assistant',
+        instructions: 'Return concise UI',
+      });
+      for await (const _event of stream) {
+        // Exhaust stream
+      }
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const parsedBody = JSON.parse(String(requestInit.body));
+
+    expect(parsedBody.context).toEqual({
+      intent: 'assistant',
+      instructions: 'Return concise UI',
+    });
+    expect(parsedBody.streaming).toBe(true);
+  });
+
   it('should yield error when streaming result validation fails', async () => {
     const lines = [
       'event: result\n',

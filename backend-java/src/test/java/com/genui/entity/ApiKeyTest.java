@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests API key methods and default values.
  */
 @DisplayName("ApiKey Entity")
-class ApiKeyTest {
+public class ApiKeyTest {
 
     private ApiKey apiKey;
     private User user;
@@ -36,7 +36,7 @@ class ApiKeyTest {
 
     @Nested
     @DisplayName("Default Values")
-    class DefaultValues {
+    public class DefaultValues {
 
         @Test
         @DisplayName("should have active as true by default")
@@ -89,7 +89,7 @@ class ApiKeyTest {
 
     @Nested
     @DisplayName("touch")
-    class Touch {
+    public class Touch {
 
         @Test
         @DisplayName("should update lastUsedAt to current time")
@@ -118,7 +118,7 @@ class ApiKeyTest {
 
     @Nested
     @DisplayName("revoke")
-    class Revoke {
+    public class Revoke {
 
         @Test
         @DisplayName("should set active to false")
@@ -143,7 +143,7 @@ class ApiKeyTest {
 
     @Nested
     @DisplayName("Test Mode")
-    class TestModeTests {
+    public class TestModeTests {
 
         @Test
         @DisplayName("should allow setting test mode to true")

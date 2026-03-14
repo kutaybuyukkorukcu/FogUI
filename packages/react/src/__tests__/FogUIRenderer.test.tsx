@@ -209,4 +209,25 @@ describe('FogUIRenderer', () => {
     );
     expect(container.firstChild).toBeNull();
   });
+
+  it('returns null for unsupported block types', () => {
+    const response = {
+      thinking: [],
+      content: [
+        {
+          type: 'unknown',
+          value: 'noop',
+        },
+      ],
+    } as unknown as FogUIResponse;
+
+    const { container } = render(
+      <FogUIProvider adapter={mockAdapter} apiKey="test">
+        <FogUIRenderer response={response} />
+      </FogUIProvider>
+    );
+
+    expect(container.firstChild).toBeInTheDocument();
+    expect(container.firstChild?.textContent).toBe('');
+  });
 });

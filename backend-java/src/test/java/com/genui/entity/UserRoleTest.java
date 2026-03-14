@@ -11,11 +11,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests role values and monthly quotas.
  */
 @DisplayName("UserRole")
-class UserRoleTest {
+public class UserRoleTest {
 
     @Nested
     @DisplayName("Monthly Quotas")
-    class MonthlyQuotas {
+    public class MonthlyQuotas {
 
         @Test
         @DisplayName("FREE role should have monthlyQuota of 100")
@@ -32,7 +32,7 @@ class UserRoleTest {
 
     @Nested
     @DisplayName("Enum Values")
-    class EnumValues {
+    public class EnumValues {
 
         @Test
         @DisplayName("should have exactly two roles")
