@@ -1,5 +1,5 @@
 import React from 'react';
-import { createAdapter } from '../providers/FogUIProvider';
+import { createAdapter } from '../utils';
 
 const Button: React.FC<any> = ({ children, ...props }) => <button {...props}>{children}</button>;
 const Card: React.FC<any> = ({ children, ...props }) => <div {...props}>{children}</div>;

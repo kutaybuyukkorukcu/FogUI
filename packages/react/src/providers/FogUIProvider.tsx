@@ -9,7 +9,7 @@ const FOGUI_API_ENDPOINT = 'https://api.virtuoapps.com';
 
 
 
-export const createAdapter = (adapter: Adapter): Adapter => adapter;
+import { createAdapter } from '../utils';
 
 interface FogUIContextValue {
   apiKey: string;

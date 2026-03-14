@@ -14,15 +14,7 @@ export interface FogUIRendererProps {
 export function FogUIRenderer({ response, className, style, onAction }: FogUIRendererProps) {
   const { adapter, onAction: contextOnAction } = useFogUIContext();
 
-  const handleAction = onAction || ((action: any) => {
-    if (typeof action === 'string') {
-      contextOnAction?.('message', action);
-    } else if (action && typeof action === 'object' && 'type' in action) {
-      contextOnAction?.(action.type, action);
-    } else {
-      contextOnAction?.('action', action);
-    }
-  });
+  const handleAction = onAction || contextOnAction;
 
   if (!response || !response.content) {
     return null;
@@ -36,6 +28,7 @@ export function FogUIRenderer({ response, className, style, onAction }: FogUIRen
           block={block}
           registry={adapter.components}
           onAction={handleAction}
+          adapter={adapter}
         />
       ))}
     </div>
@@ -48,11 +41,12 @@ interface ContentBlockRendererProps {
   block: ContentBlock;
   registry: ComponentRegistry;
   onAction?: (action: any) => void;
+  adapter: Adapter;
 }
 
 import { FogUIComponent } from '../types';
 
-function ContentBlockRenderer({ block, registry, onAction }: ContentBlockRendererProps) {
+function ContentBlockRenderer({ block, registry, onAction, adapter }: ContentBlockRendererProps) {
   if (block.type === 'text') {
     return (
       <div style={{ marginBottom: '12px', lineHeight: 1.6 }}>
@@ -69,9 +63,26 @@ function ContentBlockRenderer({ block, registry, onAction }: ContentBlockRendere
   if (block.type === 'component') {
     const componentType = block.componentType as FogUIComponent['componentType'];
     const Component = registry[componentType];
+
     if (Component) {
-      return <Component {...block.props} onAction={onAction} />;
+      const { children, ...restProps } = block.props;
+      const mappedProps = adapter.mapProps ? adapter.mapProps(componentType, restProps) : restProps;
+      
+      return (
+        <Component {...mappedProps} onAction={onAction}>
+          {block.children && block.children.map((childBlock, index) => (
+            <ContentBlockRenderer
+              key={index}
+              block={childBlock}
+              registry={registry}
+              onAction={onAction}
+              adapter={adapter}
+            />
+          ))}
+        </Component>
+      );
     }
+    
     // Fallback for unmapped component
     const UnmappedComponent = () => (
       <div data-fogui-unmapped="true" style={{ padding: '10px', border: '1px solid red', color: 'red' }}>

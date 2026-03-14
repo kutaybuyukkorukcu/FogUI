@@ -1,4 +1,4 @@
-import { createAdapter } from '../providers/FogUIProvider';
+import { createAdapter } from '../utils';
 
 // @ts-nocheck
 // This file must be .tsx for JSX parsing
