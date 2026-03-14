@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { useFogUI } from '../useFogUI';
 import { FogUIProvider } from '../providers/FogUIProvider';
 import React from 'react';
@@ -8,6 +8,10 @@ import { fogUIResponseSchema } from '../types/schema.zod';
 // Mock fetch
 const fetchMock = vi.fn();
 globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+beforeEach(() => {
+  fetchMock.mockReset();
+});
 
 const createFetchResponse = (data: any, ok = true) => {
   return Promise.resolve({
@@ -27,6 +31,31 @@ const createFetchResponse = (data: any, ok = true) => {
         };
       }
     }
+  } as unknown as Response);
+};
+
+const createStreamingResponse = (lines: string[], ok = true, hasBody = true) => {
+  return Promise.resolve({
+    ok,
+    status: ok ? 200 : 500,
+    body: hasBody
+      ? {
+          getReader: () => {
+            const encoder = new TextEncoder();
+            let index = 0;
+            return {
+              read: () => {
+                if (index >= lines.length) {
+                  return Promise.resolve({ done: true, value: undefined });
+                }
+                const value = encoder.encode(lines[index]);
+                index += 1;
+                return Promise.resolve({ done: false, value });
+              },
+            };
+          },
+        }
+      : undefined,
   } as unknown as Response);
 };
 
@@ -73,6 +102,57 @@ describe('useFogUI', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it('should include context when transform options are provided', async () => {
+    const mockResponse = {
+      success: true,
+      result: {
+        thinking: [],
+        content: [{ type: 'text', value: 'With context' }],
+      },
+    };
+
+    fetchMock.mockReturnValue(createFetchResponse(mockResponse));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    await waitFor(async () => {
+      await result.current.transform('prompt', {
+        intent: 'demo',
+        preferredComponents: ['Card', 'Badge'],
+        instructions: 'be concise',
+      });
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const parsedBody = JSON.parse(String(requestInit.body));
+
+    expect(parsedBody.context).toEqual({
+      intent: 'demo',
+      preferredComponents: ['Card', 'Badge'],
+      instructions: 'be concise',
+    });
+  });
+
+  it('should set hook error when API returns success false', async () => {
+    const mockResponse = {
+      success: false,
+      error: 'Transformation failed from API',
+      result: {
+        thinking: [],
+        content: [{ type: 'text', value: 'fallback' }],
+      },
+    };
+
+    fetchMock.mockReturnValue(createFetchResponse(mockResponse));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    await waitFor(async () => {
+      const transformResult = await result.current.transform('some content');
+      expect(transformResult.success).toBe(false);
+    });
+
+    expect(result.current.error).toBe('Transformation failed from API');
+  });
+
   it('should handle validation errors in the response', async () => {
     const invalidResponse = { success: true, result: { content: [{ type: 'invalid' }] } };
     fetchMock.mockReturnValue(createFetchResponse(invalidResponse));
@@ -110,5 +190,100 @@ describe('useFogUI', () => {
     });
 
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('should stream chunk events and unknown event payloads', async () => {
+    const lines = [
+      'event: chunk\n',
+      'data: partial-text\n\n',
+      'event: usage\n',
+      'data: {"transformTokens":12}\n\n',
+      'event: done\n',
+      'data: [DONE]\n\n',
+    ];
+
+    fetchMock.mockReturnValue(createStreamingResponse(lines));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    const events: Array<{ type: string; data: unknown }> = [];
+    await waitFor(async () => {
+      const stream = result.current.transformStream('stream content');
+      for await (const event of stream) {
+        events.push(event);
+      }
+    });
+
+    expect(events).toContainEqual({ type: 'chunk', data: 'partial-text' });
+    expect(events).toContainEqual({ type: 'usage', data: { transformTokens: 12 } });
+    expect(events).toContainEqual({ type: 'done', data: null });
+  });
+
+  it('should yield error when streaming result validation fails', async () => {
+    const lines = [
+      'event: result\n',
+      'data: {"invalid":true}\n\n',
+      'event: done\n',
+      'data: [DONE]\n\n',
+    ];
+    fetchMock.mockReturnValue(createStreamingResponse(lines));
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    const events: Array<{ type: string; data: any }> = [];
+    await waitFor(async () => {
+      const stream = result.current.transformStream('invalid stream');
+      for await (const event of stream) {
+        events.push(event);
+      }
+    });
+
+    expect(events).toContainEqual({ type: 'error', data: { error: 'Stream validation failed' } });
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('should yield error when streaming response has no body', async () => {
+    fetchMock.mockReturnValue(createStreamingResponse([], true, false));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    const events: Array<{ type: string; data: any }> = [];
+    await waitFor(async () => {
+      const stream = result.current.transformStream('no body');
+      for await (const event of stream) {
+        events.push(event);
+      }
+    });
+
+    expect(events).toContainEqual({ type: 'error', data: { error: 'No response body' } });
+  });
+
+  it('should yield HTTP error when streaming response is not ok', async () => {
+    fetchMock.mockReturnValue(createStreamingResponse([], false, true));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    const events: Array<{ type: string; data: any }> = [];
+    await waitFor(async () => {
+      const stream = result.current.transformStream('http fail');
+      for await (const event of stream) {
+        events.push(event);
+      }
+    });
+
+    expect(events).toContainEqual({ type: 'error', data: { error: 'HTTP 500' } });
+  });
+
+  it('clearError resets hook error state', async () => {
+    fetchMock.mockReturnValue(createFetchResponse({ error: 'API Error' }, false));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    await waitFor(async () => {
+      await result.current.transform('fails');
+    });
+
+    expect(result.current.error).toContain('API Error');
+    act(() => {
+      result.current.clearError();
+    });
+    expect(result.current.error).toBe(null);
   });
 });

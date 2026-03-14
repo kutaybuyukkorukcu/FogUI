@@ -38,6 +38,24 @@ describe('FogUIRenderer', () => {
     expect(screen.getByText('Hello, World!')).toBeInTheDocument();
   });
 
+  it('renders multiline text with line breaks', () => {
+    const response: FogUIResponse = {
+      thinking: [],
+      content: [{ type: 'text', value: 'Line 1\nLine 2' }],
+    };
+
+    const { container } = render(
+      <FogUIProvider adapter={mockAdapter} apiKey="test">
+        <FogUIRenderer response={response} className="renderer" style={{ padding: 8 }} />
+      </FogUIProvider>
+    );
+
+    expect(screen.getByText((content) => content.includes('Line 1'))).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Line 2'))).toBeInTheDocument();
+    expect(container.querySelector('br')).toBeInTheDocument();
+    expect(container.firstChild).toHaveClass('renderer');
+  });
+
   it('should render a component block using the adapter', () => {
     const response: FogUIResponse = {
       thinking: [],
@@ -88,6 +106,41 @@ describe('FogUIRenderer', () => {
   
       const cards = screen.getAllByTestId('card');
       expect(cards).toHaveLength(2);
+  });
+
+  it('applies adapter.mapProps before rendering components', () => {
+    const mapProps = vi.fn((_type: string, props: Record<string, unknown>) => ({
+      ...props,
+      title: `Mapped ${String(props.title)}`,
+    }));
+
+    const mappedAdapter: Adapter = {
+      components: {
+        Card: MockCard,
+      },
+      mapProps,
+    };
+
+    const response: FogUIResponse = {
+      thinking: [],
+      content: [
+        {
+          type: 'component',
+          componentType: 'Card',
+          props: { title: 'Original' },
+          children: [],
+        },
+      ],
+    };
+
+    render(
+      <FogUIProvider adapter={mappedAdapter} apiKey="test">
+        <FogUIRenderer response={response} />
+      </FogUIProvider>
+    );
+
+    expect(mapProps).toHaveBeenCalledWith('Card', { title: 'Original' });
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Mapped Original');
   });
 
   it('should fire the onAction callback when a component triggers it', () => {
@@ -157,4 +210,3 @@ describe('FogUIRenderer', () => {
     expect(container.firstChild).toBeNull();
   });
 });
-
