@@ -19,6 +19,7 @@ async function handleParsedData(currentEvent: string, data: string): Promise<Str
     return [{ type: 'done', data: null }];
   }
   if (!data) return [];
+  try {
     const parsed = JSON.parse(data);
     if (currentEvent === 'result') {
       const validation = fogUIResponseSchema.safeParse(parsed);
