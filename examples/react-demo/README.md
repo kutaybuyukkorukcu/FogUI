@@ -1,27 +1,44 @@
-# React + TypeScript + Vite
+# FogUI React Demo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This example shows how to use `@fogui/react` with a local adapter and static canonical responses.
 
-Currently, two official plugins are available:
+It is designed for fast adoption testing:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- adapter wiring,
+- renderer behavior,
+- action callbacks,
+- canonical component compatibility.
 
-## Expanding the ESLint configuration
+## Run the Demo
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+From repository root:
 
-- Configure the top-level `parserOptions` property like this:
-
-```js
-   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-   },
+```bash
+npm install
+npm install --workspace examples/react-demo
+npm run dev --workspace examples/react-demo
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+If your workspace tooling differs, run directly inside `examples/react-demo`:
+
+```bash
+npm install
+npm run dev
+```
+
+## What It Demonstrates
+
+- `FogUIProvider` + custom `adapter`
+- `FogUIRenderer` rendering static canonical payloads
+- multiple component payloads from the same adapter
+- JSON payload inspection for debugging
+
+## Key Files
+
+- `src/fogui.adapter.ts` - local unstyled adapter implementation
+- `src/components/FogUIDemo.tsx` - interactive demo and payload switcher
+- `src/App.tsx` - app shell
+
+## Next Adoption Step
+
+Replace static payloads with your backend output from `useFogUI().transform(...)`, then map components to your actual design system.

@@ -45,6 +45,29 @@ interface ContentBlockRendererProps {
   readonly adapter: Readonly<Adapter>;
 }
 
+function normalizeName(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+}
+
+function findClosestComponent(missingType: string, availableTypes: string[]): string | null {
+  if (availableTypes.length === 0) {
+    return null;
+  }
+
+  const normalizedMissing = normalizeName(missingType);
+  const exact = availableTypes.find((type) => normalizeName(type) === normalizedMissing);
+  if (exact) {
+    return exact;
+  }
+
+  const partial = availableTypes.find((type) => {
+    const normalizedType = normalizeName(type);
+    return normalizedType.includes(normalizedMissing) || normalizedMissing.includes(normalizedType);
+  });
+
+  return partial ?? null;
+}
+
 function getBlockKey(block: ContentBlock): string {
   if (block.type === 'text') {
     return `text:${block.value}`;
@@ -92,18 +115,41 @@ function ContentBlockRenderer({ block, registry, onAction, adapter }: ContentBlo
       );
     }
 
-    console.warn(`[FogUI] Unmapped component: "${block.componentType}". Please add it to your adapter.`);
-    return <UnmappedComponent componentType={block.componentType} />;
+    const availableComponents = Object.keys(registry);
+    const suggestion = findClosestComponent(block.componentType, availableComponents);
+    const availableText = availableComponents.length > 0 ? availableComponents.join(', ') : 'none';
+    const suggestionText = suggestion ? ` Did you mean "${suggestion}"?` : '';
+
+    console.warn(
+      `[FogUI] Unmapped component: "${block.componentType}".` +
+      `${suggestionText}` +
+      ` Available adapter components: ${availableText}.` +
+      ` Add a "${block.componentType}" mapping in adapter.components.`
+    );
+    return (
+      <UnmappedComponent
+        componentType={block.componentType}
+        availableComponents={availableComponents}
+        suggestion={suggestion}
+      />
+    );
   }
 
   return null;
 }
 
 // Move UnmappedComponent out of parent
-function UnmappedComponent({ componentType }: Readonly<{ componentType: string }>) {
+function UnmappedComponent({
+  componentType,
+  availableComponents,
+  suggestion,
+}: Readonly<{ componentType: string; availableComponents: string[]; suggestion: string | null }>) {
+  const availableText = availableComponents.length > 0 ? availableComponents.join(', ') : 'none';
+  const suggestionText = suggestion ? ` Did you mean "${suggestion}"?` : '';
+
   return (
     <div data-fogui-unmapped="true" style={{ padding: '10px', border: '1px solid red', color: 'red' }}>
-      Unmapped component: &quot;{componentType}&quot;. Please add it to your adapter.
+      Unmapped component: &quot;{componentType}&quot;.{suggestionText} Available adapter components: {availableText}. Add this mapping to your adapter&apos;s `components` object.
     </div>
   );
 }
