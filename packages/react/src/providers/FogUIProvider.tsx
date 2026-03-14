@@ -21,25 +21,25 @@ interface FogUIContextValue {
 const FogUIContext = createContext<FogUIContextValue | null>(null);
 
 export interface FogUIProviderProps {
-  children: React.ReactNode;
+  readonly children: React.ReactNode;
   /**
    * Your FogUI API key (get it from https://fogui.dev/dashboard)
    */
-  apiKey: string;
+  readonly apiKey: string;
   /**
    * Custom API endpoint (for self-hosted deployments)
    * @default 'https://api.virtuoapps.com'
    */
-  endpoint?: string;
+  readonly endpoint?: string;
   /**
    * Custom component adapter for your design system.
    * @see https://fogui.dev/docs/adapters
    */
-  adapter?: Adapter;
+  readonly adapter?: Adapter;
   /**
    * Global handler for component actions (e.g. form submissions, button clicks)
    */
-  onAction?: (action: string, data?: unknown) => void;
+  readonly onAction?: (action: string, data?: unknown) => void;
 }
 
 /**

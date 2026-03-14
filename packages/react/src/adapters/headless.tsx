@@ -13,9 +13,9 @@ const Table: React.FC<any> = ({ headers, rows }) => (
             <tr>{headers.map((h: string) => <th key={h}>{h}</th>)}</tr>
         </thead>
         <tbody>
-            {rows.map((row: any[], i: number) => (
-                <tr key={i}>
-                    {row.map((cell, j) => <td key={j}>{cell}</td>)}
+            {rows.map((row: any[]) => (
+                <tr key={JSON.stringify(row)}>
+                    {row.map((cell) => <td key={typeof cell === 'string' ? cell : JSON.stringify(cell)}>{cell}</td>)}
                 </tr>
             ))}
         </tbody>

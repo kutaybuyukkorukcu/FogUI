@@ -1,14 +1,15 @@
 import React from 'react';
 import type { ContentBlock, FogUIResponse } from '../types';
+import { FogUIComponent } from '../types';
 import { useFogUIContext } from '../providers/FogUIProvider';
 
 import { Adapter } from '../types/adapter';
 
 export interface FogUIRendererProps {
-  response: FogUIResponse;
-  className?: string;
-  style?: React.CSSProperties;
-  onAction?: (action: any) => void;
+  readonly response: FogUIResponse;
+  readonly className?: string;
+  readonly style?: React.CSSProperties;
+  readonly onAction?: (action: any) => void;
 }
 
 export function FogUIRenderer({ response, className, style, onAction }: FogUIRendererProps) {
@@ -16,15 +17,15 @@ export function FogUIRenderer({ response, className, style, onAction }: FogUIRen
 
   const handleAction = onAction || contextOnAction;
 
-  if (!response || !response.content) {
+  if (!response?.content) {
     return null;
   }
 
   return (
     <div className={className} style={style}>
-      {response.content.map((block, index) => (
+      {response.content.map((block) => (
         <ContentBlockRenderer
-          key={index}
+          key={getBlockKey(block)}
           block={block}
           registry={adapter.components}
           onAction={handleAction}
@@ -38,22 +39,28 @@ export function FogUIRenderer({ response, className, style, onAction }: FogUIRen
 type ComponentRegistry = Adapter['components'];
 
 interface ContentBlockRendererProps {
-  block: ContentBlock;
-  registry: ComponentRegistry;
-  onAction?: (action: any) => void;
-  adapter: Adapter;
+  readonly block: Readonly<ContentBlock>;
+  readonly registry: Readonly<ComponentRegistry>;
+  readonly onAction?: (action: any) => void;
+  readonly adapter: Readonly<Adapter>;
 }
 
-import { FogUIComponent } from '../types';
+function getBlockKey(block: ContentBlock): string {
+  if (block.type === 'text') {
+    return `text:${block.value}`;
+  }
+  return `component:${block.componentType}:${JSON.stringify(block.props)}:${JSON.stringify(block.children ?? [])}`;
+}
 
 function ContentBlockRenderer({ block, registry, onAction, adapter }: ContentBlockRendererProps) {
   if (block.type === 'text') {
+    const lines = block.value.split('\n');
     return (
       <div style={{ marginBottom: '12px', lineHeight: 1.6 }}>
-        {block.value.split('\n').map((line, i) => (
-          <React.Fragment key={i}>
+        {lines.map((line, i) => (
+          <React.Fragment key={line + '-' + i}>
             {line}
-            {i < block.value.split('\n').length - 1 && <br />}
+            {i < lines.length - 1 && <br />}
           </React.Fragment>
         ))}
       </div>
@@ -65,14 +72,15 @@ function ContentBlockRenderer({ block, registry, onAction, adapter }: ContentBlo
     const Component = registry[componentType];
 
     if (Component) {
-      const { children, ...restProps } = block.props;
+      const restProps = { ...block.props };
+      delete (restProps as { children?: unknown }).children;
       const mappedProps = adapter.mapProps ? adapter.mapProps(componentType, restProps) : restProps;
-      
+
       return (
         <Component {...mappedProps} onAction={onAction}>
-          {block.children && block.children.map((childBlock, index) => (
+          {block.children?.map((childBlock) => (
             <ContentBlockRenderer
-              key={index}
+              key={getBlockKey(childBlock)}
               block={childBlock}
               registry={registry}
               onAction={onAction}
@@ -82,16 +90,19 @@ function ContentBlockRenderer({ block, registry, onAction, adapter }: ContentBlo
         </Component>
       );
     }
-    
-    // Fallback for unmapped component
-    const UnmappedComponent = () => (
-      <div data-fogui-unmapped="true" style={{ padding: '10px', border: '1px solid red', color: 'red' }}>
-        Unmapped component: &quot;{block.componentType}&quot;. Please add it to your adapter.
-      </div>
-    );
+
     console.warn(`[FogUI] Unmapped component: "${block.componentType}". Please add it to your adapter.`);
-    return <UnmappedComponent />;
+    return <UnmappedComponent componentType={block.componentType} />;
   }
 
   return null;
+}
+
+// Move UnmappedComponent out of parent
+function UnmappedComponent({ componentType }: Readonly<{ componentType: string }>) {
+  return (
+    <div data-fogui-unmapped="true" style={{ padding: '10px', border: '1px solid red', color: 'red' }}>
+      Unmapped component: &quot;{componentType}&quot;. Please add it to your adapter.
+    </div>
+  );
 }

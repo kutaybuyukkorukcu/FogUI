@@ -126,7 +126,7 @@ describe('FogUI Types', () => {
       // Verify component types
       const componentTypes = response.content
         .filter(b => b.type === 'component')
-        .map(b => (b as ComponentBlock).componentType);
+        .map(b => b.componentType);
       
       expect(componentTypes).toContain('card');
       expect(componentTypes).toContain('list');

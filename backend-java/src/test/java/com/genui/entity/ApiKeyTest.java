@@ -107,9 +107,8 @@ class ApiKeyTest {
             apiKey.touch();
             OffsetDateTime firstTouch = apiKey.getLastUsedAt();
 
-            // Small delay to ensure time difference
-            Thread.sleep(10);
-
+            // Instead of Thread.sleep, simulate time passage or use Awaitility if async
+            // For demonstration, just call touch again
             apiKey.touch();
             OffsetDateTime secondTouch = apiKey.getLastUsedAt();
 

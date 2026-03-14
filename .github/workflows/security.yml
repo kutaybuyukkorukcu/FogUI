@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0  # Required for full git history scan
 
       - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@v3.93.8
+        uses: trufflesecurity/trufflehog@v3.88.0
         with:
           path: ./
           base: ${{ github.event.repository.default_branch }}

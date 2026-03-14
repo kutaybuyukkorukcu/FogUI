@@ -203,7 +203,7 @@ describe('FogUIRenderer', () => {
   it('should not render anything for a null or empty response', () => {
     const { container } = render(
         <FogUIProvider adapter={mockAdapter} apiKey="test">
-            {/* @ts-ignore */}
+            {/* @ts-expect-error testing invalid/null response shape */}
             <FogUIRenderer response={null} />
         </FogUIProvider>
     );

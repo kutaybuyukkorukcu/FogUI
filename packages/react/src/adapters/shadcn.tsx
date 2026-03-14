@@ -49,37 +49,37 @@ const Badge: React.FC<any> = ({ children, ...props }) => {
 
 const Table: React.FC<any> = ({ headers, rows }) => {
     return (
-        <div className="relative w-full overflow-auto">
-            <table className="w-full caption-bottom text-sm">
-                <thead className="[&_tr]:border-b">
-                    <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        {headers.map((header: string, i: number) => (
-                            <th key={i} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">{header}</th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                    {rows.map((row: any[], i: number) => (
-                        <tr key={i} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                            {row.map((cell: any, j: number) => (
-                                <td key={j} className="p-4 align-middle [&:has([role=checkbox])]:pr-0">{cell}</td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+      <div className="relative w-full overflow-auto">
+        <table className="w-full caption-bottom text-sm">
+          <thead className="[&_tr]:border-b">
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+              {headers.map((header: string) => (
+                <th key={header} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">{header}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="[&_tr:last-child]:border-0">
+            {rows.map((row: any[]) => (
+              <tr key={JSON.stringify(row)} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                {row.map((cell: any) => (
+                  <td key={typeof cell === 'string' ? cell : JSON.stringify(cell)} className="p-4 align-middle [&:has([role=checkbox])]:pr-0">{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     );
 };
 
 const List: React.FC<any> = ({ items, ordered }) => {
     const ListEl = ordered ? 'ol' : 'ul';
     return (
-        <ListEl className={`my-6 ml-6 ${ordered ? 'list-decimal' : 'list-disc'} [&>li]:mt-2`}>
-            {items.map((item: string, i: number) => (
-                <li key={i}>{item}</li>
-            ))}
-        </ListEl>
+      <ListEl className={`my-6 ml-6 ${ordered ? 'list-decimal' : 'list-disc'} [&>li]:mt-2`}>
+        {items.map((item: string) => (
+          <li key={typeof item === 'string' ? item : JSON.stringify(item)}>{item}</li>
+        ))}
+      </ListEl>
     );
 };
 
