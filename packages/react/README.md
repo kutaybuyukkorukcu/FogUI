@@ -1,214 +1,212 @@
 # @fogui/react
 
-> Transform LLM output into beautiful, interactive UI components - like magic from the fog ✨
-
-[![npm version](https://badge.fury.io/js/@fogui%2Freact.svg)](https://www.npmjs.com/package/@fogui/react)
+Transform agent/LLM output into real React UI using your existing component system.
 
 ## Installation
 
 ```bash
 npm install @fogui/react
-# or
-yarn add @fogui/react
-# or
-pnpm add @fogui/react
 ```
 
 ## Quick Start
 
 ```tsx
-import { FogUIProvider, useFogUI, FogUIRenderer } from '@fogui/react';
+import { useState } from 'react';
+import {
+  FogUIProvider,
+  FogUIRenderer,
+  createAdapter,
+  useFogUI,
+  type Adapter,
+  type FogUIResponse,
+} from '@fogui/react';
 
-// 1. Wrap your app with FogUIProvider
-function App() {
-  return (
-    <FogUIProvider apiKey="fog_xxxx">
-      <Chat />
-    </FogUIProvider>
-  );
-}
+const adapter: Adapter = createAdapter({
+  components: {
+    Card: ({ title, description, children }) => (
+      <section>
+        {title && <h3>{title}</h3>}
+        {description && <p>{description}</p>}
+        {children}
+      </section>
+    ),
+    Button: ({ label, onAction }) => (
+      <button type="button" onClick={() => onAction?.('button_click', { id: 'cta' })}>
+        {label}
+      </button>
+    ),
+  },
+});
 
-// 2. Use the hook to transform LLM output
-function Chat() {
-  const { transform, isLoading } = useFogUI();
-  const [ui, setUI] = useState(null);
+const ChatView = () => {
+  const { transform, isLoading, error } = useFogUI();
+  const [response, setResponse] = useState<FogUIResponse | null>(null);
 
-  const handleSubmit = async (userMessage: string) => {
-    // Call YOUR LLM (with your own API key)
-    const llmResponse = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: userMessage }]
+  const onGenerate = async () => {
+    const result = await transform('Create a card with a call-to-action button', {
+      intent: 'lead_capture',
+      preferredComponents: ['Card', 'Button'],
     });
 
-    // Transform with FogUI - UI materializes from the fog ✨
-    const result = await transform(llmResponse.choices[0].message.content);
-    
-    if (result.success) {
-      setUI(result.result);
+    if (result.success && result.result) {
+      setResponse(result.result);
     }
   };
 
   return (
-    <div>
-      {isLoading && <p>Materializing UI...</p>}
-      {ui && <FogUIRenderer response={ui} />}
-    </div>
+    <>
+      <button type="button" onClick={onGenerate} disabled={isLoading}>
+        {isLoading ? 'Generating...' : 'Generate UI'}
+      </button>
+
+      {error && <p>{error}</p>}
+      {response && <FogUIRenderer response={response} />}
+    </>
   );
-}
-```
-
-## Use Your Own Design System
-
-FogUI is designed to work with **your existing UI components**. No need to adopt a new design language!
-
-### Option 1: Shadcn/Radix UI
-
-```tsx
-import { FogUIProvider } from '@fogui/react';
-import { createShadcnAdapter } from '@fogui/react/adapters';
-
-// Import YOUR Shadcn components
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-
-// Create adapter with your components
-const shadcnComponents = createShadcnAdapter({
-  Card, CardHeader, CardContent, CardTitle, CardDescription,
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
-  Alert, AlertTitle, AlertDescription,
-});
-
-function App() {
-  return (
-    <FogUIProvider apiKey="fog_xxxx" components={shadcnComponents}>
-      <Chat />
-    </FogUIProvider>
-  );
-}
-```
-
-### Option 2: Custom Components (Any Design System)
-
-```tsx
-import { FogUIProvider } from '@fogui/react';
-
-// Map FogUI component types to YOUR components
-const myComponents = {
-  card: ({ title, description, data }) => (
-    <div className="my-card">
-      <h3>{title}</h3>
-      <p>{description}</p>
-      {/* Render data however you want */}
-    </div>
-  ),
-  table: MyTableComponent,
-  list: MyListComponent,
-  callout: MyAlertComponent,
 };
 
-function App() {
+export default function App() {
   return (
-    <FogUIProvider apiKey="fog_xxxx" components={myComponents}>
-      <Chat />
+    <FogUIProvider
+      apiKey="fog_xxx"
+      adapter={adapter}
+      onAction={(action, data) => {
+        console.log('FogUI action:', action, data);
+      }}
+    >
+      <ChatView />
     </FogUIProvider>
   );
 }
 ```
 
-## Self-Hosted Deployment
+## Core Concepts
 
-For enterprise/self-hosted deployments, specify a custom endpoint:
+- Canonical schema from your backend is rendered by `FogUIRenderer`.
+- `adapter` maps canonical component types (like `Card`, `Table`) to your UI components.
+- `useFogUI` transforms raw model output into the canonical schema.
+- `onAction` allows component interactions to feed back into your app/agent loop.
+
+## Provider API
 
 ```tsx
-<FogUIProvider 
-  apiKey="fog_xxxx" 
-  endpoint="https://fogui.mycompany.com"
+<FogUIProvider
+  apiKey="fog_xxx"
+  endpoint="https://api.virtuoapps.com" // optional
+  adapter={myAdapter} // optional, defaults to headless adapter
+  onAction={(action, data) => { /* optional */ }}
 >
   <App />
 </FogUIProvider>
 ```
 
-## API Reference
+| Prop | Type | Required | Description |
+| --- | --- | --- | --- |
+| `apiKey` | `string` | Yes | FogUI API key |
+| `endpoint` | `string` | No | Custom FogUI backend endpoint |
+| `adapter` | `Adapter` | No | Design system mapping |
+| `onAction` | `(action: string, data?: unknown) => void` | No | Global action handler |
 
-### `<FogUIProvider>`
-
-Wrap your app with this provider to configure FogUI.
+## Renderer API
 
 ```tsx
-<FogUIProvider 
-  apiKey="fog_xxxx"
-  components={myComponents}      // Optional: your design system
-  endpoint="https://custom.api"  // Optional: self-hosted endpoint
->
-  <App />
-</FogUIProvider>
+<FogUIRenderer
+  response={fogUIResponse}
+  className="fogui-output"
+  style={{ maxWidth: 720 }}
+  onAction={(action, data) => {
+    // Optional per-render override, falls back to provider onAction
+  }}
+/>
 ```
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `apiKey` | `string` | Your FogUI API key |
-| `components` | `ComponentRegistry` | Custom component mapping (optional) |
-| `endpoint` | `string` | Custom API endpoint (optional) |
+When a component type is missing from your adapter, renderer:
 
-### `useFogUI()`
+- renders an inline fallback block,
+- prints a warning with available adapter components,
+- suggests a likely component match if possible.
 
-Hook for transforming LLM output.
+## Hook API
 
 ```tsx
 const { transform, transformStream, isLoading, error, clearError } = useFogUI();
 ```
 
-| Method | Type | Description |
-|--------|------|-------------|
-| `transform` | `(content: string, options?) => Promise<TransformResult>` | Transform text to UI |
-| `transformStream` | `(content: string, options?) => AsyncGenerator` | Streaming transform |
-| `isLoading` | `boolean` | Loading state |
-| `error` | `string \| null` | Error message |
-| `clearError` | `() => void` | Clear error state |
-
-### `<FogUIRenderer>`
-
-Render the transformed UI response.
+### `transform`
 
 ```tsx
-<FogUIRenderer 
-  response={transformResult.result} 
-  componentRegistry={customComponents}  // Optional: override provider components
-  className="my-class"                  // Optional
-  style={{ maxWidth: 600 }}             // Optional
-/>
+const result = await transform(content, {
+  intent: 'dashboard',
+  preferredComponents: ['Card', 'Table'],
+  instructions: 'Use compact spacing',
+});
 ```
 
-## Component Types
+### `transformStream`
 
-FogUI transforms LLM output into these component types:
+```tsx
+for await (const event of transformStream(content, { intent: 'chat' })) {
+  if (event.type === 'chunk') {
+    // streaming text/event chunks
+  }
+  if (event.type === 'result') {
+    // validated canonical response
+  }
+}
+```
 
-| Type | Props | Description |
-|------|-------|-------------|
-| `card` | `{ title, description, data }` | Information card |
-| `table` | `{ columns, rows, title }` | Data table |
-| `list` | `{ title, items, ordered }` | Bullet or numbered list |
-| `callout` | `{ title, message, variant }` | Alert/info box |
+## Adapter Template
 
-You can extend with custom types by adding them to your component registry.
+```tsx
+import { createAdapter, type Adapter } from '@fogui/react';
 
-## Get Your API Key
+export const myAdapter: Adapter = createAdapter({
+  components: {
+    Card: MyCard,
+    Table: MyTable,
+    List: MyList,
+    Form: MyForm,
+    Input: MyInput,
+    Button: MyButton,
+    Stack: MyStack,
+    Grid: MyGrid,
+    Tabs: MyTabs,
+    TabPane: MyTabPane,
+    Badge: MyBadge,
+  },
+  mapProps: (componentType, props) => {
+    if (componentType === 'Button') {
+      return {
+        ...props,
+        onClick: props.action ? () => console.log(props.action) : undefined,
+      };
+    }
+    return props;
+  },
+});
+```
 
-1. Visit [fogui.dev/dashboard](https://fogui.dev/dashboard)
-2. Sign up or log in
-3. Create a new API key
-4. Use it in your app
+## Canonical Components
 
-## Why FogUI?
+- `Card`
+- `Table`
+- `List`
+- `Form`
+- `Input`
+- `Button`
+- `Stack`
+- `Grid`
+- `Tabs`
+- `TabPane`
+- `Badge`
 
-> UI that materializes from nothing - like magic from the fog ✨
+## Local Development
 
-- **Your LLM, Your Keys** - We never see your LLM API keys
-- **Any LLM Provider** - Works with OpenAI, Claude, Gemini, Llama, etc.
-- **Your Design System** - Shadcn, MUI, Ant Design, or custom
-- **TypeScript First** - Full type safety
-- **Streaming Support** - Real-time UI updates
+```bash
+npm run test
+npm run typecheck
+npm run build
+```
 
 ## License
 

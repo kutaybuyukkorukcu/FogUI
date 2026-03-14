@@ -42,3 +42,8 @@ Once the demo is stable, we will proceed with the items from the product roadmap
 -   **Phase 3 - Agent-First UX:**
     -   Implement UI patch support for streaming updates.
     -   Define and implement action lifecycle hooks (`onActionStart`, `onActionComplete`, etc.).
+
+-   **Release Ops Backlog (Lower Priority):**
+    -   Prepare publish-ready npm release flow for `@fogui/react`.
+    -   Add repeatable checklist (version bump, changelog, test/typecheck/build).
+    -   Add CI publish path with `NPM_TOKEN` for tagged releases.

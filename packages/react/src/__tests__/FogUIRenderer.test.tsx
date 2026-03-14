@@ -193,8 +193,31 @@ describe('FogUIRenderer', () => {
     );
 
     expect(screen.getByText(/Unmapped component: "UnmappedComponent"/)).toBeInTheDocument();
+    expect(screen.getByText(/Available adapter components: Card/)).toBeInTheDocument();
     expect(consoleSpy).toHaveBeenCalledWith(
-      '[FogUI] Unmapped component: "UnmappedComponent". Please add it to your adapter.'
+      '[FogUI] Unmapped component: "UnmappedComponent". Available adapter components: Card. Add a "UnmappedComponent" mapping in adapter.components.'
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('should suggest closest component match when component name casing differs', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const response: FogUIResponse = {
+      thinking: [],
+      content: [{ type: 'component', componentType: 'card', props: {}, children: [] }],
+    };
+
+    render(
+      <FogUIProvider adapter={mockAdapter} apiKey="test">
+        <FogUIRenderer response={response} />
+      </FogUIProvider>
+    );
+
+    expect(screen.getByText(/Did you mean "Card"/)).toBeInTheDocument();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[FogUI] Unmapped component: "card". Did you mean "Card"? Available adapter components: Card. Add a "card" mapping in adapter.components.'
     );
 
     consoleSpy.mockRestore();

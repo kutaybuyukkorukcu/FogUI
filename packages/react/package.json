@@ -1,6 +1,6 @@
 {
     "name": "@fogui/react",
-    "version": "0.3.4",
+    "version": "0.3.5",
     "description": "Transform LLM output into beautiful, interactive UI components - like magic from the fog",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
