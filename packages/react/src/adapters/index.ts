@@ -2,23 +2,16 @@
  * Pre-built adapters for popular design systems.
  * 
  * These adapters map FogUI component types to components from popular UI libraries.
- * Simply import and use as your component registry.
+ * Simply import and use as your adapter.
  * 
- * @example Using Shadcn adapter
+ * @example Using the Shadcn adapter
  * ```tsx
  * import { FogUIProvider } from '@fogui/react';
- * import { createShadcnAdapter } from '@fogui/react/adapters';
- * 
- * // Create adapter with your Shadcn components
- * const shadcnComponents = createShadcnAdapter({
- *   Card, CardHeader, CardContent, CardTitle, CardDescription,
- *   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
- *   Alert, AlertTitle, AlertDescription,
- * });
+ * import { shadcnAdapter } from '@fogui/react/adapters';
  * 
  * function App() {
  *   return (
- *     <FogUIProvider apiKey="fog_xxx" components={shadcnComponents}>
+ *     <FogUIProvider apiKey="fog_xxx" adapter={shadcnAdapter}>
  *       <MyApp />
  *     </FogUIProvider>
  *   );
