@@ -249,7 +249,7 @@ public class TransformController {
             return;
         }
 
-        List<com.genui.model.transform.StreamPatchOperation> patches = streamPatchGenerator.generatePatches(previousResponse.get(), partial);
+        List<StreamPatchOperation> patches = streamPatchGenerator.generatePatches(previousResponse.get(), partial);
         if (patches.isEmpty()) {
             return;
         }
