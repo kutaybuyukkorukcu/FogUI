@@ -1,13 +1,14 @@
 # FogUI React Demo
 
-This example shows how to use `@fogui/react` with a local adapter and static canonical responses.
+This example shows how to use `@fogui/react` with a local adapter, static canonical responses, and live stream patch mode.
 
 It is designed for fast adoption testing:
 
 - adapter wiring,
 - renderer behavior,
 - action callbacks,
-- canonical component compatibility.
+- canonical component compatibility,
+- stream patch event handling.
 
 ## Run the Demo
 
@@ -30,15 +31,17 @@ npm run dev
 
 - `FogUIProvider` + custom `adapter`
 - `FogUIRenderer` rendering static canonical payloads
+- local mock patch application (`applyFogUIPatches`)
+- live backend stream integration (`useFogUI().transformStream`)
 - multiple component payloads from the same adapter
 - JSON payload inspection for debugging
 
 ## Key Files
 
-- `src/fogui.adapter.ts` - local unstyled adapter implementation
+- `src/fogui.adapter.tsx` - local demo adapter implementation
 - `src/components/FogUIDemo.tsx` - interactive demo and payload switcher
 - `src/App.tsx` - app shell
 
 ## Next Adoption Step
 
-Replace static payloads with your backend output from `useFogUI().transform(...)`, then map components to your actual design system.
+Switch to live mode in the demo and use your backend API key/endpoint. Streamed `patch` events update UI incrementally before final `result`.
