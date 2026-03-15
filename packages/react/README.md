@@ -73,6 +73,15 @@ export default function App() {
       onAction={(action, data) => {
         console.log('FogUI action:', action, data);
       }}
+      onActionStart={(payload) => {
+        console.log('Action start:', payload);
+      }}
+      onActionComplete={(payload) => {
+        console.log('Action complete:', payload);
+      }}
+      onActionError={(payload) => {
+        console.error('Action error:', payload.error);
+      }}
     >
       <ChatView />
     </FogUIProvider>
@@ -95,6 +104,9 @@ export default function App() {
   endpoint="https://api.virtuoapps.com" // optional
   adapter={myAdapter} // optional, defaults to headless adapter
   onAction={(action, data) => { /* optional */ }}
+  onActionStart={(payload) => { /* optional */ }}
+  onActionComplete={(payload) => { /* optional */ }}
+  onActionError={(payload) => { /* optional */ }}
 >
   <App />
 </FogUIProvider>
@@ -106,6 +118,32 @@ export default function App() {
 | `endpoint` | `string` | No | Custom FogUI backend endpoint |
 | `adapter` | `Adapter` | No | Design system mapping |
 | `onAction` | `(action: string, data?: unknown) => void` | No | Global action handler |
+| `onActionStart` | `(payload: FogUIActionPayload) => void \| Promise<void>` | No | Lifecycle hook fired before action dispatch |
+| `onActionComplete` | `(payload: FogUIActionPayload) => void \| Promise<void>` | No | Lifecycle hook fired after successful action dispatch |
+| `onActionError` | `(payload: FogUIActionErrorPayload) => void \| Promise<void>` | No | Lifecycle hook fired when action dispatch fails |
+
+## Action Lifecycle
+
+`onAction` remains backward-compatible and still receives `(action, data)`.
+
+Lifecycle payload shape:
+
+```ts
+{
+  action: string;
+  data?: unknown;
+  timestamp: string; // ISO timestamp
+  sourceComponent: string;
+}
+```
+
+Lifecycle order is deterministic:
+
+1. `onActionStart`
+2. `onAction`
+3. `onActionComplete`
+
+If action dispatch throws/rejects, `onActionError` is fired instead of `onActionComplete`.
 
 ## Renderer API
 
@@ -129,7 +167,7 @@ When a component type is missing from your adapter, renderer:
 ## Hook API
 
 ```tsx
-const { transform, transformStream, isLoading, error, clearError } = useFogUI();
+const { transform, transformStream, applyPatches, isLoading, error, clearError } = useFogUI();
 ```
 
 ### `transform`
@@ -149,11 +187,38 @@ for await (const event of transformStream(content, { intent: 'chat' })) {
   if (event.type === 'chunk') {
     // streaming text/event chunks
   }
+  if (event.type === 'patch') {
+    // event.data is FogUIPatchOperation[]
+    setResponse((prev) => (prev ? applyPatches(prev, event.data as FogUIPatchOperation[]) : prev));
+  }
   if (event.type === 'result') {
     // validated canonical response
   }
+  if (event.type === 'error') {
+    // stream-level errors
+  }
+  if (event.type === 'done') {
+    // stream completed
+  }
 }
 ```
+
+## Streaming Patches (MVP)
+
+`transformStream` now supports `patch` events for incremental UI updates.
+
+Patch format:
+
+```ts
+type FogUIPatchOperation = {
+  op: 'replace' | 'append' | 'remove';
+  path: string; // JSON pointer style, e.g. /content/0/value or /content
+  value?: unknown;
+};
+```
+
+Use `applyPatches(currentResponse, patches)` from `useFogUI` (or `applyFogUIPatches` utility) to apply patches safely.
+Invalid patch paths never crash rendering and are ignored with a warning.
 
 ## Adapter Template
 

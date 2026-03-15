@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 import { FogUIProvider } from '../providers/FogUIProvider';
 import { FogUIRenderer } from '../components/FogUIRenderer';
@@ -143,7 +143,7 @@ describe('FogUIRenderer', () => {
     expect(screen.getByTestId('card-title')).toHaveTextContent('Mapped Original');
   });
 
-  it('should fire the onAction callback when a component triggers it', () => {
+  it('should fire the onAction callback when a component triggers it', async () => {
     const onActionMock = vi.fn();
 
     const ActionButton = ({ onAction, label }: { onAction: (action: string, data?: any) => void; label: string }) => (
@@ -175,7 +175,116 @@ describe('FogUIRenderer', () => {
     );
     
     screen.getByText('Click Me').click();
-    expect(onActionMock).toHaveBeenCalledWith('button-clicked', { from: 'test' });
+    await waitFor(() => {
+      expect(onActionMock).toHaveBeenCalledWith('button-clicked', { from: 'test' });
+    });
+  });
+
+  it('fires lifecycle hooks in deterministic order for successful actions', async () => {
+    const order: string[] = [];
+
+    const ActionButton = ({ onAction, label }: { onAction: (action: string, data?: unknown) => void; label: string }) => (
+      <button onClick={() => onAction('button-clicked', { from: 'lifecycle' })}>{label}</button>
+    );
+
+    const adapterWithAction: Adapter = {
+      components: {
+        Button: ActionButton,
+      },
+    };
+
+    const response: FogUIResponse = {
+      thinking: [],
+      content: [
+        {
+          type: 'component',
+          componentType: 'Button',
+          props: { label: 'Lifecycle Action' },
+          children: [],
+        },
+      ],
+    };
+
+    const onAction = vi.fn(() => {
+      order.push('action');
+    });
+
+    render(
+      <FogUIProvider
+        adapter={adapterWithAction}
+        apiKey="test"
+        onActionStart={(payload) => {
+          order.push('start');
+          expect(payload.action).toBe('button-clicked');
+          expect(payload.sourceComponent).toBe('Button');
+          expect(typeof payload.timestamp).toBe('string');
+        }}
+        onAction={onAction}
+        onActionComplete={(payload) => {
+          order.push('complete');
+          expect(payload.action).toBe('button-clicked');
+        }}
+      >
+        <FogUIRenderer response={response} />
+      </FogUIProvider>
+    );
+
+    screen.getByText('Lifecycle Action').click();
+
+    await waitFor(() => {
+      expect(order).toEqual(['start', 'action', 'complete']);
+    });
+    expect(onAction).toHaveBeenCalledWith('button-clicked', { from: 'lifecycle' });
+  });
+
+  it('fires onActionError when action handler throws', async () => {
+    const onActionError = vi.fn();
+
+    const ActionButton = ({ onAction, label }: { onAction: (action: string, data?: unknown) => void; label: string }) => (
+      <button onClick={() => onAction('explode', { from: 'test' })}>{label}</button>
+    );
+
+    const adapterWithAction: Adapter = {
+      components: {
+        Button: ActionButton,
+      },
+    };
+
+    const response: FogUIResponse = {
+      thinking: [],
+      content: [
+        {
+          type: 'component',
+          componentType: 'Button',
+          props: { label: 'Explode' },
+          children: [],
+        },
+      ],
+    };
+
+    render(
+      <FogUIProvider
+        adapter={adapterWithAction}
+        apiKey="test"
+        onAction={() => {
+          throw new Error('Boom');
+        }}
+        onActionError={onActionError}
+      >
+        <FogUIRenderer response={response} />
+      </FogUIProvider>
+    );
+
+    screen.getByText('Explode').click();
+
+    await waitFor(() => {
+      expect(onActionError).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = onActionError.mock.calls[0][0] as { action: string; sourceComponent: string; error: Error };
+    expect(payload.action).toBe('explode');
+    expect(payload.sourceComponent).toBe('Button');
+    expect(payload.error.message).toBe('Boom');
   });
 
   it('should render a warning for an unmapped component', () => {

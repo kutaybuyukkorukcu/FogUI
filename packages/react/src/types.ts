@@ -27,6 +27,39 @@ export interface TransformOptions {
    * Custom instructions for transformation
    */
   instructions?: string;
+
+  /**
+   * Streaming behavior controls.
+   */
+  stream?: {
+    /**
+     * Emit chunk events for legacy consumers.
+     * @default true
+     */
+    includeChunks?: boolean;
+    /**
+     * Prefer patch events as the primary incremental transport.
+     * @default true
+     */
+    preferPatches?: boolean;
+  };
+}
+
+export interface FogUIActionPayload {
+  action: string;
+  data?: unknown;
+  timestamp: string;
+  sourceComponent: string;
+}
+
+export interface FogUIActionErrorPayload extends FogUIActionPayload {
+  error: unknown;
+}
+
+export interface FogUIPatchOperation {
+  op: 'replace' | 'append' | 'remove';
+  path: string;
+  value?: unknown;
 }
 
 export interface TransformResult {
@@ -53,6 +86,11 @@ export interface UseFogUIReturn {
   transformStream: (content: string, options?: TransformOptions) => AsyncGenerator<StreamEvent>;
 
   /**
+   * Apply incremental UI patches to an existing canonical response.
+   */
+  applyPatches: (current: FogUIResponse, patches: FogUIPatchOperation[]) => FogUIResponse;
+
+  /**
    * Whether a transformation is in progress
    */
   isLoading: boolean;
@@ -68,10 +106,50 @@ export interface UseFogUIReturn {
   clearError: () => void;
 }
 
-export interface StreamEvent {
-  type: 'chunk' | 'result' | 'usage' | 'error' | 'done';
-  data: unknown;
+export interface StreamChunkEvent {
+  type: 'chunk';
+  data: string;
 }
+
+export interface StreamPatchEvent {
+  type: 'patch';
+  data: FogUIPatchOperation[];
+}
+
+export interface StreamResultEvent {
+  type: 'result';
+  data: FogUIResponse;
+}
+
+export interface StreamUsageEvent {
+  type: 'usage';
+  data: {
+    transformTokens?: number;
+    processingTimeMs?: number;
+    [key: string]: unknown;
+  };
+}
+
+export interface StreamErrorEvent {
+  type: 'error';
+  data: {
+    error: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface StreamDoneEvent {
+  type: 'done';
+  data: null;
+}
+
+export type StreamEvent =
+  | StreamChunkEvent
+  | StreamPatchEvent
+  | StreamResultEvent
+  | StreamUsageEvent
+  | StreamErrorEvent
+  | StreamDoneEvent;
 
 export * from './types/schema';
 

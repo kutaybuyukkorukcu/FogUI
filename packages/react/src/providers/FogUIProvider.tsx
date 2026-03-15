@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { Adapter } from '../types/adapter';
 import { headlessAdapter } from '../adapters/headless';
+import type { FogUIActionErrorPayload, FogUIActionPayload } from '../types';
 
 /**
  * FogUI Platform API endpoint
@@ -16,6 +17,9 @@ interface FogUIContextValue {
   endpoint: string;
   adapter: Adapter;
   onAction?: (action: string, data?: unknown) => void;
+  onActionStart?: (payload: FogUIActionPayload) => void | Promise<void>;
+  onActionComplete?: (payload: FogUIActionPayload) => void | Promise<void>;
+  onActionError?: (payload: FogUIActionErrorPayload) => void | Promise<void>;
 }
 
 const FogUIContext = createContext<FogUIContextValue | null>(null);
@@ -40,12 +44,33 @@ export interface FogUIProviderProps {
    * Global handler for component actions (e.g. form submissions, button clicks)
    */
   readonly onAction?: (action: string, data?: unknown) => void;
+  /**
+   * Fires before action dispatch begins.
+   */
+  readonly onActionStart?: (payload: FogUIActionPayload) => void | Promise<void>;
+  /**
+   * Fires after action dispatch completes successfully.
+   */
+  readonly onActionComplete?: (payload: FogUIActionPayload) => void | Promise<void>;
+  /**
+   * Fires when action dispatch fails.
+   */
+  readonly onActionError?: (payload: FogUIActionErrorPayload) => void | Promise<void>;
 }
 
 /**
  * FogUIProvider - Provides FogUI configuration to the component tree.
  */
-export function FogUIProvider({ children, apiKey, endpoint, adapter, onAction }: FogUIProviderProps) {
+export function FogUIProvider({
+  children,
+  apiKey,
+  endpoint,
+  adapter,
+  onAction,
+  onActionStart,
+  onActionComplete,
+  onActionError,
+}: FogUIProviderProps) {
   if (!apiKey) {
     console.warn('[FogUI] API key is required. Get one at https://fogui.dev/dashboard');
   }
@@ -55,7 +80,10 @@ export function FogUIProvider({ children, apiKey, endpoint, adapter, onAction }:
     endpoint: endpoint || FOGUI_API_ENDPOINT,
     adapter: adapter || headlessAdapter,
     onAction,
-  }), [apiKey, endpoint, adapter, onAction]);
+    onActionStart,
+    onActionComplete,
+    onActionError,
+  }), [apiKey, endpoint, adapter, onAction, onActionStart, onActionComplete, onActionError]);
 
   return (
     <FogUIContext.Provider value={value}>
