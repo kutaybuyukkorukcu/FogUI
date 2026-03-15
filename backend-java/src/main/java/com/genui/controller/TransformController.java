@@ -166,7 +166,7 @@ public class TransformController {
             var chatClient = chatClientFactory.createClient();
             var prompt = buildStreamPrompt(request);
             var fullContent = new StringBuilder();
-            var previousResponse = new AtomicReference<com.genui.model.genui.GenerativeUIResponse>(null);
+            var previousResponse = new AtomicReference<GenerativeUIResponse>(null);
             boolean includeChunks = request.isIncludeChunks();
             boolean preferPatches = request.isPreferPatches();
 
