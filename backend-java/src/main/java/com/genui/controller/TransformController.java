@@ -2,6 +2,8 @@ package com.genui.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.genui.entity.User;
+import com.genui.model.genui.GenerativeUIResponse;
+import com.genui.model.transform.StreamPatchOperation;
 import com.genui.model.transform.TransformRequest;
 import com.genui.model.transform.TransformResponse;
 import com.genui.repository.UserRepository;
@@ -166,7 +168,7 @@ public class TransformController {
             var chatClient = chatClientFactory.createClient();
             var prompt = buildStreamPrompt(request);
             var fullContent = new StringBuilder();
-            var previousResponse = new AtomicReference<com.genui.model.genui.GenerativeUIResponse>(null);
+            var previousResponse = new AtomicReference<GenerativeUIResponse>(null);
             boolean includeChunks = request.isIncludeChunks();
             boolean preferPatches = request.isPreferPatches();
 
@@ -242,14 +244,14 @@ public class TransformController {
     private void emitPatchesFromPartial(
             StringBuilder fullContent,
             SseEmitter emitter,
-            AtomicReference<com.genui.model.genui.GenerativeUIResponse> previousResponse
+            AtomicReference<GenerativeUIResponse> previousResponse
     ) {
         var partial = responseParser.tryParsePartial(fullContent.toString());
         if (partial == null) {
             return;
         }
 
-        List<com.genui.model.transform.StreamPatchOperation> patches = streamPatchGenerator.generatePatches(previousResponse.get(), partial);
+        List<StreamPatchOperation> patches = streamPatchGenerator.generatePatches(previousResponse.get(), partial);
         if (patches.isEmpty()) {
             return;
         }
