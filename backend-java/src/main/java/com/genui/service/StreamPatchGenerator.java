@@ -103,14 +103,8 @@ public class StreamPatchGenerator {
             if (previousMetadata != null && !previousMetadata.isEmpty()) {
                 patches.add(StreamPatchOperation.remove(METADATA_PATH));
             }
-            return;
-        }
-
-        if (previousMetadata == null || previousMetadata.isEmpty()) {
+        } else {
             patches.add(StreamPatchOperation.replace(METADATA_PATH, currentMetadata));
-            return;
         }
-
-        patches.add(StreamPatchOperation.replace(METADATA_PATH, currentMetadata));
     }
 }
