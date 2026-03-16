@@ -17,11 +17,12 @@ function normalizeThinkingItem(value: unknown): { status: string; message: strin
     const status = typeof value.status === 'string' && value.status.trim().length > 0
         ? value.status.trim()
         : 'complete';
-    const message = typeof value.message === 'string'
-        ? value.message
-        : value.message == null
-            ? ''
-            : String(value.message);
+    let message = '';
+    if (typeof value.message === 'string') {
+        message = value.message;
+    } else if (value.message != null) {
+        message = String(value.message);
+    }
     const timestamp = typeof value.timestamp === 'string' && value.timestamp.trim().length > 0
         ? value.timestamp
         : undefined;
@@ -50,13 +51,16 @@ function normalizeComponentBlock(value: unknown): UnknownRecord {
     const block = isRecord(value) ? value : {};
     const rawProps = isRecord(block.props) ? block.props : {};
     const propsChildren = rawProps.children;
-    const { children: _propsChildren, ...propsWithoutChildren } = rawProps;
+    const propsWithoutChildren = Object.fromEntries(
+        Object.entries(rawProps).filter(([key]) => key !== 'children')
+    );
 
-    const childrenSource = Array.isArray(block.children)
-        ? block.children
-        : Array.isArray(propsChildren) || isRecord(propsChildren)
-            ? propsChildren
-            : [];
+    let childrenSource: unknown = [];
+    if (Array.isArray(block.children)) {
+        childrenSource = block.children;
+    } else if (Array.isArray(propsChildren) || isRecord(propsChildren)) {
+        childrenSource = propsChildren;
+    }
 
     const normalizedChildren = normalizeContentBlocks(childrenSource);
 
