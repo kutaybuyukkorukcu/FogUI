@@ -60,32 +60,93 @@ function warnInvalidPatch(patch: FogUIPatchOperation): void {
   console.warn('[FogUI] Ignored invalid patch operation', patch);
 }
 
+function getValueAtTokens(root: unknown, tokens: string[]): unknown {
+  return tokens.reduce<unknown>((acc, token) => {
+    if (Array.isArray(acc)) {
+      const index = Number(token);
+      if (!Number.isInteger(index) || index < 0 || index >= acc.length) {
+        return undefined;
+      }
+      return acc[index];
+    }
+
+    if (acc && typeof acc === 'object') {
+      return (acc as Record<string, unknown>)[token];
+    }
+
+    return undefined;
+  }, root);
+}
+
+function applyAppendPatch(target: FogUIResponse, tokens: string[], patch: FogUIPatchOperation): boolean {
+  const appendTarget = tokens.length === 0 ? target : getValueAtTokens(target, tokens);
+  if (!Array.isArray(appendTarget) || patch.value === undefined) {
+    return false;
+  }
+
+  appendTarget.push(patch.value);
+  return true;
+}
+
+function applyArrayPatch(parent: unknown[], key: string, patch: FogUIPatchOperation): boolean {
+  const index = Number(key);
+  if (!Number.isInteger(index) || index < 0 || index >= parent.length) {
+    return false;
+  }
+
+  if (patch.op === 'replace') {
+    if (patch.value === undefined) {
+      return false;
+    }
+
+    parent[index] = patch.value;
+    return true;
+  }
+
+  if (patch.op === 'remove') {
+    parent.splice(index, 1);
+    return true;
+  }
+
+  return false;
+}
+
+function applyObjectPatch(parent: unknown, key: string, patch: FogUIPatchOperation): boolean {
+  if (!parent || typeof parent !== 'object') {
+    return false;
+  }
+
+  const objectParent = parent as Record<string, unknown>;
+  if (!(key in objectParent)) {
+    return false;
+  }
+
+  if (patch.op === 'replace') {
+    if (patch.value === undefined) {
+      return false;
+    }
+
+    objectParent[key] = patch.value;
+    return true;
+  }
+
+  if (patch.op === 'remove') {
+    delete objectParent[key];
+    return true;
+  }
+
+  return false;
+}
+
 function applySinglePatch(target: FogUIResponse, patch: FogUIPatchOperation): boolean {
   const tokens = decodeJsonPointer(patch.path);
 
   if (patch.op === 'append') {
-    const appendTarget = tokens.length === 0
-      ? target
-      : tokens.reduce<unknown>((acc, token) => {
-          if (Array.isArray(acc)) {
-            const index = Number(token);
-            if (!Number.isInteger(index) || index < 0 || index >= acc.length) return undefined;
-            return acc[index];
-          }
-
-          if (acc && typeof acc === 'object') {
-            return (acc as Record<string, unknown>)[token];
-          }
-
-          return undefined;
-        }, target);
-
-    if (!Array.isArray(appendTarget) || patch.value === undefined) {
+    if (!applyAppendPatch(target, tokens, patch)) {
       warnInvalidPatch(patch);
       return false;
     }
 
-    appendTarget.push(patch.value);
     return true;
   }
 
@@ -96,59 +157,15 @@ function applySinglePatch(target: FogUIResponse, patch: FogUIPatchOperation): bo
   }
 
   const { parent, key } = resolution;
+  const changed = Array.isArray(parent)
+    ? applyArrayPatch(parent, key, patch)
+    : applyObjectPatch(parent, key, patch);
 
-  if (Array.isArray(parent)) {
-    const index = Number(key);
-    if (!Number.isInteger(index) || index < 0 || index >= parent.length) {
-      warnInvalidPatch(patch);
-      return false;
-    }
-
-    if (patch.op === 'replace') {
-      if (patch.value === undefined) {
-        warnInvalidPatch(patch);
-        return false;
-      }
-      parent[index] = patch.value;
-      return true;
-    }
-
-    if (patch.op === 'remove') {
-      parent.splice(index, 1);
-      return true;
-    }
-
+  if (!changed) {
     warnInvalidPatch(patch);
-    return false;
   }
 
-  if (!parent || typeof parent !== 'object') {
-    warnInvalidPatch(patch);
-    return false;
-  }
-
-  const objectParent = parent as Record<string, unknown>;
-  if (!(key in objectParent)) {
-    warnInvalidPatch(patch);
-    return false;
-  }
-
-  if (patch.op === 'replace') {
-    if (patch.value === undefined) {
-      warnInvalidPatch(patch);
-      return false;
-    }
-    objectParent[key] = patch.value;
-    return true;
-  }
-
-  if (patch.op === 'remove') {
-    delete objectParent[key];
-    return true;
-  }
-
-  warnInvalidPatch(patch);
-  return false;
+  return changed;
 }
 
 export function applyFogUIPatches(current: FogUIResponse, patches: FogUIPatchOperation[]): FogUIResponse {

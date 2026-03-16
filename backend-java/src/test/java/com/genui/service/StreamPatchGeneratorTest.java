@@ -69,4 +69,59 @@ class StreamPatchGeneratorTest {
 
         assertTrue(patches.stream().anyMatch(p -> "replace".equals(p.getOp()) && "/metadata".equals(p.getPath())));
     }
+
+        @Test
+        @DisplayName("returns empty patches when current response is null")
+        void returnsEmptyWhenCurrentIsNull() {
+                var patches = generator.generatePatches(GenerativeUIResponse.builder().build(), null);
+                assertTrue(patches.isEmpty());
+        }
+
+        @Test
+        @DisplayName("emits remove operations when current list shrinks")
+        void emitsRemoveOperationsWhenCurrentListShrinks() {
+                GenerativeUIResponse previous = GenerativeUIResponse.builder()
+                                .content(List.of(ContentBlock.text("A"), ContentBlock.text("B")))
+                                .build();
+
+                GenerativeUIResponse current = GenerativeUIResponse.builder()
+                                .content(List.of(ContentBlock.text("A")))
+                                .build();
+
+                var patches = generator.generatePatches(previous, current);
+
+                assertTrue(patches.stream().anyMatch(p -> "remove".equals(p.getOp()) && "/content/1".equals(p.getPath())));
+        }
+
+        @Test
+        @DisplayName("emits metadata remove when metadata becomes empty")
+        void emitsMetadataRemoveWhenMetadataBecomesEmpty() {
+                GenerativeUIResponse previous = GenerativeUIResponse.builder()
+                                .metadata(Map.of("version", "1"))
+                                .build();
+
+                GenerativeUIResponse current = GenerativeUIResponse.builder()
+                                .metadata(Map.of())
+                                .build();
+
+                var patches = generator.generatePatches(previous, current);
+
+                assertTrue(patches.stream().anyMatch(p -> "remove".equals(p.getOp()) && "/metadata".equals(p.getPath())));
+        }
+
+        @Test
+        @DisplayName("does not emit metadata patch when metadata is unchanged")
+        void doesNotEmitMetadataPatchWhenMetadataUnchanged() {
+                GenerativeUIResponse previous = GenerativeUIResponse.builder()
+                                .metadata(Map.of("version", "1"))
+                                .build();
+
+                GenerativeUIResponse current = GenerativeUIResponse.builder()
+                                .metadata(Map.of("version", "1"))
+                                .build();
+
+                var patches = generator.generatePatches(previous, current);
+
+                assertTrue(patches.stream().noneMatch(p -> "/metadata".equals(p.getPath())));
+        }
 }
