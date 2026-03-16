@@ -88,7 +88,7 @@ export function FogUIRenderer({
     onActionError: onActionError || contextOnActionError,
   };
 
-  if (!response?.content) {
+  if (!Array.isArray(response?.content)) {
     return null;
   }
 
@@ -155,8 +155,36 @@ function hasActionHandlers(lifecycleHandlers: Readonly<ActionLifecycleHandlers>)
   );
 }
 
+function isContentBlockLike(value: unknown): value is ContentBlock {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const block = value as { type?: unknown };
+  return block.type === 'text' || block.type === 'component';
+}
+
+function getRenderableChildren(
+  blockChildren: unknown,
+  propsChildren: unknown,
+): ContentBlock[] {
+  if (Array.isArray(blockChildren) && blockChildren.length > 0) {
+    return blockChildren.filter(isContentBlockLike);
+  }
+
+  if (Array.isArray(propsChildren)) {
+    return propsChildren.filter(isContentBlockLike);
+  }
+
+  if (isContentBlockLike(propsChildren)) {
+    return [propsChildren];
+  }
+
+  return [];
+}
+
 function renderTextBlock(value: string): JSX.Element {
-  const lines = value.split('\n');
+  const lines = String(value ?? '').split('\n');
   return (
     <div style={{ marginBottom: '12px', lineHeight: 1.6 }}>
       {lines.map((line, i) => (
@@ -177,19 +205,28 @@ function renderMappedComponent(
   adapter: Readonly<Adapter>,
 ): JSX.Element {
   const componentType = block.componentType as FogUIComponent['componentType'];
+  const rawProps: Record<string, unknown> = block.props && typeof block.props === 'object'
+    ? block.props
+    : {};
+  const propsChildren = rawProps.children;
   const restProps = Object.fromEntries(
-    Object.entries(block.props).filter(([key]) => key !== 'children')
+    Object.entries(rawProps).filter(([key]) => key !== 'children')
   );
   const mappedProps = adapter.mapProps ? adapter.mapProps(componentType, restProps) : restProps;
+  const childBlocks = getRenderableChildren(block.children, propsChildren);
   const wrappedOnAction = hasActionHandlers(lifecycleHandlers)
     ? (action: string, data?: unknown) => {
         dispatchActionLifecycle(lifecycleHandlers, block.componentType, action, data);
       }
     : undefined;
 
+  if (childBlocks.length === 0) {
+    return <Component {...mappedProps} onAction={wrappedOnAction} />;
+  }
+
   return (
     <Component {...mappedProps} onAction={wrappedOnAction}>
-      {block.children?.map((childBlock) => (
+      {childBlocks.map((childBlock) => (
         <ContentBlockRenderer
           key={getBlockKey(childBlock)}
           block={childBlock}

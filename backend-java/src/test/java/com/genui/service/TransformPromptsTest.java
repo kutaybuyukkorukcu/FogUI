@@ -135,5 +135,15 @@ class TransformPromptsTest {
             assertTrue(prompt.contains("thinking"));
             assertTrue(prompt.contains("content"));
         }
+
+        @Test
+        @DisplayName("should include deterministic contract requirements")
+        void shouldIncludeDeterministicContractRequirements() {
+            String prompt = TransformPrompts.TRANSFORM_SYSTEM_PROMPT;
+
+            assertTrue(prompt.contains("Deterministic Contract"));
+            assertTrue(prompt.contains("componentType"));
+            assertTrue(prompt.contains("list components"));
+        }
     }
 }

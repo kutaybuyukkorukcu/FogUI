@@ -1,4 +1,5 @@
 import type { FogUIPatchOperation, FogUIResponse } from './types';
+import { normalizeFogUIResponse } from './types/schema.zod';
 
 interface ParentResolution {
   parent: unknown;
@@ -183,5 +184,9 @@ export function applyFogUIPatches(current: FogUIResponse, patches: FogUIPatchOpe
     }
   }
 
-  return next ?? current;
+  if (!next) {
+    return current;
+  }
+
+  return normalizeFogUIResponse(next) as unknown as FogUIResponse;
 }

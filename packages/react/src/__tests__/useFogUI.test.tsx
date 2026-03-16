@@ -154,7 +154,7 @@ describe('useFogUI', () => {
     expect(result.current.error).toBe('Transformation failed from API');
   });
 
-  it('should handle validation errors in the response', async () => {
+  it('should normalize malformed transform responses instead of failing validation', async () => {
     const invalidResponse = { success: true, result: { content: [{ type: 'invalid' }] } };
     fetchMock.mockReturnValue(createFetchResponse(invalidResponse));
     
@@ -162,8 +162,12 @@ describe('useFogUI', () => {
     
     await waitFor(async () => {
       const transformResult = await result.current.transform('some content');
-      expect(transformResult.success).toBe(false);
-      expect(transformResult.error).toBe('API response validation failed');
+      expect(transformResult.success).toBe(true);
+      expect(transformResult.error).toBeUndefined();
+      expect(transformResult.result).toEqual({
+        thinking: [],
+        content: [{ type: 'text', value: '' }],
+      });
     });
   });
 
@@ -340,7 +344,7 @@ describe('useFogUI', () => {
     expect(parsedBody.preferPatches).toBe(true);
   });
 
-  it('should yield error when streaming result validation fails', async () => {
+  it('should normalize malformed streaming results and continue', async () => {
     const lines = [
       'event: result\n',
       'data: {"invalid":true}\n\n',
@@ -349,7 +353,6 @@ describe('useFogUI', () => {
     ];
     fetchMock.mockReturnValue(createStreamingResponse(lines));
 
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { result } = renderHook(() => useFogUI(), { wrapper });
 
     const events: Array<{ type: string; data: any }> = [];
@@ -360,8 +363,14 @@ describe('useFogUI', () => {
       }
     });
 
-    expect(events).toContainEqual({ type: 'error', data: { error: 'Stream validation failed' } });
-    consoleErrorSpy.mockRestore();
+    expect(events).toContainEqual({
+      type: 'result',
+      data: {
+        thinking: [],
+        content: [],
+      },
+    });
+    expect(events).toContainEqual({ type: 'done', data: null });
   });
 
   it('should yield error when streaming response has no body', async () => {

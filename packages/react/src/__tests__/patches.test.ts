@@ -52,4 +52,17 @@ describe('applyFogUIPatches', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('normalizes successful patch output into render-safe canonical shape', () => {
+    const next = applyFogUIPatches(baseResponse, [
+      { op: 'replace', path: '/content/0', value: { componentType: '  list  ', props: { items: ['A'] } } },
+    ]);
+
+    expect(next).not.toBe(baseResponse);
+    expect(next.content[0]).toMatchObject({
+      type: 'component',
+      componentType: 'list',
+      props: { items: ['A'] },
+    });
+  });
 });
