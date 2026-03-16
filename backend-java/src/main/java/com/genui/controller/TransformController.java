@@ -2,11 +2,14 @@ package com.genui.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.genui.entity.User;
+import com.genui.model.genui.GenerativeUIResponse;
+import com.genui.model.transform.StreamPatchOperation;
 import com.genui.model.transform.TransformRequest;
 import com.genui.model.transform.TransformResponse;
 import com.genui.repository.UserRepository;
 import com.genui.security.ApiKeyUserDetails;
 import com.genui.service.ChatClientFactory;
+import com.genui.service.StreamPatchGenerator;
 import com.genui.service.TransformPrompts;
 import com.genui.service.UIResponseParser;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -46,8 +51,11 @@ import java.util.concurrent.Executors;
 @RequiredArgsConstructor
 public class TransformController {
 
+    private static final String ERROR_KEY = "error";
+
     private final ChatClientFactory chatClientFactory;
     private final UIResponseParser responseParser;
+    private final StreamPatchGenerator streamPatchGenerator;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -160,11 +168,24 @@ public class TransformController {
             var chatClient = chatClientFactory.createClient();
             var prompt = buildStreamPrompt(request);
             var fullContent = new StringBuilder();
+            var previousResponse = new AtomicReference<GenerativeUIResponse>(null);
+            boolean includeChunks = request.isIncludeChunks();
+            boolean preferPatches = request.isPreferPatches();
 
             chatClient.prompt(prompt)
                     .stream()
                     .content()
-                    .doOnNext(chunk -> handleStreamChunk(chunk, emitter, fullContent))
+                    .doOnNext(chunk -> {
+                        if (includeChunks) {
+                            handleStreamChunk(chunk, emitter, fullContent);
+                        } else {
+                            fullContent.append(chunk);
+                        }
+
+                        if (preferPatches) {
+                            emitPatchesFromPartial(fullContent, emitter, previousResponse);
+                        }
+                    })
                     .doOnComplete(() -> handleStreamComplete(emitter, fullContent, request, startTime))
                     .doOnError(error -> handleStreamError(error, emitter))
                     .subscribe();
@@ -185,9 +206,9 @@ public class TransformController {
     private void sendErrorAndComplete(SseEmitter emitter, String errorMessage) {
         try {
             var errorJson = objectMapper.createObjectNode();
-            errorJson.put("error", errorMessage);
+            errorJson.put(ERROR_KEY, errorMessage);
             emitter.send(SseEmitter.event()
-                    .name("error")
+                    .name(ERROR_KEY)
                     .data(objectMapper.writeValueAsString(errorJson)));
             emitter.complete();
         } catch (IOException e) {
@@ -220,11 +241,37 @@ public class TransformController {
         }
     }
 
+    private void emitPatchesFromPartial(
+            StringBuilder fullContent,
+            SseEmitter emitter,
+            AtomicReference<GenerativeUIResponse> previousResponse
+    ) {
+        var partial = responseParser.tryParsePartial(fullContent.toString());
+        if (partial == null) {
+            return;
+        }
+
+        List<StreamPatchOperation> patches = streamPatchGenerator.generatePatches(previousResponse.get(), partial);
+        if (patches.isEmpty()) {
+            return;
+        }
+
+        previousResponse.set(partial);
+
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("patch")
+                    .data(objectMapper.writeValueAsString(patches)));
+        } catch (IOException e) {
+            log.error("Error sending patch", e);
+        }
+    }
+
     private void handleStreamComplete(SseEmitter emitter, StringBuilder fullContent, TransformRequest request, long startTime) {
         try {
             sendStreamResult(emitter, fullContent.toString());
             sendStreamUsage(emitter, request, fullContent, startTime);
-            emitter.send(SseEmitter.event().data("[DONE]"));
+            emitter.send(SseEmitter.event().name("done").data("[DONE]"));
             emitter.complete();
         } catch (Exception e) {
             log.error("Error completing stream", e);
@@ -254,7 +301,16 @@ public class TransformController {
 
     private void handleStreamError(Throwable error, SseEmitter emitter) {
         log.error("Stream error", error);
-        emitter.completeWithError(error);
+        try {
+            var errorJson = objectMapper.createObjectNode();
+            errorJson.put(ERROR_KEY, error.getMessage() != null ? error.getMessage() : "Stream processing failed");
+            emitter.send(SseEmitter.event()
+                    .name(ERROR_KEY)
+                    .data(objectMapper.writeValueAsString(errorJson)));
+            emitter.complete();
+        } catch (IOException ioException) {
+            emitter.completeWithError(ioException);
+        }
     }
 
     private void handleProcessError(Exception ex, SseEmitter emitter) {

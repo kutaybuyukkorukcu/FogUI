@@ -39,6 +39,20 @@ public class TransformRequest {
     private boolean streaming = false;
 
     /**
+     * When true, stream emits patch events as primary incremental updates.
+     */
+    @JsonProperty("preferPatches")
+    @Builder.Default
+    private boolean preferPatches = true;
+
+    /**
+     * When true, stream still emits raw chunk events for backward compatibility.
+     */
+    @JsonProperty("includeChunks")
+    @Builder.Default
+    private boolean includeChunks = true;
+
+    /**
      * Optional session ID for maintaining state across streaming chunks.
      */
     private String sessionId;

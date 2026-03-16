@@ -1,5 +1,10 @@
 import React from 'react';
-import type { ContentBlock, FogUIResponse } from '../types';
+import type {
+  ContentBlock,
+  FogUIActionErrorPayload,
+  FogUIActionPayload,
+  FogUIResponse,
+} from '../types';
 import { FogUIComponent } from '../types';
 import { useFogUIContext } from '../providers/FogUIProvider';
 
@@ -10,12 +15,78 @@ export interface FogUIRendererProps {
   readonly className?: string;
   readonly style?: React.CSSProperties;
   readonly onAction?: (action: string, data?: unknown) => void;
+  readonly onActionStart?: (payload: FogUIActionPayload) => void | Promise<void>;
+  readonly onActionComplete?: (payload: FogUIActionPayload) => void | Promise<void>;
+  readonly onActionError?: (payload: FogUIActionErrorPayload) => void | Promise<void>;
 }
 
-export function FogUIRenderer({ response, className, style, onAction }: FogUIRendererProps) {
-  const { adapter, onAction: contextOnAction } = useFogUIContext();
+interface ActionLifecycleHandlers {
+  onAction?: (action: string, data?: unknown) => void;
+  onActionStart?: (payload: FogUIActionPayload) => void | Promise<void>;
+  onActionComplete?: (payload: FogUIActionPayload) => void | Promise<void>;
+  onActionError?: (payload: FogUIActionErrorPayload) => void | Promise<void>;
+}
 
-  const handleAction = onAction || contextOnAction;
+async function invokeHandler<TArgs extends unknown[]>(
+  handler: ((...args: TArgs) => void | Promise<void>) | undefined,
+  ...args: TArgs
+): Promise<void> {
+  if (!handler) return;
+  await handler(...args);
+}
+
+function dispatchActionLifecycle(
+  handlers: ActionLifecycleHandlers,
+  sourceComponent: string,
+  action: string,
+  data?: unknown,
+): void {
+  const payload: FogUIActionPayload = {
+    action,
+    data,
+    sourceComponent,
+    timestamp: new Date().toISOString(),
+  };
+
+  const runLifecycle = async () => {
+    await invokeHandler(handlers.onActionStart, payload);
+    await invokeHandler(handlers.onAction, action, data);
+    await invokeHandler(handlers.onActionComplete, payload);
+  };
+
+  void runLifecycle().catch((error) => {
+    void invokeHandler(handlers.onActionError, {
+      ...payload,
+      error,
+    }).catch((handlerError) => {
+      console.warn('[FogUI] onActionError handler failed', handlerError);
+    });
+  });
+}
+
+export function FogUIRenderer({
+  response,
+  className,
+  style,
+  onAction,
+  onActionStart,
+  onActionComplete,
+  onActionError,
+}: FogUIRendererProps) {
+  const {
+    adapter,
+    onAction: contextOnAction,
+    onActionStart: contextOnActionStart,
+    onActionComplete: contextOnActionComplete,
+    onActionError: contextOnActionError,
+  } = useFogUIContext();
+
+  const lifecycleHandlers: ActionLifecycleHandlers = {
+    onAction: onAction || contextOnAction,
+    onActionStart: onActionStart || contextOnActionStart,
+    onActionComplete: onActionComplete || contextOnActionComplete,
+    onActionError: onActionError || contextOnActionError,
+  };
 
   if (!response?.content) {
     return null;
@@ -28,7 +99,7 @@ export function FogUIRenderer({ response, className, style, onAction }: FogUIRen
           key={getBlockKey(block)}
           block={block}
           registry={adapter.components}
-          onAction={handleAction}
+          lifecycleHandlers={lifecycleHandlers}
           adapter={adapter}
         />
       ))}
@@ -41,7 +112,7 @@ type ComponentRegistry = Adapter['components'];
 interface ContentBlockRendererProps {
   readonly block: Readonly<ContentBlock>;
   readonly registry: Readonly<ComponentRegistry>;
-  readonly onAction?: (action: string, data?: unknown) => void;
+  readonly lifecycleHandlers: Readonly<ActionLifecycleHandlers>;
   readonly adapter: Readonly<Adapter>;
 }
 
@@ -75,67 +146,101 @@ function getBlockKey(block: ContentBlock): string {
   return `component:${block.componentType}:${JSON.stringify(block.props)}:${JSON.stringify(block.children ?? [])}`;
 }
 
-function ContentBlockRenderer({ block, registry, onAction, adapter }: ContentBlockRendererProps) {
+function hasActionHandlers(lifecycleHandlers: Readonly<ActionLifecycleHandlers>): boolean {
+  return (
+    !!lifecycleHandlers.onAction ||
+    !!lifecycleHandlers.onActionStart ||
+    !!lifecycleHandlers.onActionComplete ||
+    !!lifecycleHandlers.onActionError
+  );
+}
+
+function renderTextBlock(value: string): JSX.Element {
+  const lines = value.split('\n');
+  return (
+    <div style={{ marginBottom: '12px', lineHeight: 1.6 }}>
+      {lines.map((line, i) => (
+        <React.Fragment key={line + '-' + i}>
+          {line}
+          {i < lines.length - 1 && <br />}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function renderMappedComponent(
+  block: Extract<ContentBlock, { type: 'component' }>,
+  Component: React.ComponentType<any>,
+  lifecycleHandlers: Readonly<ActionLifecycleHandlers>,
+  registry: Readonly<ComponentRegistry>,
+  adapter: Readonly<Adapter>,
+): JSX.Element {
+  const componentType = block.componentType as FogUIComponent['componentType'];
+  const restProps = Object.fromEntries(
+    Object.entries(block.props).filter(([key]) => key !== 'children')
+  );
+  const mappedProps = adapter.mapProps ? adapter.mapProps(componentType, restProps) : restProps;
+  const wrappedOnAction = hasActionHandlers(lifecycleHandlers)
+    ? (action: string, data?: unknown) => {
+        dispatchActionLifecycle(lifecycleHandlers, block.componentType, action, data);
+      }
+    : undefined;
+
+  return (
+    <Component {...mappedProps} onAction={wrappedOnAction}>
+      {block.children?.map((childBlock) => (
+        <ContentBlockRenderer
+          key={getBlockKey(childBlock)}
+          block={childBlock}
+          registry={registry}
+          lifecycleHandlers={lifecycleHandlers}
+          adapter={adapter}
+        />
+      ))}
+    </Component>
+  );
+}
+
+function renderUnmappedComponent(block: Extract<ContentBlock, { type: 'component' }>, registry: Readonly<ComponentRegistry>): JSX.Element {
+  const availableComponents = Object.keys(registry);
+  const suggestion = findClosestComponent(block.componentType, availableComponents);
+  const availableText = availableComponents.length > 0 ? availableComponents.join(', ') : 'none';
+  const suggestionText = suggestion ? ` Did you mean "${suggestion}"?` : '';
+
+  console.warn(
+    `[FogUI] Unmapped component: "${block.componentType}".` +
+    `${suggestionText}` +
+    ` Available adapter components: ${availableText}.` +
+    ` Add a "${block.componentType}" mapping in adapter.components.`
+  );
+
+  return (
+    <UnmappedComponent
+      componentType={block.componentType}
+      availableComponents={availableComponents}
+      suggestion={suggestion}
+    />
+  );
+}
+
+function ContentBlockRenderer({ block, registry, lifecycleHandlers, adapter }: ContentBlockRendererProps) {
   if (block.type === 'text') {
-    const lines = block.value.split('\n');
-    return (
-      <div style={{ marginBottom: '12px', lineHeight: 1.6 }}>
-        {lines.map((line, i) => (
-          <React.Fragment key={line + '-' + i}>
-            {line}
-            {i < lines.length - 1 && <br />}
-          </React.Fragment>
-        ))}
-      </div>
-    );
+    return renderTextBlock(block.value);
   }
 
-  if (block.type === 'component') {
-    const componentType = block.componentType as FogUIComponent['componentType'];
-    const Component = registry[componentType];
-
-    if (Component) {
-      const restProps = Object.fromEntries(
-        Object.entries(block.props).filter(([key]) => key !== 'children')
-      );
-      const mappedProps = adapter.mapProps ? adapter.mapProps(componentType, restProps) : restProps;
-
-      return (
-        <Component {...mappedProps} onAction={onAction}>
-          {block.children?.map((childBlock) => (
-            <ContentBlockRenderer
-              key={getBlockKey(childBlock)}
-              block={childBlock}
-              registry={registry}
-              onAction={onAction}
-              adapter={adapter}
-            />
-          ))}
-        </Component>
-      );
-    }
-
-    const availableComponents = Object.keys(registry);
-    const suggestion = findClosestComponent(block.componentType, availableComponents);
-    const availableText = availableComponents.length > 0 ? availableComponents.join(', ') : 'none';
-    const suggestionText = suggestion ? ` Did you mean "${suggestion}"?` : '';
-
-    console.warn(
-      `[FogUI] Unmapped component: "${block.componentType}".` +
-      `${suggestionText}` +
-      ` Available adapter components: ${availableText}.` +
-      ` Add a "${block.componentType}" mapping in adapter.components.`
-    );
-    return (
-      <UnmappedComponent
-        componentType={block.componentType}
-        availableComponents={availableComponents}
-        suggestion={suggestion}
-      />
-    );
+  if (block.type !== 'component') {
+    return null;
   }
 
-  return null;
+  const componentType = block.componentType as FogUIComponent['componentType'];
+  const Component = registry[componentType];
+
+  if (Component) {
+    return renderMappedComponent(block, Component, lifecycleHandlers, registry, adapter);
+  }
+
+  return renderUnmappedComponent(block, registry);
 }
 
 // Move UnmappedComponent out of parent

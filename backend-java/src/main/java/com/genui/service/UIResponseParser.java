@@ -125,12 +125,42 @@ public class UIResponseParser {
      */
     public GenerativeUIResponse tryParsePartial(String json) {
         try {
+            String candidateJson = extractPartialJsonCandidate(json);
+            if (candidateJson == null || candidateJson.isBlank() || !candidateJson.trim().startsWith("{")) {
+                return null;
+            }
+
             // Try to fix incomplete JSON by closing brackets
-            var fixedJson = tryFixIncompleteJson(json);
+            var fixedJson = tryFixIncompleteJson(candidateJson);
             return objectMapper.readValue(fixedJson, GenerativeUIResponse.class);
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private String extractPartialJsonCandidate(String content) {
+        if (content == null || content.isBlank()) {
+            return null;
+        }
+
+        String trimmed = content.trim();
+
+        int genuiStart = trimmed.indexOf("<genui>");
+        if (genuiStart >= 0) {
+            trimmed = trimmed.substring(genuiStart + "<genui>".length()).trim();
+        }
+
+        int genuiEnd = trimmed.indexOf("</genui>");
+        if (genuiEnd >= 0) {
+            trimmed = trimmed.substring(0, genuiEnd).trim();
+        }
+
+        int firstBrace = trimmed.indexOf('{');
+        if (firstBrace >= 0) {
+            return trimmed.substring(firstBrace).trim();
+        }
+
+        return trimmed;
     }
 
     /**

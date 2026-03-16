@@ -218,6 +218,62 @@ class UIResponseParserTest {
             assertNotNull(result.getContent());
             assertTrue(result.getContent().size() > 0);
         }
+
+          @Test
+          @DisplayName("should use default fallback message when tags leave blank content")
+          void shouldUseDefaultFallbackMessageWhenTagsLeaveBlankContent() {
+            String invalidJson = "<genui></genui>";
+
+            GenerativeUIResponse result = parser.parse(invalidJson);
+
+            assertNotNull(result);
+            assertEquals(true, result.getMetadata().get("fallback"));
+            assertEquals("I received your request but couldn't format a proper response.",
+                result.getContent().get(0).getValue());
+          }
+        }
+
+        @Nested
+        @DisplayName("Partial JSON Parsing")
+        class PartialJsonParsing {
+
+          @Test
+          @DisplayName("should validate partial JSON shape")
+          void shouldValidatePartialJsonShape() {
+            assertTrue(parser.isValidPartialJson("{\"content\":[]}"));
+            assertFalse(parser.isValidPartialJson("[]"));
+            assertFalse(parser.isValidPartialJson("short"));
+          }
+
+          @Test
+          @DisplayName("should parse partial JSON extracted from genui wrapper")
+          void shouldParsePartialJsonFromGenuiWrapper() {
+            String streamChunk = "prefix <genui> {\"thinking\":[],\"content\":[{\"type\":\"text\",\"value\":\"Partial\"}]} </genui>";
+
+            GenerativeUIResponse result = parser.tryParsePartial(streamChunk);
+
+            assertNotNull(result);
+            assertEquals("Partial", result.getContent().get(0).getValue());
+          }
+
+          @Test
+          @DisplayName("should repair and parse incomplete JSON")
+          void shouldRepairAndParseIncompleteJson() {
+            String incomplete = "{\"thinking\":[],\"content\":[{\"type\":\"text\",\"value\":\"X\"}]";
+
+            GenerativeUIResponse result = parser.tryParsePartial(incomplete);
+
+            assertNotNull(result);
+            assertEquals("X", result.getContent().get(0).getValue());
+          }
+
+          @Test
+          @DisplayName("should return null for partial text without JSON object")
+          void shouldReturnNullForTextWithoutJsonObject() {
+            assertNull(parser.tryParsePartial("streaming words only"));
+            assertNull(parser.tryParsePartial(""));
+            assertNull(parser.tryParsePartial(null));
+          }
     }
 
     @Nested

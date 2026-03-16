@@ -4,6 +4,7 @@ import { useFogUI } from '../useFogUI';
 import { FogUIProvider } from '../providers/FogUIProvider';
 import React from 'react';
 import { fogUIResponseSchema } from '../types/schema.zod';
+import type { FogUIResponse, FogUIPatchOperation } from '../types';
 
 // Mock fetch
 const fetchMock = vi.fn();
@@ -218,6 +219,43 @@ describe('useFogUI', () => {
     expect(events).toContainEqual({ type: 'done', data: null });
   });
 
+  it('should stream mixed chunk, patch, result, and done events', async () => {
+    const resultPayload = {
+      thinking: [],
+      content: [{ type: 'text', value: 'Final state' }],
+    };
+
+    const lines = [
+      'event: chunk\n',
+      'data: partial\n\n',
+      'event: patch\n',
+      'data: {"op":"append","path":"/content","value":{"type":"text","value":"partial"}}\n\n',
+      'event: result\n',
+      `data: ${JSON.stringify(resultPayload)}\n\n`,
+      'event: done\n',
+      'data: [DONE]\n\n',
+    ];
+
+    fetchMock.mockReturnValue(createStreamingResponse(lines));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    const events: Array<{ type: string; data: unknown }> = [];
+    await waitFor(async () => {
+      const stream = result.current.transformStream('mixed stream content');
+      for await (const event of stream) {
+        events.push(event);
+      }
+    });
+
+    expect(events).toContainEqual({ type: 'chunk', data: 'partial' });
+    expect(events).toContainEqual({
+      type: 'patch',
+      data: [{ op: 'append', path: '/content', value: { type: 'text', value: 'partial' } }],
+    });
+    expect(events).toContainEqual({ type: 'result', data: resultPayload });
+    expect(events).toContainEqual({ type: 'done', data: null });
+  });
+
   it('should ignore invalid JSON for non-chunk stream events', async () => {
     const lines = [
       'event: usage\n',
@@ -269,6 +307,37 @@ describe('useFogUI', () => {
       instructions: 'Return concise UI',
     });
     expect(parsedBody.streaming).toBe(true);
+    expect(parsedBody.includeChunks).toBe(true);
+    expect(parsedBody.preferPatches).toBe(true);
+  });
+
+  it('should allow overriding stream transport options', async () => {
+    const lines = [
+      'event: done\n',
+      'data: [DONE]\n\n',
+    ];
+
+    fetchMock.mockReturnValue(createStreamingResponse(lines));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    await waitFor(async () => {
+      const stream = result.current.transformStream('stream prompt', {
+        stream: {
+          includeChunks: false,
+          preferPatches: true,
+        },
+      });
+
+      for await (const event of stream) {
+        expect(event).toBeDefined();
+      }
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const parsedBody = JSON.parse(String(requestInit.body));
+
+    expect(parsedBody.includeChunks).toBe(false);
+    expect(parsedBody.preferPatches).toBe(true);
   });
 
   it('should yield error when streaming result validation fails', async () => {
@@ -338,5 +407,21 @@ describe('useFogUI', () => {
       result.current.clearError();
     });
     expect(result.current.error).toBe(null);
+  });
+
+  it('applyPatches applies incremental updates from hook API', () => {
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    const current: FogUIResponse = {
+      thinking: [],
+      content: [{ type: 'text', value: 'A' }],
+    };
+    const patches: FogUIPatchOperation[] = [
+      { op: 'append', path: '/content', value: { type: 'text', value: 'B' } },
+    ];
+
+    const next = result.current.applyPatches(current, patches);
+    expect(next.content).toHaveLength(2);
+    expect(next.content[1]).toEqual({ type: 'text', value: 'B' });
   });
 });
