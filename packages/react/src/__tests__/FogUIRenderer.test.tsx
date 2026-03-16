@@ -108,6 +108,38 @@ describe('FogUIRenderer', () => {
       expect(cards).toHaveLength(2);
   });
 
+  it('renders nested blocks when backend provides props.children', () => {
+    const response: FogUIResponse = {
+      thinking: [],
+      content: [
+        {
+          type: 'component',
+          componentType: 'Card',
+          props: {
+            title: 'Parent Via Props',
+            children: [
+              {
+                type: 'component',
+                componentType: 'Card',
+                props: { title: 'Child Via Props' },
+              },
+            ],
+          },
+          children: [],
+        },
+      ],
+    };
+
+    render(
+      <FogUIProvider adapter={mockAdapter} apiKey="test">
+        <FogUIRenderer response={response} />
+      </FogUIProvider>
+    );
+
+    expect(screen.getByText('Parent Via Props')).toBeInTheDocument();
+    expect(screen.getByText('Child Via Props')).toBeInTheDocument();
+  });
+
   it('applies adapter.mapProps before rendering components', () => {
     const mapProps = vi.fn((_type: string, props: Record<string, unknown>) => ({
       ...props,
