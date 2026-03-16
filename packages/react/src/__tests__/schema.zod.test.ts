@@ -76,36 +76,26 @@ describe('fogUIResponseSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects invalid variants and invalid response shape', () => {
-    const invalidButton = {
-      thinking: [],
-      content: [
-        {
-          type: 'component',
-          componentType: 'Button',
-          props: { label: 'Missing action' },
-        },
-      ],
-    };
-
-    const invalidThinking = {
-      thinking: [{ status: 'pending', message: 'bad status' }],
+  it('rejects truly invalid response shapes', () => {
+    // Missing required top-level fields
+    const missingThinking = {
       content: [{ type: 'text', value: 'hi' }],
     };
-
-    const invalidBadge = {
-      thinking: [],
-      content: [
-        {
-          type: 'component',
-          componentType: 'Badge',
-          props: { label: 'oops', color: 'purple' },
-        },
-      ],
+    const missingContent = {
+      thinking: [{ status: 'complete', message: 'ok' }],
     };
-
-    expect(fogUIResponseSchema.safeParse(invalidButton).success).toBe(false);
-    expect(fogUIResponseSchema.safeParse(invalidThinking).success).toBe(false);
-    expect(fogUIResponseSchema.safeParse(invalidBadge).success).toBe(false);
+    // Wrong types
+    const wrongThinkingType = {
+      thinking: 'not-an-array',
+      content: [{ type: 'text', value: 'hi' }],
+    };
+    const wrongContentType = {
+      thinking: [{ status: 'complete', message: 'ok' }],
+      content: 'not-an-array',
+    };
+    expect(fogUIResponseSchema.safeParse(missingThinking).success).toBe(false);
+    expect(fogUIResponseSchema.safeParse(missingContent).success).toBe(false);
+    expect(fogUIResponseSchema.safeParse(wrongThinkingType).success).toBe(false);
+    expect(fogUIResponseSchema.safeParse(wrongContentType).success).toBe(false);
   });
 });

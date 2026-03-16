@@ -12,6 +12,43 @@ import { useEffect, useMemo, useState } from 'react';
 import { demoAdapter } from '../fogui.adapter';
 
 type DemoMode = 'mock' | 'live';
+type LogEntry = { kind: string; action?: string; data?: unknown; note?: string; timestamp: string };
+
+interface StreamDebugEvent {
+  readonly type: string;
+  readonly at: string;
+  readonly deltaMs: number;
+  readonly detail?: unknown;
+}
+
+interface StreamDebugReport {
+  readonly runId: string;
+  readonly mode: DemoMode;
+  readonly example: string;
+  readonly promptLength: number;
+  readonly endpoint: string;
+  readonly startedAt: string;
+  readonly endedAt: string;
+  readonly durationMs: number;
+  readonly stats: {
+    readonly chunks: number;
+    readonly chunkChars: number;
+    readonly avgChunkChars: number;
+    readonly maxChunkChars: number;
+    readonly patches: number;
+    readonly patchOps: number;
+    readonly errors: number;
+    readonly hasResult: boolean;
+    readonly hasDone: boolean;
+    readonly hasUsage: boolean;
+    readonly hasValidationError: boolean;
+    readonly hasNetworkError: boolean;
+  };
+  readonly notes: string[];
+  readonly usage?: unknown;
+  readonly errors: unknown[];
+  readonly events: StreamDebugEvent[];
+}
 
 const streamPrompts: Record<string, string> = {
   Dashboard: 'Create a compact revenue dashboard with KPI badges and one summary card.',
@@ -175,19 +212,22 @@ const exampleResponses: Record<string, FogUIResponse> = {
 };
 
 interface FogUIDemoContentProps {
-  readonly actionLog: Array<{ kind: string; action?: string; data?: unknown; note?: string }>;
+  readonly actionLog: LogEntry[];
   readonly onAction: (action: string, data?: unknown) => void;
   readonly onApplyPatch: (patches: FogUIPatchOperation[]) => void;
   readonly onStreamLog: (entry: { kind: string; action?: string; data?: unknown; note?: string }) => void;
   readonly mode: DemoMode;
   readonly setMode: (mode: DemoMode) => void;
+  readonly endpoint: string;
 }
 
-function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode, setMode }: FogUIDemoContentProps) {
+function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode, setMode, endpoint }: FogUIDemoContentProps) {
   const { transformStream, applyPatches, isLoading, error } = useFogUI();
   const [activeExample, setActiveExample] = useState<keyof typeof exampleResponses>('Dashboard');
   const [response, setResponse] = useState<FogUIResponse>(exampleResponses.Dashboard);
   const [prompt, setPrompt] = useState(streamPrompts.Dashboard);
+  const [latestStreamDebug, setLatestStreamDebug] = useState<StreamDebugReport | null>(null);
+  const [copyStatus, setCopyStatus] = useState<string>('');
 
   const exampleKeys = useMemo(() => Object.keys(exampleResponses) as Array<keyof typeof exampleResponses>, []);
 
@@ -266,41 +306,166 @@ function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode
   };
 
   const runLiveStream = async () => {
+    const startedAt = new Date();
+    const runId = `${startedAt.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
+    const debugEvents: StreamDebugEvent[] = [];
+    const debugErrors: unknown[] = [];
+    const notes: string[] = [];
+    let chunkChars = 0;
+    let maxChunkChars = 0;
+    let chunks = 0;
+    let patches = 0;
+    let patchOps = 0;
+    let errors = 0;
+    let hasResult = false;
+    let hasDone = false;
+    let hasUsage = false;
+    let usagePayload: unknown;
+
+    const pushDebugEvent = (type: string, detail?: unknown) => {
+      const now = new Date();
+      debugEvents.push({
+        type,
+        at: now.toISOString(),
+        deltaMs: now.getTime() - startedAt.getTime(),
+        detail,
+      });
+    };
+
     setResponse({ thinking: [], content: [] });
-    onStreamLog({ kind: 'stream:start', note: `example=${activeExample}` });
+    onStreamLog({ kind: 'stream:start', note: `run=${runId} example=${activeExample}` });
+    pushDebugEvent('stream:start', { runId, example: activeExample, promptLength: prompt.length });
 
-    const stream = transformStream(prompt, {
-      intent: activeExample.toLowerCase(),
-    });
+    try {
+      const stream = transformStream(prompt, {
+        intent: activeExample.toLowerCase(),
+        stream: {
+          includeChunks: false,
+          preferPatches: true,
+        },
+      });
 
-    for await (const event of stream) {
-      if (event.type === 'patch') {
-        const patchData = event.data as FogUIPatchOperation[];
-        setResponse((prev) => applyPatches(prev, patchData));
-        onStreamLog({ kind: 'stream:patch', data: patchData });
+      for await (const event of stream) {
+        pushDebugEvent(event.type);
+
+        if (event.type === 'patch') {
+          const patchData = event.data as FogUIPatchOperation[];
+          patches += 1;
+          patchOps += patchData.length;
+          setResponse((prev) => applyPatches(prev, patchData));
+          onStreamLog({ kind: 'stream:patch', note: `ops=${patchData.length}`, data: patchData });
+        }
+
+        if (event.type === 'result') {
+          const resultData = event.data as FogUIResponse;
+          hasResult = true;
+          setResponse(resultData);
+          onStreamLog({ kind: 'stream:result', note: 'final canonical snapshot received' });
+        }
+
+        if (event.type === 'usage') {
+          hasUsage = true;
+          usagePayload = event.data;
+          onStreamLog({ kind: 'stream:usage', data: event.data });
+        }
+
+        if (event.type === 'chunk') {
+          const chunkText = String(event.data ?? '');
+          chunks += 1;
+          chunkChars += chunkText.length;
+          maxChunkChars = Math.max(maxChunkChars, chunkText.length);
+          onStreamLog({ kind: 'stream:chunk', note: `len=${chunkText.length} ${chunkText.slice(0, 60)}` });
+        }
+
+        if (event.type === 'error') {
+          errors += 1;
+          debugErrors.push(event.data);
+          onStreamLog({ kind: 'stream:error', data: event.data });
+        }
+
+        if (event.type === 'done') {
+          hasDone = true;
+          onStreamLog({ kind: 'stream:done' });
+        }
+      }
+    } catch (streamError) {
+      errors += 1;
+      debugErrors.push(streamError instanceof Error ? streamError.message : streamError);
+      pushDebugEvent('stream:exception', streamError instanceof Error ? streamError.message : streamError);
+      onStreamLog({
+        kind: 'stream:error',
+        data: streamError instanceof Error ? streamError.message : streamError,
+      });
+    } finally {
+      if (hasDone && !hasResult) {
+        notes.push('done received before result or result missing');
       }
 
-      if (event.type === 'result') {
-        const resultData = event.data as FogUIResponse;
-        setResponse(resultData);
-        onStreamLog({ kind: 'stream:result', note: 'final canonical snapshot received' });
+      if (errors > 0 && hasDone) {
+        notes.push('error and done both received in same run; likely transport interruption or backend stream close race');
       }
 
-      if (event.type === 'usage') {
-        onStreamLog({ kind: 'stream:usage', data: event.data });
+      const hasValidationError = debugErrors.some((item) =>
+        String(typeof item === 'object' ? JSON.stringify(item) : item).toLowerCase().includes('validation')
+      );
+      const hasNetworkError = debugErrors.some((item) =>
+        String(typeof item === 'object' ? JSON.stringify(item) : item).toLowerCase().includes('network')
+      );
+
+      if (hasNetworkError) {
+        notes.push('network-level stream failure detected; check backend/proxy chunked response completion');
       }
 
-      if (event.type === 'chunk') {
-        onStreamLog({ kind: 'stream:chunk', note: String(event.data).slice(0, 60) });
+      if (hasValidationError) {
+        notes.push('client-side stream validation failed; inspect malformed/truncated chunk payload');
       }
 
-      if (event.type === 'error') {
-        onStreamLog({ kind: 'stream:error', data: event.data });
-      }
+      const endedAt = new Date();
+      const durationMs = endedAt.getTime() - startedAt.getTime();
+      const report: StreamDebugReport = {
+        runId,
+        mode,
+        example: activeExample,
+        promptLength: prompt.length,
+        endpoint,
+        startedAt: startedAt.toISOString(),
+        endedAt: endedAt.toISOString(),
+        durationMs,
+        stats: {
+          chunks,
+          chunkChars,
+          avgChunkChars: chunks > 0 ? Number((chunkChars / chunks).toFixed(2)) : 0,
+          maxChunkChars,
+          patches,
+          patchOps,
+          errors,
+          hasResult,
+          hasDone,
+          hasUsage,
+          hasValidationError,
+          hasNetworkError,
+        },
+        notes,
+        usage: usagePayload,
+        errors: debugErrors,
+        events: debugEvents,
+      };
 
-      if (event.type === 'done') {
-        onStreamLog({ kind: 'stream:done' });
-      }
+      setLatestStreamDebug(report);
+    }
+  };
+
+  const copyLatestDebug = async () => {
+    if (!latestStreamDebug) {
+      setCopyStatus('No stream debug report yet.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(latestStreamDebug, null, 2));
+      setCopyStatus('Copied stream debug report to clipboard.');
+    } catch {
+      setCopyStatus('Clipboard copy failed. Select and copy the JSON manually.');
     }
   };
 
@@ -473,12 +638,51 @@ function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode
               {actionLog.map((entry, index) => (
                 <li key={`${entry.kind}-${entry.action ?? 'none'}-${index}`} style={{ color: 'var(--text)', lineHeight: 1.4 }}>
                   <code style={{ color: 'var(--accent-2)' }}>{entry.kind}</code>
+                  {` ${entry.timestamp}`}
                   {entry.action ? ` action=${entry.action}` : ''}
                   {entry.note ? ` ${entry.note}` : ''}
                   {entry.data ? ` ${JSON.stringify(entry.data)}` : ''}
                 </li>
               ))}
             </ul>
+          )}
+
+          <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={copyLatestDebug}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid rgba(124, 220, 244, 0.35)',
+                borderRadius: '8px',
+                background: 'rgba(4, 20, 31, 0.6)',
+                color: 'var(--text-strong)',
+                cursor: 'pointer',
+              }}
+            >
+              Copy Latest Stream Debug JSON
+            </button>
+          </div>
+          {copyStatus && <p style={{ margin: '8px 0 0', color: 'var(--text-dim)', fontSize: '0.85rem' }}>{copyStatus}</p>}
+
+          {latestStreamDebug && (
+            <pre style={{
+              marginTop: '10px',
+              marginBottom: 0,
+              maxHeight: '260px',
+              overflow: 'auto',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontSize: '11px',
+              color: 'var(--text)',
+              lineHeight: 1.35,
+              border: '1px solid rgba(124, 220, 244, 0.2)',
+              borderRadius: '8px',
+              padding: '8px',
+              background: 'rgba(1, 10, 16, 0.4)',
+            }}>
+              {JSON.stringify(latestStreamDebug, null, 2)}
+            </pre>
           )}
         </section>
 
@@ -506,13 +710,17 @@ function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode
 }
 
 export function FogUIDemo() {
-  const [actionLog, setActionLog] = useState<Array<{ kind: string; action?: string; data?: unknown; note?: string }>>([]);
+  const [actionLog, setActionLog] = useState<LogEntry[]>([]);
   const [mode, setMode] = useState<DemoMode>('mock');
   const [apiKey, setApiKey] = useState('fog_live_7cd49b8942e4181f0bee0980063d23cd');
   const [endpoint, setEndpoint] = useState('http://localhost:8080');
 
   const appendLog = (entry: { kind: string; action?: string; data?: unknown; note?: string }) => {
-    setActionLog((prev) => [entry, ...prev].slice(0, 20));
+    const withTimestamp: LogEntry = {
+      ...entry,
+      timestamp: new Date().toISOString(),
+    };
+    setActionLog((prev) => [withTimestamp, ...prev].slice(0, 120));
   };
 
   const handleAction = (action: string, data?: unknown) => {
@@ -606,6 +814,7 @@ export function FogUIDemo() {
           onStreamLog={appendLog}
           mode={mode}
           setMode={setMode}
+          endpoint={endpoint}
         />
       </FogUIProvider>
     </div>

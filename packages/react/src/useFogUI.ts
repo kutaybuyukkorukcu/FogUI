@@ -60,7 +60,7 @@ const jsonHandlers: Record<Exclude<StreamEventType, 'chunk' | 'done'>, JsonHandl
   result: (parsed): StreamEvent[] => {
     const validation = fogUIResponseSchema.safeParse(parsed);
     if (validation.success) {
-      const event: StreamResultEvent = { type: 'result', data: validation.data };
+      const event: StreamResultEvent = { type: 'result', data: validation.data as FogUIResponse };
       return [event];
     }
 
@@ -248,6 +248,7 @@ export function useFogUI(): UseFogUIReturn {
   ): AsyncGenerator<StreamEvent> {
     setIsLoading(true);
     setError(null);
+    let seenDoneEvent = false;
 
     try {
       const response = await fetch(`${endpoint}/fogui/transform/stream`, {
@@ -294,11 +295,32 @@ export function useFogUI(): UseFogUIReturn {
         currentEvent = result.currentEvent;
 
         for (const event of result.events) {
+          if (event.type === 'done') {
+            seenDoneEvent = true;
+          }
+          yield event;
+        }
+      }
+
+      // Flush one trailing, non-newline-terminated event frame if present.
+      if (buffer.trim().length > 0) {
+        const trailing = await processLines(`${buffer}\n`.split('\n'), currentEvent);
+        for (const event of trailing.events) {
+          if (event.type === 'done') {
+            seenDoneEvent = true;
+          }
           yield event;
         }
       }
 
     } catch (err) {
+      // Some environments can throw a terminal network error after a valid done event.
+      if ((err instanceof TypeError || err instanceof Error) &&
+          seenDoneEvent &&
+          String(err.message).toLowerCase().includes('network')) {
+        return;
+      }
+
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
       yield { type: 'error', data: { error: message } };

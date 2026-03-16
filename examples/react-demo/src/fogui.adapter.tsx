@@ -4,7 +4,7 @@ import React from 'react';
 // A simple, unstyled adapter for demo purposes.
 // It uses basic HTML elements to render the components.
 
-const Card: React.FC<any> = ({ title, description, children }) => (
+const Card: React.FC<any> = ({ title, description, data, children }) => (
   <div style={{
     border: '1px solid rgba(124, 220, 244, 0.3)',
     background: 'rgba(8, 26, 39, 0.82)',
@@ -14,6 +14,15 @@ const Card: React.FC<any> = ({ title, description, children }) => (
   }}>
     {title && <h3 style={{ marginTop: 0, marginBottom: '6px', color: 'var(--text-strong)' }}>{title}</h3>}
     {description && <p style={{ color: 'var(--text-dim)', marginTop: 0 }}>{description}</p>}
+    {data && typeof data === 'object' && (
+      <div style={{ marginBottom: children ? '10px' : 0 }}>
+        {Object.entries(data).map(([key, value]) => (
+          <div key={key} style={{ color: 'var(--text)', fontSize: '0.92rem', margin: '2px 0' }}>
+            <strong style={{ color: 'var(--text-strong)' }}>{key}:</strong> {String(value)}
+          </div>
+        ))}
+      </div>
+    )}
     <div>{children}</div>
   </div>
 );
@@ -89,20 +98,66 @@ const Badge: React.FC<any> = ({ label, ...props }) => (
   </span>
 );
 const Tabs: React.FC<any> = ({ children }) => <div>{children}</div>; // Simplified for demo
+const resolveGap = (gap: unknown): string => {
+  if (typeof gap === 'number') {
+    return `${gap}px`;
+  }
+
+  if (gap === 'sm') {
+    return '8px';
+  }
+
+  if (gap === 'md') {
+    return '12px';
+  }
+
+  if (gap === 'lg') {
+    return '16px';
+  }
+
+  return typeof gap === 'string' && gap.length > 0 ? gap : '8px';
+};
+
+const Container: React.FC<any> = ({ children, layout = 'stack', columns = 1, gap = 8, style, ...props }) => {
+  const gapValue = resolveGap(gap);
+  const baseStyle = layout === 'grid'
+    ? {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${Number(columns) || 1}, minmax(0, 1fr))`,
+        gap: gapValue,
+      }
+    : {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        gap: gapValue,
+      };
+
+  return <div style={{ ...baseStyle, ...style }} {...props}>{children}</div>;
+};
+
+const componentRegistry: Record<string, React.ComponentType<any>> = {
+  Card,
+  Table,
+  List,
+  Button,
+  Input,
+  Form,
+  Stack,
+  Grid,
+  Badge,
+  Tabs,
+  Container,
+};
+
+const lowercaseAliases = Object.fromEntries(
+  Object.entries(componentRegistry).map(([name, component]) => [name.toLowerCase(), component])
+);
 
 
 export const demoAdapter: Adapter = {
   components: {
-    Card,
-    Table,
-    List,
-    Button,
-    Input,
-    Form,
-    Stack,
-    Grid,
-    Badge,
-    Tabs,
+    ...componentRegistry,
+    ...lowercaseAliases,
   },
   mapProps: (_componentType, props) => {
     // No prop mapping needed for this basic adapter
