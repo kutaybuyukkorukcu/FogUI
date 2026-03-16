@@ -80,6 +80,32 @@ class UIResponseParserTest {
             assertNull(parser.parse(""));
             assertNull(parser.parse("   "));
         }
+
+        @Test
+        @DisplayName("should normalize component shape for deterministic rendering")
+        void shouldNormalizeComponentShapeForDeterministicRendering() {
+            String json = """
+                    {
+                      "thinking": [{"message": null, "status": ""}],
+                      "content": [
+                        {
+                          "type": "component",
+                          "componentType": "  LIST ",
+                          "props": "invalid-props"
+                        }
+                      ]
+                    }
+                    """;
+
+            GenerativeUIResponse result = parser.parse(json);
+
+            assertNotNull(result);
+            assertEquals("complete", result.getThinking().get(0).getStatus());
+            assertEquals("", result.getThinking().get(0).getMessage());
+            assertEquals("component", result.getContent().get(0).getType());
+            assertEquals("list", result.getContent().get(0).getComponentType());
+            assertTrue(result.getContent().get(0).getProps() instanceof java.util.Map);
+        }
     }
 
     @Nested
@@ -290,6 +316,18 @@ class UIResponseParserTest {
             var result = parser.parse(json);
             assertEquals("text", result.getContent().get(0).getType());
         }
+
+          @Test
+          @DisplayName("should coerce non-text values into deterministic text blocks")
+          void shouldCoerceNonTextValuesIntoDeterministicTextBlocks() {
+            String json = """
+                {"thinking": [], "content": [{"type": "text", "value": 12345}]}
+                """;
+
+            var result = parser.parse(json);
+            assertEquals("text", result.getContent().get(0).getType());
+            assertEquals("12345", result.getContent().get(0).getValue());
+          }
 
         @Test
         @DisplayName("should parse card component")

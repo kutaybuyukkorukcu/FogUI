@@ -96,6 +96,14 @@ public final class TransformPrompts {
       4. **Keep text for context** - Use text blocks for explanations that don't fit components
       5. **Be consistent** - Similar data should use similar components
 
+      ## Deterministic Contract (must follow)
+
+      1. Every content item MUST include a valid "type" value: "text" or "component".
+      2. Every component block MUST include lowercase "componentType" and object "props" (use {} when empty).
+      3. Never place raw objects as direct render children. Use component blocks in "children" and keep primitive display data in props.
+      4. For list components, "items" must be an array of primitives or objects shaped like {"label": "...", "value": "..."}.
+      5. For table components, rows must align to columns and be arrays (not objects unless columns are also provided for mapping).
+
       ## Examples
 
       **Input:** "The top 3 programming languages are Python, JavaScript, and TypeScript."

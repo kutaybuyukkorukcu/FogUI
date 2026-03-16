@@ -9,6 +9,26 @@ import {
   type FogUIResponse,
 } from '@fogui/react';
 import { useEffect, useMemo, useState } from 'react';
+import React from 'react';
+// Simple error boundary for demo
+class DemoErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: any }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return <div style={{ color: 'red', padding: 16, background: '#1a1a1a', borderRadius: 8 }}>
+        <strong>Render Error:</strong>
+        <pre style={{ whiteSpace: 'pre-wrap' }}>{String(this.state.error)}</pre>
+      </div>;
+    }
+    return this.props.children;
+  }
+}
 import { demoAdapter } from '../fogui.adapter';
 
 type DemoMode = 'mock' | 'live';
@@ -46,6 +66,10 @@ interface StreamDebugReport {
   };
   readonly notes: string[];
   readonly usage?: unknown;
+  readonly finalResultSummary?: {
+    readonly contentCount: number;
+    readonly blockTypes: string[];
+  };
   readonly errors: unknown[];
   readonly events: StreamDebugEvent[];
 }
@@ -321,6 +345,7 @@ function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode
     let hasDone = false;
     let hasUsage = false;
     let usagePayload: unknown;
+    let finalResultSummary: { contentCount: number; blockTypes: string[] } | undefined;
 
     const pushDebugEvent = (type: string, detail?: unknown) => {
       const now = new Date();
@@ -359,8 +384,23 @@ function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode
         if (event.type === 'result') {
           const resultData = event.data as FogUIResponse;
           hasResult = true;
-          setResponse(resultData);
-          onStreamLog({ kind: 'stream:result', note: 'final canonical snapshot received' });
+          finalResultSummary = {
+            contentCount: Array.isArray(resultData?.content) ? resultData.content.length : 0,
+            blockTypes: Array.isArray(resultData?.content)
+              ? resultData.content.map((block) => `${block.type}:${'componentType' in block ? String(block.componentType) : 'text'}`)
+              : [],
+          };
+          const hasRenderableContent = Array.isArray(resultData?.content) && resultData.content.length > 0;
+          if (hasRenderableContent) {
+            setResponse(resultData);
+            onStreamLog({ kind: 'stream:result', note: 'final canonical snapshot received' });
+          } else {
+            onStreamLog({
+              kind: 'stream:result',
+              note: 'final snapshot was empty; keeping patch-rendered state',
+              data: resultData,
+            });
+          }
         }
 
         if (event.type === 'usage') {
@@ -447,6 +487,7 @@ function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode
         },
         notes,
         usage: usagePayload,
+        finalResultSummary,
         errors: debugErrors,
         events: debugEvents,
       };
@@ -577,7 +618,13 @@ function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode
         borderRadius: '14px',
         boxShadow: '0 16px 28px rgba(0, 0, 0, 0.25)',
       }}>
-        <FogUIRenderer response={response} onAction={onAction} />
+        {Array.isArray(response.content) && response.content.length > 0 ? (
+          <FogUIRenderer response={response} onAction={onAction} />
+        ) : (
+          <div style={{ color: 'var(--text-dim)', fontSize: '0.92rem' }}>
+            No renderable content in current response. Check the Response JSON panel for content shape.
+          </div>
+        )}
       </div>
 
       <div style={{ marginTop: '14px' }}>
@@ -807,15 +854,17 @@ export function FogUIDemo() {
         onActionComplete={handleActionComplete}
         onActionError={handleActionError}
       >
-        <FogUIDemoContent
-          actionLog={actionLog}
-          onAction={handleAction}
-          onApplyPatch={handlePatch}
-          onStreamLog={appendLog}
-          mode={mode}
-          setMode={setMode}
-          endpoint={endpoint}
-        />
+        <DemoErrorBoundary>
+          <FogUIDemoContent
+            actionLog={actionLog}
+            onAction={handleAction}
+            onApplyPatch={handlePatch}
+            onStreamLog={appendLog}
+            mode={mode}
+            setMode={setMode}
+            endpoint={endpoint}
+          />
+        </DemoErrorBoundary>
       </FogUIProvider>
     </div>
   );

@@ -8,8 +8,11 @@ import com.genui.model.genui.ThinkingItem;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -68,6 +71,7 @@ public class UIResponseParser {
 
             // Parse the JSON
             var response = objectMapper.readValue(jsonContent, GenerativeUIResponse.class);
+            response = sanitizeResponse(response);
 
             if (response != null) {
                 log.info("Successfully parsed UI response with {} content blocks",
@@ -132,10 +136,107 @@ public class UIResponseParser {
 
             // Try to fix incomplete JSON by closing brackets
             var fixedJson = tryFixIncompleteJson(candidateJson);
-            return objectMapper.readValue(fixedJson, GenerativeUIResponse.class);
+            var parsed = objectMapper.readValue(fixedJson, GenerativeUIResponse.class);
+            return sanitizeResponse(parsed);
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private GenerativeUIResponse sanitizeResponse(GenerativeUIResponse response) {
+        if (response == null) {
+            return null;
+        }
+
+        response.setThinking(sanitizeThinking(response.getThinking()));
+        response.setContent(sanitizeContentBlocks(response.getContent()));
+        return response;
+    }
+
+    private List<ThinkingItem> sanitizeThinking(List<ThinkingItem> thinking) {
+        if (thinking == null) {
+            return new ArrayList<>();
+        }
+
+        List<ThinkingItem> sanitized = new ArrayList<>();
+        for (ThinkingItem item : thinking) {
+            if (item == null) {
+                continue;
+            }
+
+            String status = item.getStatus();
+            if (status == null || status.isBlank()) {
+                item.setStatus("complete");
+            }
+
+            if (item.getMessage() == null) {
+                item.setMessage("");
+            }
+
+            sanitized.add(item);
+        }
+
+        return sanitized;
+    }
+
+    private List<ContentBlock> sanitizeContentBlocks(List<ContentBlock> blocks) {
+        if (blocks == null) {
+            return new ArrayList<>();
+        }
+
+        List<ContentBlock> sanitized = new ArrayList<>();
+        for (ContentBlock block : blocks) {
+            ContentBlock sanitizedBlock = sanitizeBlock(block);
+            if (sanitizedBlock != null) {
+                sanitized.add(sanitizedBlock);
+            }
+        }
+
+        return sanitized;
+    }
+
+    private ContentBlock sanitizeBlock(ContentBlock block) {
+        if (block == null) {
+            return null;
+        }
+
+        boolean isComponent = "component".equalsIgnoreCase(block.getType())
+                || (block.getComponentType() != null && !block.getComponentType().isBlank());
+
+        if (isComponent) {
+            block.setType("component");
+            block.setComponentType(normalizeComponentType(block.getComponentType()));
+            block.setProps(sanitizeProps(block.getProps()));
+
+            List<ContentBlock> children = sanitizeContentBlocks(block.getChildren());
+            block.setChildren(children.isEmpty() ? null : children);
+
+            block.setValue(null);
+            return block;
+        }
+
+        block.setType("text");
+        block.setValue(block.getValue() == null ? "" : String.valueOf(block.getValue()));
+        block.setComponentType(null);
+        block.setProps(null);
+        block.setChildren(null);
+        return block;
+    }
+
+    private Object sanitizeProps(Object props) {
+        if (props instanceof Map<?, ?>) {
+            return props;
+        }
+
+        return new HashMap<String, Object>();
+    }
+
+    private String normalizeComponentType(String componentType) {
+        if (componentType == null || componentType.isBlank()) {
+            return "unknown";
+        }
+
+        return componentType.trim().toLowerCase(Locale.ROOT);
     }
 
     private String extractPartialJsonCandidate(String content) {
