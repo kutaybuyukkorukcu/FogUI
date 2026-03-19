@@ -3,12 +3,10 @@ package com.genui.controller;
 import com.genui.entity.User;
 import com.genui.model.genui.ContentBlock;
 import com.genui.model.genui.GenerativeUIResponse;
-import com.genui.model.transform.StreamPatchOperation;
 import com.genui.model.transform.TransformRequest;
 import com.genui.repository.UserRepository;
 import com.genui.security.ApiKeyUserDetails;
 import com.genui.service.ChatClientFactory;
-import com.genui.service.StreamPatchGenerator;
 import com.genui.service.UIResponseParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +38,6 @@ class TransformControllerUnitTest {
 
     private ChatClientFactory chatClientFactory;
     private UIResponseParser responseParser;
-    private StreamPatchGenerator streamPatchGenerator;
     private UserRepository userRepository;
     private TransformController controller;
 
@@ -48,17 +45,15 @@ class TransformControllerUnitTest {
     void setUp() {
         chatClientFactory = Mockito.mock(ChatClientFactory.class);
         responseParser = Mockito.mock(UIResponseParser.class);
-        streamPatchGenerator = Mockito.mock(StreamPatchGenerator.class);
         userRepository = Mockito.mock(UserRepository.class);
 
-        controller = new TransformController(chatClientFactory, responseParser, streamPatchGenerator, userRepository);
+        controller = new TransformController(chatClientFactory, responseParser, userRepository);
     }
 
     @Test
-    @DisplayName("transform should return 500 when parser returns null")
-    void transformShouldReturn500WhenParserReturnsNull() {
-        mockSyncChatClient("{\"thinking\":[],\"content\":[]}");
-        when(responseParser.parse(any(String.class))).thenReturn(null);
+    @DisplayName("transform should return 500 when entity returns null")
+    void transformShouldReturn500WhenEntityReturnsNull() {
+        mockSyncChatClient(null);
 
         TransformRequest request = new TransformRequest();
         request.setContent("hello");
@@ -71,11 +66,11 @@ class TransformControllerUnitTest {
     @Test
     @DisplayName("transform should not save usage without authenticated user")
     void transformShouldNotSaveUsageWithoutAuthenticatedUser() {
-        mockSyncChatClient("{\"thinking\":[],\"content\":[{\"type\":\"text\",\"value\":\"ok\"}]}");
+        GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                .content(List.of(ContentBlock.text("ok")))
+                .build();
+        mockSyncChatClient(uiResponse);
         when(chatClientFactory.getActiveModelName()).thenReturn("gpt-test");
-        when(responseParser.parse(any(String.class))).thenReturn(
-                GenerativeUIResponse.builder().content(List.of(ContentBlock.text("ok"))).build()
-        );
 
         TransformRequest request = new TransformRequest();
         request.setContent("hello");
@@ -89,11 +84,11 @@ class TransformControllerUnitTest {
     @Test
     @DisplayName("transform should save usage with authenticated user")
     void transformShouldSaveUsageWithAuthenticatedUser() {
-        mockSyncChatClient("{\"thinking\":[],\"content\":[{\"type\":\"text\",\"value\":\"ok\"}]}");
+        GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                .content(List.of(ContentBlock.text("ok")))
+                .build();
+        mockSyncChatClient(uiResponse);
         when(chatClientFactory.getActiveModelName()).thenReturn("gpt-test");
-        when(responseParser.parse(any(String.class))).thenReturn(
-                GenerativeUIResponse.builder().content(List.of(ContentBlock.text("ok"))).build()
-        );
 
         User user = User.builder()
                 .email("unit@example.com")
@@ -160,36 +155,32 @@ class TransformControllerUnitTest {
     }
 
     @Test
-    @DisplayName("emitPatchesFromPartial should no-op when partial is null")
-    void emitPatchesFromPartialShouldNoOpWhenPartialIsNull() {
+    @DisplayName("emitPartialResult should no-op when partial is null")
+    void emitPartialResultShouldNoOpWhenPartialIsNull() {
         when(responseParser.tryParsePartial(any(String.class))).thenReturn(null);
 
         StringBuilder fullContent = new StringBuilder("chunk");
         SseEmitter emitter = Mockito.mock(SseEmitter.class);
         AtomicReference<GenerativeUIResponse> previous = new AtomicReference<>(null);
 
-        ReflectionTestUtils.invokeMethod(controller, "emitPatchesFromPartial", fullContent, emitter, previous);
+        ReflectionTestUtils.invokeMethod(controller, "emitPartialResult", fullContent, emitter, previous);
 
-        verify(streamPatchGenerator, never()).generatePatches(any(), any());
         assertNull(previous.get());
     }
 
     @Test
-    @DisplayName("emitPatchesFromPartial should send patch and update previous response")
-    void emitPatchesFromPartialShouldSendPatchAndUpdatePreviousResponse() throws IOException {
+    @DisplayName("emitPartialResult should send result event and update previous response")
+    void emitPartialResultShouldSendResultEventAndUpdatePreviousResponse() throws IOException {
         GenerativeUIResponse partial = GenerativeUIResponse.builder()
                 .content(List.of(ContentBlock.text("A")))
                 .build();
         when(responseParser.tryParsePartial(any(String.class))).thenReturn(partial);
-        when(streamPatchGenerator.generatePatches(any(), any())).thenReturn(
-                List.of(StreamPatchOperation.append("/content", ContentBlock.text("A")))
-        );
 
         StringBuilder fullContent = new StringBuilder("chunk");
         SseEmitter emitter = Mockito.mock(SseEmitter.class);
         AtomicReference<GenerativeUIResponse> previous = new AtomicReference<>(null);
 
-        ReflectionTestUtils.invokeMethod(controller, "emitPatchesFromPartial", fullContent, emitter, previous);
+        ReflectionTestUtils.invokeMethod(controller, "emitPartialResult", fullContent, emitter, previous);
 
         assertNotNull(previous.get());
         verify(emitter).send(any(SseEmitter.SseEventBuilder.class));
@@ -215,15 +206,9 @@ class TransformControllerUnitTest {
                 .content(List.of(ContentBlock.text("Hello")))
                 .build();
         when(responseParser.tryParsePartial(any(String.class))).thenReturn(partial);
-        when(streamPatchGenerator.generatePatches(any(), any())).thenReturn(
-                List.of(StreamPatchOperation.append("/content", ContentBlock.text("Hello")))
-        );
-        when(responseParser.parse(any(String.class))).thenReturn(partial);
 
         TransformRequest request = new TransformRequest();
         request.setContent("hello");
-        request.setIncludeChunks(true);
-        request.setPreferPatches(true);
 
         SseEmitter emitter = Mockito.mock(SseEmitter.class);
 
@@ -262,15 +247,16 @@ class TransformControllerUnitTest {
         verify(emitter).complete();
     }
 
-    private void mockSyncChatClient(String responseContent) {
+    private void mockSyncChatClient(GenerativeUIResponse response) {
         ChatClient mockClient = Mockito.mock(ChatClient.class);
         ChatClient.ChatClientRequestSpec mockRequestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
         ChatClient.CallResponseSpec mockCallSpec = Mockito.mock(ChatClient.CallResponseSpec.class);
 
         when(chatClientFactory.createClient()).thenReturn(mockClient);
         when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
+        when(mockRequestSpec.options(any())).thenReturn(mockRequestSpec);
         when(mockRequestSpec.call()).thenReturn(mockCallSpec);
-        when(mockCallSpec.content()).thenReturn(responseContent);
+        when(mockCallSpec.entity(GenerativeUIResponse.class)).thenReturn(response);
     }
 
     private void mockStreamingChatClient(Flux<String> flux) {

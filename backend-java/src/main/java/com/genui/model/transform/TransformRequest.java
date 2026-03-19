@@ -1,13 +1,11 @@
 package com.genui.model.transform;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Request body for the /genui/transform endpoint.
@@ -30,33 +28,6 @@ public class TransformRequest {
      */
     private TransformContext context;
 
-    /**
-     * Whether this is a partial/streaming chunk.
-     * When true, the transformer will attempt to handle incomplete content.
-     */
-    @JsonProperty("streaming")
-    @Builder.Default
-    private boolean streaming = false;
-
-    /**
-     * When true, stream emits patch events as primary incremental updates.
-     */
-    @JsonProperty("preferPatches")
-    @Builder.Default
-    private boolean preferPatches = true;
-
-    /**
-     * When true, stream still emits raw chunk events for backward compatibility.
-     */
-    @JsonProperty("includeChunks")
-    @Builder.Default
-    private boolean includeChunks = true;
-
-    /**
-     * Optional session ID for maintaining state across streaming chunks.
-     */
-    private String sessionId;
-
     @Data
     @Builder
     @NoArgsConstructor
@@ -71,11 +42,6 @@ public class TransformRequest {
          * Preferred component types to use
          */
         private List<String> preferredComponents;
-
-        /**
-         * Expected data schema for structured data extraction
-         */
-        private Map<String, Object> dataSchema;
 
         /**
          * Custom instructions for the transformation

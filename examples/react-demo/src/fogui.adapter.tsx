@@ -4,6 +4,38 @@ import React from 'react';
 // A simple, unstyled adapter for demo purposes.
 // It uses basic HTML elements to render the components.
 
+const formatDisplayValue = (value: unknown): React.ReactNode => {
+  if (value == null) {
+    return '-';
+  }
+
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return '[]';
+    }
+
+    return (
+      <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        {JSON.stringify(value, null, 2)}
+      </span>
+    );
+  }
+
+  if (typeof value === 'object') {
+    return (
+      <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        {JSON.stringify(value, null, 2)}
+      </span>
+    );
+  }
+
+  return String(value);
+};
+
 const Card: React.FC<any> = ({ title, description, data, children }) => (
   <div style={{
     border: '1px solid rgba(124, 220, 244, 0.3)',
@@ -18,7 +50,7 @@ const Card: React.FC<any> = ({ title, description, data, children }) => (
       <div style={{ marginBottom: children ? '10px' : 0 }}>
         {Object.entries(data).map(([key, value]) => (
           <div key={key} style={{ color: 'var(--text)', fontSize: '0.92rem', margin: '2px 0' }}>
-            <strong style={{ color: 'var(--text-strong)' }}>{key}:</strong> {String(value)}
+            <strong style={{ color: 'var(--text-strong)' }}>{key}:</strong> {formatDisplayValue(value)}
           </div>
         ))}
       </div>

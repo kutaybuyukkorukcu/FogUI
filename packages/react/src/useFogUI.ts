@@ -1,15 +1,11 @@
 import { useState, useCallback } from 'react';
 import { useFogUIContext } from './providers/FogUIProvider';
 import { fogUIResponseSchema } from './types/schema.zod';
-import { applyFogUIPatches } from './patches';
 import type {
   FogUIResponse,
-  FogUIPatchOperation,
-  StreamChunkEvent,
   StreamDoneEvent,
   StreamErrorEvent,
   StreamEvent,
-  StreamPatchEvent,
   StreamResultEvent,
   StreamUsageEvent,
   TransformOptions,
@@ -18,129 +14,102 @@ import type {
 } from './types';
 
 type StreamEventType = StreamEvent['type'];
-type JsonHandler = (parsed: unknown) => StreamEvent[];
 
-// Helper: parse event/data lines (outer scope)
-function parseEventLine(line: string, currentEvent: string): { event: string, data: string } | null {
-  if (line.startsWith('event:')) {
-    return { event: line.substring(6).trim(), data: '' };
-  } else if (line.startsWith('data:')) {
-    return { event: currentEvent, data: line.substring(5).trim() };
-  }
-  return null;
-}
-
-function parsePatchOperations(parsed: unknown): FogUIPatchOperation[] {
-  if (Array.isArray(parsed)) {
-    return parsed as FogUIPatchOperation[];
-  }
-
-  if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { patches?: unknown }).patches)) {
-    return (parsed as { patches: FogUIPatchOperation[] }).patches;
-  }
-
-  return [parsed as FogUIPatchOperation];
-}
-
-function isSupportedEventType(value: string): value is StreamEventType {
-  return value === 'chunk'
-    || value === 'patch'
-    || value === 'result'
-    || value === 'usage'
-    || value === 'error'
-    || value === 'done';
+interface SseFrame {
+  event: string;
+  data: string;
 }
 
 function parseJsonPayload(data: string): unknown {
   return JSON.parse(data);
 }
 
-const jsonHandlers: Record<Exclude<StreamEventType, 'chunk' | 'done'>, JsonHandler> = {
-  patch: (parsed): StreamPatchEvent[] => [{ type: 'patch', data: parsePatchOperations(parsed) }],
-  result: (parsed): StreamEvent[] => {
-    const validation = fogUIResponseSchema.safeParse(parsed);
-    if (validation.success) {
-      const event: StreamResultEvent = { type: 'result', data: validation.data as FogUIResponse };
-      return [event];
-    }
-
-    console.error(validation.error.issues);
-    const errorEvent: StreamErrorEvent = {
-      type: 'error',
-      data: { error: 'Stream validation failed' },
-    };
-    return [errorEvent];
-  },
-  usage: (parsed): StreamUsageEvent[] => [{ type: 'usage', data: (parsed as StreamUsageEvent['data']) ?? {} }],
-  error: (parsed): StreamErrorEvent[] => {
-    if (parsed && typeof parsed === 'object' && typeof (parsed as { error?: unknown }).error === 'string') {
-      return [{ type: 'error', data: parsed as StreamErrorEvent['data'] }];
-    }
-
-    return [{ type: 'error', data: { error: 'Stream processing failed', details: parsed } }];
-  },
-};
-
-// Helper: handle parsed data (outer scope)
-async function handleParsedData(currentEvent: string, data: string): Promise<StreamEvent[]> {
-  if (data === '[DONE]') {
-    const doneEvent: StreamDoneEvent = { type: 'done', data: null };
-    return [doneEvent];
-  }
-
-  if (!data) return [];
-
-  if (!currentEvent || !isSupportedEventType(currentEvent)) {
-    return [];
-  }
-
-  if (currentEvent === 'chunk') {
-    try {
-      const parsed = parseJsonPayload(data);
-      if (typeof parsed === 'string') {
-        const event: StreamChunkEvent = { type: 'chunk', data: parsed };
-        return [event];
-      }
-      const fallbackEvent: StreamChunkEvent = { type: 'chunk', data };
-      return [fallbackEvent];
-    } catch {
-      const event: StreamChunkEvent = { type: 'chunk', data };
-      return [event];
-    }
-  }
-
-  if (currentEvent === 'done') {
-    const doneEvent: StreamDoneEvent = { type: 'done', data: null };
-    return [doneEvent];
-  }
-
-  try {
-    const parsed = parseJsonPayload(data);
-    const handler = jsonHandlers[currentEvent];
-    return handler ? handler(parsed) : [];
-  } catch {
-    return [];
-  }
+function isSupportedEventType(value: string): value is StreamEventType {
+  return value === 'result'
+    || value === 'usage'
+    || value === 'error'
+    || value === 'done';
 }
 
-// Helper: process lines
-async function processLines(lines: string[], currentEvent: string): Promise<{ buffer: string, currentEvent: string, events: StreamEvent[] }> {
-  const newBuffer = lines.pop() || '';
-  const events: StreamEvent[] = [];
+function parseSseFrames(chunkBuffer: string): { frames: SseFrame[]; remainder: string } {
+  const rawFrames = chunkBuffer.split('\n\n');
+  const remainder = rawFrames.pop() ?? '';
 
-  for (const line of lines) {
-    const parsedLine = parseEventLine(line, currentEvent);
-    if (!parsedLine) continue;
+  const frames: SseFrame[] = rawFrames
+    .map((raw): SseFrame | null => {
+      const lines = raw.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
+      if (lines.length === 0) return null;
 
-    if (line.startsWith('event:')) {
-      currentEvent = parsedLine.event;
-    } else if (line.startsWith('data:')) {
-      const parsedEvents = await handleParsedData(currentEvent, parsedLine.data);
-      events.push(...parsedEvents);
+      let event = 'message';
+      const dataParts: string[] = [];
+
+      for (const line of lines) {
+        if (line.startsWith('event:')) {
+          event = line.substring(6).trim();
+        } else if (line.startsWith('data:')) {
+          dataParts.push(line.substring(5).trim());
+        }
+      }
+
+      return {
+        event,
+        data: dataParts.join('\n'),
+      };
+    })
+    .filter((frame): frame is SseFrame => frame !== null);
+
+  return { frames, remainder };
+}
+
+function toStreamEvents(frame: SseFrame): StreamEvent[] {
+  if (frame.data === '[DONE]' || frame.event === 'done') {
+    const doneEvent: StreamDoneEvent = { type: 'done', data: null };
+    return [doneEvent];
+  }
+
+  if (!isSupportedEventType(frame.event) || frame.data.length === 0) {
+    return [];
+  }
+
+  if (frame.event === 'result') {
+    try {
+      const parsed = parseJsonPayload(frame.data);
+      const validation = fogUIResponseSchema.safeParse(parsed);
+      if (validation.success) {
+        const event: StreamResultEvent = { type: 'result', data: validation.data as FogUIResponse };
+        return [event];
+      }
+
+      console.error(validation.error.issues);
+      return [{ type: 'error', data: { error: 'Stream validation failed' } }];
+    } catch {
+      return [];
     }
   }
 
-  return { buffer: newBuffer, currentEvent, events };
+  if (frame.event === 'usage') {
+    try {
+      const parsed = parseJsonPayload(frame.data);
+      return [{ type: 'usage', data: (parsed as StreamUsageEvent['data']) ?? {} }];
+    } catch {
+      return [];
+    }
+  }
+
+  if (frame.event === 'error') {
+    try {
+      const parsed = parseJsonPayload(frame.data);
+      if (parsed && typeof parsed === 'object' && typeof (parsed as { error?: unknown }).error === 'string') {
+        return [{ type: 'error', data: parsed as StreamErrorEvent['data'] }];
+      }
+
+      return [{ type: 'error', data: { error: 'Stream processing failed', details: parsed } }];
+    } catch {
+      return [{ type: 'error', data: { error: 'Stream processing failed' } }];
+    }
+  }
+
+  return [];
 }
 
 /**
@@ -259,13 +228,11 @@ export function useFogUI(): UseFogUIReturn {
         },
         body: JSON.stringify({
           content,
-          context: options.intent || options.instructions ? {
+          context: options.intent || options.preferredComponents || options.instructions ? {
             intent: options.intent,
+            preferredComponents: options.preferredComponents,
             instructions: options.instructions,
           } : undefined,
-          streaming: true,
-          includeChunks: options.stream?.includeChunks ?? true,
-          preferPatches: options.stream?.preferPatches ?? true,
         }),
       });
 
@@ -280,36 +247,37 @@ export function useFogUI(): UseFogUIReturn {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let currentEvent = '';
-
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        const result = await processLines(lines, currentEvent);
+        const parsed = parseSseFrames(buffer);
+        buffer = parsed.remainder;
 
-        buffer = result.buffer;
-        currentEvent = result.currentEvent;
-
-        for (const event of result.events) {
-          if (event.type === 'done') {
-            seenDoneEvent = true;
+        for (const frame of parsed.frames) {
+          const events = toStreamEvents(frame);
+          for (const event of events) {
+            if (event.type === 'done') {
+              seenDoneEvent = true;
+            }
+            yield event;
           }
-          yield event;
         }
       }
 
-      // Flush one trailing, non-newline-terminated event frame if present.
+      // Flush a trailing frame when stream does not end with an empty line.
       if (buffer.trim().length > 0) {
-        const trailing = await processLines(`${buffer}\n`.split('\n'), currentEvent);
-        for (const event of trailing.events) {
-          if (event.type === 'done') {
-            seenDoneEvent = true;
+        const parsed = parseSseFrames(`${buffer}\n\n`);
+        for (const frame of parsed.frames) {
+          const events = toStreamEvents(frame);
+          for (const event of events) {
+            if (event.type === 'done') {
+              seenDoneEvent = true;
+            }
+            yield event;
           }
-          yield event;
         }
       }
 
@@ -333,14 +301,9 @@ export function useFogUI(): UseFogUIReturn {
     setError(null);
   }, []);
 
-  const applyPatches = useCallback((current: FogUIResponse, patches: FogUIPatchOperation[]) => {
-    return applyFogUIPatches(current, patches);
-  }, []);
-
   return {
     transform,
     transformStream,
-    applyPatches,
     isLoading,
     error,
     clearError,

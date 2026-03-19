@@ -7,6 +7,8 @@ import com.genui.entity.User;
 import com.genui.entity.UserRole;
 import com.genui.repository.UserRepository;
 import com.genui.security.JwtService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Tag(name = "Authentication", description = "User registration and login endpoints")
 public class AuthController {
 
     private final UserRepository userRepository;
@@ -34,6 +37,7 @@ public class AuthController {
      * Register a new user.
      */
     @PostMapping("/register")
+    @Operation(summary = "Register user", description = "Creates a new user account and returns an access token")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail().toLowerCase())) {
@@ -62,6 +66,7 @@ public class AuthController {
      * Login with email and password.
      */
     @PostMapping("/login")
+    @Operation(summary = "Login user", description = "Authenticates credentials and returns an access token")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         var userOpt = userRepository.findByEmail(request.getEmail().toLowerCase())
                 .filter(user -> passwordEncoder.matches(request.getPassword(), user.getPasswordHash()))
@@ -82,6 +87,7 @@ public class AuthController {
      * Get current user info (requires JWT auth).
      */
     @GetMapping("/me")
+    @Operation(summary = "Get current user", description = "Returns profile details for the authenticated user")
     public ResponseEntity<?> me(@RequestAttribute(name = "user", required = false) User user) {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

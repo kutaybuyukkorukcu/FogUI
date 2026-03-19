@@ -4,7 +4,6 @@ import { useFogUI } from '../useFogUI';
 import { FogUIProvider } from '../providers/FogUIProvider';
 import React from 'react';
 import { fogUIResponseSchema } from '../types/schema.zod';
-import type { FogUIResponse, FogUIPatchOperation } from '../types';
 
 // Mock fetch
 const fetchMock = vi.fn();
@@ -154,7 +153,9 @@ describe('useFogUI', () => {
     expect(result.current.error).toBe('Transformation failed from API');
   });
 
-  it('should normalize malformed transform responses instead of failing validation', async () => {
+  it('should fail validation for malformed transform responses', async () => {
+    // Missing required 'thinking' field — structured output from backend won't produce this,
+    // but the schema now strictly validates rather than normalizing
     const invalidResponse = { success: true, result: { content: [{ type: 'invalid' }] } };
     fetchMock.mockReturnValue(createFetchResponse(invalidResponse));
     
@@ -162,12 +163,8 @@ describe('useFogUI', () => {
     
     await waitFor(async () => {
       const transformResult = await result.current.transform('some content');
-      expect(transformResult.success).toBe(true);
-      expect(transformResult.error).toBeUndefined();
-      expect(transformResult.result).toEqual({
-        thinking: [],
-        content: [{ type: 'text', value: '' }],
-      });
+      expect(transformResult.success).toBe(false);
+      expect(transformResult.error).toBeDefined();
     });
   });
 
@@ -197,7 +194,7 @@ describe('useFogUI', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('should stream chunk events and unknown event payloads', async () => {
+  it('should ignore unknown stream event types and keep known events', async () => {
     const lines = [
       'event: chunk\n',
       'data: partial-text\n\n',
@@ -218,22 +215,17 @@ describe('useFogUI', () => {
       }
     });
 
-    expect(events).toContainEqual({ type: 'chunk', data: 'partial-text' });
     expect(events).toContainEqual({ type: 'usage', data: { transformTokens: 12 } });
     expect(events).toContainEqual({ type: 'done', data: null });
   });
 
-  it('should stream mixed chunk, patch, result, and done events', async () => {
+  it('should stream result and done events', async () => {
     const resultPayload = {
       thinking: [],
       content: [{ type: 'text', value: 'Final state' }],
     };
 
     const lines = [
-      'event: chunk\n',
-      'data: partial\n\n',
-      'event: patch\n',
-      'data: {"op":"append","path":"/content","value":{"type":"text","value":"partial"}}\n\n',
       'event: result\n',
       `data: ${JSON.stringify(resultPayload)}\n\n`,
       'event: done\n',
@@ -245,17 +237,12 @@ describe('useFogUI', () => {
 
     const events: Array<{ type: string; data: unknown }> = [];
     await waitFor(async () => {
-      const stream = result.current.transformStream('mixed stream content');
+      const stream = result.current.transformStream('stream content');
       for await (const event of stream) {
         events.push(event);
       }
     });
 
-    expect(events).toContainEqual({ type: 'chunk', data: 'partial' });
-    expect(events).toContainEqual({
-      type: 'patch',
-      data: [{ op: 'append', path: '/content', value: { type: 'text', value: 'partial' } }],
-    });
     expect(events).toContainEqual({ type: 'result', data: resultPayload });
     expect(events).toContainEqual({ type: 'done', data: null });
   });
@@ -295,6 +282,7 @@ describe('useFogUI', () => {
     await waitFor(async () => {
       const stream = result.current.transformStream('stream prompt', {
         intent: 'assistant',
+        preferredComponents: ['Card', 'Table'],
         instructions: 'Return concise UI',
       });
       for await (const event of stream) {
@@ -308,43 +296,14 @@ describe('useFogUI', () => {
 
     expect(parsedBody.context).toEqual({
       intent: 'assistant',
+      preferredComponents: ['Card', 'Table'],
       instructions: 'Return concise UI',
     });
-    expect(parsedBody.streaming).toBe(true);
-    expect(parsedBody.includeChunks).toBe(true);
-    expect(parsedBody.preferPatches).toBe(true);
   });
 
-  it('should allow overriding stream transport options', async () => {
-    const lines = [
-      'event: done\n',
-      'data: [DONE]\n\n',
-    ];
-
-    fetchMock.mockReturnValue(createStreamingResponse(lines));
-    const { result } = renderHook(() => useFogUI(), { wrapper });
-
-    await waitFor(async () => {
-      const stream = result.current.transformStream('stream prompt', {
-        stream: {
-          includeChunks: false,
-          preferPatches: true,
-        },
-      });
-
-      for await (const event of stream) {
-        expect(event).toBeDefined();
-      }
-    });
-
-    const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
-    const parsedBody = JSON.parse(String(requestInit.body));
-
-    expect(parsedBody.includeChunks).toBe(false);
-    expect(parsedBody.preferPatches).toBe(true);
-  });
-
-  it('should normalize malformed streaming results and continue', async () => {
+  it('should emit error when streaming result event has invalid shape', async () => {
+    // With structured outputs, the backend won't emit malformed result events.
+    // The schema now strictly validates; invalid shapes emit an error event.
     const lines = [
       'event: result\n',
       'data: {"invalid":true}\n\n',
@@ -363,13 +322,8 @@ describe('useFogUI', () => {
       }
     });
 
-    expect(events).toContainEqual({
-      type: 'result',
-      data: {
-        thinking: [],
-        content: [],
-      },
-    });
+    // Should emit an error (validation failed) and then done
+    expect(events.some(e => e.type === 'error')).toBe(true);
     expect(events).toContainEqual({ type: 'done', data: null });
   });
 
@@ -418,19 +372,4 @@ describe('useFogUI', () => {
     expect(result.current.error).toBe(null);
   });
 
-  it('applyPatches applies incremental updates from hook API', () => {
-    const { result } = renderHook(() => useFogUI(), { wrapper });
-
-    const current: FogUIResponse = {
-      thinking: [],
-      content: [{ type: 'text', value: 'A' }],
-    };
-    const patches: FogUIPatchOperation[] = [
-      { op: 'append', path: '/content', value: { type: 'text', value: 'B' } },
-    ];
-
-    const next = result.current.applyPatches(current, patches);
-    expect(next.content).toHaveLength(2);
-    expect(next.content[1]).toEqual({ type: 'text', value: 'B' });
-  });
 });

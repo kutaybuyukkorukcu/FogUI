@@ -167,7 +167,7 @@ When a component type is missing from your adapter, renderer:
 ## Hook API
 
 ```tsx
-const { transform, transformStream, applyPatches, isLoading, error, clearError } = useFogUI();
+const { transform, transformStream, isLoading, error, clearError } = useFogUI();
 ```
 
 ### `transform`
@@ -184,13 +184,6 @@ const result = await transform(content, {
 
 ```tsx
 for await (const event of transformStream(content, { intent: 'chat' })) {
-  if (event.type === 'chunk') {
-    // streaming text/event chunks
-  }
-  if (event.type === 'patch') {
-    // event.data is FogUIPatchOperation[]
-    setResponse((prev) => (prev ? applyPatches(prev, event.data as FogUIPatchOperation[]) : prev));
-  }
   if (event.type === 'result') {
     // validated canonical response
   }
@@ -202,23 +195,6 @@ for await (const event of transformStream(content, { intent: 'chat' })) {
   }
 }
 ```
-
-## Streaming Patches (MVP)
-
-`transformStream` now supports `patch` events for incremental UI updates.
-
-Patch format:
-
-```ts
-type FogUIPatchOperation = {
-  op: 'replace' | 'append' | 'remove';
-  path: string; // JSON pointer style, e.g. /content/0/value or /content
-  value?: unknown;
-};
-```
-
-Use `applyPatches(currentResponse, patches)` from `useFogUI` (or `applyFogUIPatches` utility) to apply patches safely.
-Invalid patch paths never crash rendering and are ignored with a warning.
 
 ## Adapter Template
 

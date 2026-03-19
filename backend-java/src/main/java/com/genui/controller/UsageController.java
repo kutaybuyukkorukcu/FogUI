@@ -3,6 +3,8 @@ package com.genui.controller;
 import com.genui.dto.UsageStats;
 import com.genui.entity.User;
 import com.genui.security.ApiKeyUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -19,9 +21,11 @@ import java.util.Collections;
 @RestController
 @RequestMapping("/api/usage")
 @RequiredArgsConstructor
+@Tag(name = "Usage", description = "Usage and quota endpoints")
 public class UsageController {
 
         @GetMapping("/stats")
+        @Operation(summary = "Get usage stats", description = "Returns current quota and usage information")
         public ResponseEntity<UsageStats> getStats(@AuthenticationPrincipal ApiKeyUserDetails userDetails) {
                 User user = userDetails.getUser();
 

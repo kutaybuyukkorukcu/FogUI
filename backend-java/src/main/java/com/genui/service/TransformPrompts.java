@@ -31,104 +31,29 @@ public final class TransformPrompts {
       - **Scannable:** Break up long text into digestible blocks
       - **Interactive:** Add structure that enables rich UI experiences
 
-      ## Output Format
-      Always respond with valid JSON (no markdown, no code blocks):
+      ## Component Selection Guidelines
 
-      {
-        "thinking": [
-          {"message": "Analyzing content structure...", "status": "complete"},
-          {"message": "Selecting optimal components...", "status": "complete"}
-        ],
-        "content": [
-          // Mix of text and component blocks
-        ]
-      }
+      - **text** — Plain explanations, headings, or prose that doesn't fit a structured component.
+      - **card** — A single item, summary, or key fact. Use `title`, `description`, and/or `data` (key-value pairs).
+      - **list** — An ordered or unordered collection. Items should be `{"label": "...", "value": "..."}` pairs or plain strings.
+      - **table** — Tabular data with multiple columns. Provide `columns` (array of `{key, label}`) and `rows` (array of objects).
+      - **chart** — Quantitative data visualization. Use `chartData` as an array of `{name, value}` entries.
+      - **form** — Structured user input. Define `fields` as `{name, label, type, required}`.
+      - **confirmation** — A critical action gate. Provide `title`, `message`, `confirmText`, and optional `variant` (danger/warning).
+      - **accordion** — Collapsible FAQ or detail sections. Each item has `title` and `content`.
+      - **code** — A code snippet. Provide `language`, `code`, and optional `filename`.
+      - **container** — Layout grouping that can nest any other component in its `children` array. Use `layout` (stack/grid), `columns`, and `gap` (sm/md/lg).
 
-      ## Available Components (5 Base Types)
-
-      1. **Text Block** - For explanations, headings, and context
-         {"type": "text", "value": "markdown text"}
-
-      2. **Card** - For single items, summaries, key info
-         {"type": "component", "componentType": "card", "props": {"title": "...", "description": "...", "data": {...}}}
-
-      3. **List** - For collections with few fields
-         {"type": "component", "componentType": "list", "props": {"title": "...", "items": [...], "layout": "list|grid|compact"}}
-
-      4. **Table** - For structured data with many columns
-         {"type": "component", "componentType": "table", "props": {"columns": [...], "rows": [...]}}
-
-      5. **Container** - For layout and grouping (SUPPORTS NESTING)
-         {"type": "component", "componentType": "container", "props": {"layout": "stack|grid", "columns": 2, "gap": "sm|md|lg"}, "children": [...]}
-
-      6. **Chart** - For data visualization
-         {"type": "component", "componentType": "chart", "props": {"title": "Title", "chartData": [{"name": "A", "value": 10}, {"name": "B", "value": 20}]}}
-
-      7. **Form** - For user input and data collection
-         {"type": "component", "componentType": "form", "props": {"title": "Title", "fields": [{"name": "email", "label": "Email", "type": "email", "required": true}, {"name": "age", "label": "Age", "type": "number"}]}}
-
-      8. **Confirmation** - For critical actions requiring user approval
-         {"type": "component", "componentType": "confirmation", "props": {"title": "Are you sure?", "message": "This action cannot be undone.", "confirmText": "Delete", "variant": "danger", "data": {"recordId": "123"}}}
-
-      9. **Accordion** - For collapsible sections, FAQs, or details
-         {"type": "component", "componentType": "accordion", "props": {"items": [{"title": "Section 1", "content": "Details here..."}, {"title": "Section 2", "content": "More info..."}]}}
-
-      10. **Code Block** - For displaying code snippets
-          {"type": "component", "componentType": "code", "props": {"language": "python", "code": "print('Hello')", "filename": "script.py"}}
-
-      ## Composition Pattern
-      For complex layouts like KPI dashboards, use Container with Card children:
-      {
-        "type": "component",
-        "componentType": "container",
-        "props": {"layout": "grid", "columns": 3, "gap": "md"},
-        "children": [
-          {"type": "component", "componentType": "card", "props": {"title": "Revenue", "data": {"value": "$4.2M"}}},
-          {"type": "component", "componentType": "card", "props": {"title": "Users", "data": {"value": "45,000"}}}
-        ]
-      }
+      ## Composition
+      Use **container** with nested children to build dashboards, multi-column layouts, or grouped sections.
 
       ## Guidelines
 
-      1. **Preserve all information** - Don't lose any data from the original text
-      2. **Choose appropriate components** - Match the component to the data type
-      3. **Add structure** - Break numbered lists into list components, tables into table components
-      4. **Keep text for context** - Use text blocks for explanations that don't fit components
-      5. **Be consistent** - Similar data should use similar components
-
-      ## Deterministic Contract (must follow)
-
-      1. Every content item MUST include a valid "type" value: "text" or "component".
-      2. Every component block MUST include lowercase "componentType" and object "props" (use {} when empty).
-      3. Never place raw objects as direct render children. Use component blocks in "children" and keep primitive display data in props.
-      4. For list components, "items" must be an array of primitives or objects shaped like {"label": "...", "value": "..."}.
-      5. For table components, rows must align to columns and be arrays (not objects unless columns are also provided for mapping).
-
-      ## Examples
-
-      **Input:** "The top 3 programming languages are Python, JavaScript, and TypeScript."
-
-      **Output:**
-      {
-        "thinking": [{"message": "Converting list to structured format", "status": "complete"}],
-        "content": [
-          {"type": "text", "value": "Here are the top programming languages:"},
-          {
-            "type": "component",
-            "componentType": "list",
-            "props": {
-              "title": "Top Programming Languages",
-              "items": [
-                {"name": "Python", "rank": 1},
-                {"name": "JavaScript", "rank": 2},
-                {"name": "TypeScript", "rank": 3}
-              ]
-            }
-          }
-        ]
-      }
-
-      Remember: Output ONLY valid JSON. No markdown code blocks. No explanatory text outside the JSON.
+      1. **Preserve all information** — Do not lose any data from the original text.
+      2. **Choose appropriate components** — Match the component to the data type.
+      3. **Add structure** — Break numbered lists into list components, tabular data into table components.
+      4. **Keep text for context** — Use text blocks for explanations that don't fit structured components.
+      5. **Be consistent** — Similar data should use similar components.
       """;
 
   /**

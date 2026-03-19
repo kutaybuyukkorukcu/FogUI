@@ -119,31 +119,30 @@ class TransformPromptsTest {
         void shouldContainComponentDefinitions() {
             String prompt = TransformPrompts.TRANSFORM_SYSTEM_PROMPT;
 
-            assertTrue(prompt.contains("Card"));
-            assertTrue(prompt.contains("List"));
-            assertTrue(prompt.contains("Table"));
-            assertTrue(prompt.contains("Container"));
-            assertTrue(prompt.contains("Chart"));
+            assertTrue(prompt.contains("card"));
+            assertTrue(prompt.contains("list"));
+            assertTrue(prompt.contains("table"));
+            assertTrue(prompt.contains("container"));
+            assertTrue(prompt.contains("chart"));
         }
 
         @Test
-        @DisplayName("should contain JSON output format instructions")
+        @DisplayName("should contain output format instructions")
         void shouldContainJsonOutputFormatInstructions() {
             String prompt = TransformPrompts.TRANSFORM_SYSTEM_PROMPT;
 
-            assertTrue(prompt.contains("JSON"));
-            assertTrue(prompt.contains("thinking"));
-            assertTrue(prompt.contains("content"));
+            // Prompt guides component selection; explicit JSON schema is handled
+            // by Spring AI structured outputs at the API level
+            assertTrue(prompt.contains("component") || prompt.contains("Component"));
         }
 
         @Test
-        @DisplayName("should include deterministic contract requirements")
+        @DisplayName("should include component selection guidelines")
         void shouldIncludeDeterministicContractRequirements() {
             String prompt = TransformPrompts.TRANSFORM_SYSTEM_PROMPT;
 
-            assertTrue(prompt.contains("Deterministic Contract"));
-            assertTrue(prompt.contains("componentType"));
-            assertTrue(prompt.contains("list components"));
+            assertTrue(prompt.contains("Component Selection Guidelines"));
+            assertTrue(prompt.contains("componentType") || prompt.contains("component"));
         }
     }
 }

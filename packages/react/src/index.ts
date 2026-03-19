@@ -1,6 +1,5 @@
 export { FogUIProvider, useFogUIContext } from './providers/FogUIProvider';
 export { createAdapter } from './utils';
-export { applyFogUIPatches } from './patches';
 export type { FogUIProviderProps } from './providers/FogUIProvider';
 
 // Main Hook

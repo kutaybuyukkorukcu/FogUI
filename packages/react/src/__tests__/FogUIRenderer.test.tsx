@@ -140,6 +140,45 @@ describe('FogUIRenderer', () => {
     expect(screen.getByText('Child Via Props')).toBeInTheDocument();
   });
 
+  it('prefers block children over props.children when both are present', () => {
+    const response: FogUIResponse = {
+      thinking: [],
+      content: [
+        {
+          type: 'component',
+          componentType: 'Card',
+          props: {
+            title: 'Parent Both Sources',
+            children: [
+              {
+                type: 'component',
+                componentType: 'Card',
+                props: { title: 'Child From Props' },
+              },
+            ],
+          },
+          children: [
+            {
+              type: 'component',
+              componentType: 'Card',
+              props: { title: 'Child From Block' },
+            },
+          ],
+        },
+      ],
+    };
+
+    render(
+      <FogUIProvider adapter={mockAdapter} apiKey="test">
+        <FogUIRenderer response={response} />
+      </FogUIProvider>
+    );
+
+    expect(screen.getByText('Parent Both Sources')).toBeInTheDocument();
+    expect(screen.getByText('Child From Block')).toBeInTheDocument();
+    expect(screen.queryByText('Child From Props')).not.toBeInTheDocument();
+  });
+
   it('applies adapter.mapProps before rendering components', () => {
     const mapProps = vi.fn((_type: string, props: Record<string, unknown>) => ({
       ...props,
@@ -342,9 +381,7 @@ describe('FogUIRenderer', () => {
     consoleSpy.mockRestore();
   });
 
-  it('should suggest closest component match when component name casing differs', () => {
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
+  it('resolves components when component name casing differs', () => {
     const response: FogUIResponse = {
       thinking: [],
       content: [{ type: 'component', componentType: 'card', props: {}, children: [] }],
@@ -356,12 +393,7 @@ describe('FogUIRenderer', () => {
       </FogUIProvider>
     );
 
-    expect(screen.getByText(/Did you mean "Card"/)).toBeInTheDocument();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '[FogUI] Unmapped component: "card". Did you mean "Card"? Available adapter components: Card. Add a "card" mapping in adapter.components.'
-    );
-
-    consoleSpy.mockRestore();
+    expect(screen.getByTestId('card')).toBeInTheDocument();
   });
 
   it('should not render anything for a null or empty response', () => {

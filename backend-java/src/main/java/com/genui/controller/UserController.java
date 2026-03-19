@@ -4,6 +4,8 @@ import com.genui.dto.UserProfile;
 import com.genui.entity.User;
 import com.genui.repository.UserRepository;
 import com.genui.security.ApiKeyUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -14,16 +16,19 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
+@Tag(name = "User", description = "User profile endpoints")
 public class UserController {
 
     private final UserRepository userRepository;
 
     @GetMapping("/profile")
+    @Operation(summary = "Get profile", description = "Returns current user profile")
     public ResponseEntity<UserProfile> getProfile(@AuthenticationPrincipal ApiKeyUserDetails userDetails) {
         return ResponseEntity.ok(UserProfile.from(userDetails.getUser()));
     }
 
     @PutMapping("/profile")
+    @Operation(summary = "Update profile", description = "Updates current user profile fields")
     public ResponseEntity<UserProfile> updateProfile(
             @AuthenticationPrincipal ApiKeyUserDetails userDetails,
             @RequestBody UserProfile request) {

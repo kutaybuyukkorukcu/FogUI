@@ -2,29 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { fogUIResponseSchema } from '../types/schema.zod';
 
 describe('fogUIResponseSchema', () => {
-  it('accepts nested canonical component payloads', () => {
+  it('accepts a canonical response with text and component blocks', () => {
     const payload = {
       thinking: [{ status: 'complete', message: 'done' }],
       content: [
         { type: 'text', value: 'hello' },
         {
           type: 'component',
-          componentType: 'Card',
+          componentType: 'card',
           props: { title: 'Card title' },
-          children: [
-            {
-              type: 'component',
-              componentType: 'Stack',
-              props: { direction: 'horizontal', gap: 2 },
-              children: [
-                {
-                  type: 'component',
-                  componentType: 'Badge',
-                  props: { label: 'status', color: 'green' },
-                },
-              ],
-            },
-          ],
         },
       ],
       metadata: { modelUsed: 'test-model' },
@@ -34,7 +20,35 @@ describe('fogUIResponseSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts tabs with tab panes and form children', () => {
+  it('accepts nested component blocks with children', () => {
+    const payload = {
+      thinking: [{ status: 'complete', message: 'done' }],
+      content: [
+        {
+          type: 'component',
+          componentType: 'container',
+          props: { layout: 'grid', columns: 2 },
+          children: [
+            {
+              type: 'component',
+              componentType: 'card',
+              props: { title: 'Card A' },
+            },
+            {
+              type: 'component',
+              componentType: 'card',
+              props: { title: 'Card B' },
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = fogUIResponseSchema.safeParse(payload);
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts deeply nested component trees', () => {
     const payload = {
       thinking: [],
       content: [
@@ -58,11 +72,6 @@ describe('fogUIResponseSchema', () => {
                       componentType: 'Input',
                       props: { type: 'text', label: 'Name' },
                     },
-                    {
-                      type: 'component',
-                      componentType: 'Button',
-                      props: { label: 'Save', action: 'submit_profile' },
-                    },
                   ],
                 },
               ],
@@ -76,89 +85,52 @@ describe('fogUIResponseSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('normalizes malformed top-level response shapes', () => {
-    // Missing required top-level fields
-    const missingThinking = {
-      content: [{ type: 'text', value: 'hi' }],
-    };
-    const missingContent = {
-      thinking: [{ status: 'complete', message: 'ok' }],
-    };
-    // Wrong types
-    const wrongThinkingType = {
-      thinking: 'not-an-array',
-      content: [{ type: 'text', value: 'hi' }],
-    };
-    const wrongContentType = {
-      thinking: [{ status: 'complete', message: 'ok' }],
-      content: 'not-an-array',
-    };
+  it('rejects a response with missing required fields', () => {
+    const missingThinking = { content: [{ type: 'text', value: 'hi' }] };
+    const missingContent = { thinking: [{ status: 'complete', message: 'ok' }] };
 
-    const parsedMissingThinking = fogUIResponseSchema.safeParse(missingThinking);
-    const parsedMissingContent = fogUIResponseSchema.safeParse(missingContent);
-    const parsedWrongThinking = fogUIResponseSchema.safeParse(wrongThinkingType);
-    const parsedWrongContent = fogUIResponseSchema.safeParse(wrongContentType);
-
-    expect(parsedMissingThinking.success).toBe(true);
-    expect(parsedMissingContent.success).toBe(true);
-    expect(parsedWrongThinking.success).toBe(true);
-    expect(parsedWrongContent.success).toBe(true);
-
-    if (!parsedMissingThinking.success || !parsedMissingContent.success || !parsedWrongThinking.success || !parsedWrongContent.success) {
-      return;
-    }
-
-    expect(parsedMissingThinking.data.thinking).toEqual([]);
-    expect(parsedMissingContent.data.content).toEqual([]);
-    expect(parsedWrongThinking.data.thinking).toEqual([]);
-    expect(parsedWrongContent.data.content).toEqual([]);
+    expect(fogUIResponseSchema.safeParse(missingThinking).success).toBe(false);
+    expect(fogUIResponseSchema.safeParse(missingContent).success).toBe(false);
   });
 
-  it('normalizes mixed block payloads into deterministic render-safe shapes', () => {
+  it('rejects a component block with empty componentType', () => {
     const payload = {
-      thinking: [{ status: '', message: 42 }],
+      thinking: [],
       content: [
-        { type: 'text', value: 1234 },
-        {
-          type: 'component',
-          componentType: '  list  ',
-          props: {
-            title: 'KPIs',
-            children: [
-              { type: 'text', value: 'Child from props.children' },
-            ],
-          },
-        },
-        {
-          componentType: 'card',
-          props: 'invalid-props-type',
-        },
+        { type: 'component', componentType: '', props: {} },
+      ],
+    };
+
+    const result = fogUIResponseSchema.safeParse(payload);
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts component blocks with null or missing props', () => {
+    const payload = {
+      thinking: [],
+      content: [
+        { type: 'component', componentType: 'card', props: null },
+        { type: 'component', componentType: 'list' },
       ],
     };
 
     const result = fogUIResponseSchema.safeParse(payload);
     expect(result.success).toBe(true);
+  });
 
-    if (!result.success) {
-      return;
-    }
+  it('accepts metadata as null or a record', () => {
+    const withNull = {
+      thinking: [],
+      content: [],
+      metadata: null,
+    };
+    const withRecord = {
+      thinking: [],
+      content: [],
+      metadata: { version: '1.0', timestamp: '2026-01-01' },
+    };
 
-    expect(result.data.thinking[0]).toEqual({ status: 'complete', message: '42', timestamp: undefined });
-    expect(result.data.content[0]).toEqual({ type: 'text', value: '1234' });
-
-    expect(result.data.content[1]).toMatchObject({
-      type: 'component',
-      componentType: 'list',
-      props: { title: 'KPIs' },
-    });
-
-    const listComponent = result.data.content[1] as { children?: unknown[] };
-    expect(Array.isArray(listComponent.children)).toBe(true);
-
-    expect(result.data.content[2]).toMatchObject({
-      type: 'component',
-      componentType: 'card',
-      props: {},
-    });
+    expect(fogUIResponseSchema.safeParse(withNull).success).toBe(true);
+    expect(fogUIResponseSchema.safeParse(withRecord).success).toBe(true);
   });
 });

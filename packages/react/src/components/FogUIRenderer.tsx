@@ -117,7 +117,10 @@ interface ContentBlockRendererProps {
 }
 
 function normalizeName(value: string): string {
-  return value.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  return Array.from(value)
+    .filter((char) => /[a-zA-Z0-9]/.test(char))
+    .join('')
+    .toLowerCase();
 }
 
 function findClosestComponent(missingType: string, availableTypes: string[]): string | null {
@@ -137,6 +140,25 @@ function findClosestComponent(missingType: string, availableTypes: string[]): st
   });
 
   return partial ?? null;
+}
+
+function resolveComponent(
+  registry: Readonly<ComponentRegistry>,
+  componentType: string,
+): React.ComponentType<any> | undefined {
+  const indexedRegistry = registry as Readonly<Record<string, React.ComponentType<any> | undefined>>;
+  const exact = indexedRegistry[componentType];
+  if (exact) {
+    return exact;
+  }
+
+  const normalizedTarget = normalizeName(componentType);
+  const matchingKey = Object.keys(registry).find((key) => normalizeName(key) === normalizedTarget);
+  if (!matchingKey) {
+    return undefined;
+  }
+
+  return indexedRegistry[matchingKey];
 }
 
 function getBlockKey(block: ContentBlock): string {
@@ -271,7 +293,7 @@ function ContentBlockRenderer({ block, registry, lifecycleHandlers, adapter }: C
   }
 
   const componentType = block.componentType as FogUIComponent['componentType'];
-  const Component = registry[componentType];
+  const Component = resolveComponent(registry, componentType);
 
   if (Component) {
     return renderMappedComponent(block, Component, lifecycleHandlers, registry, adapter);
