@@ -6,10 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Base content block - aligns with frontend ContentBlock
- * Type should be "text" or "component"
- */
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -18,36 +16,20 @@ public class ContentBlock {
 
     @JsonProperty("type")
     @Builder.Default
-    private String type = "text"; // "text" or "component"
+    private String type = "text";
 
-    /**
-     * For "text" type: the text value
-     * For "component" type: not used (see componentType and props)
-     */
     @JsonProperty("value")
     private Object value;
 
-    /**
-     * For "component" type: the component type (card, table, chart, etc.)
-     */
     @JsonProperty("componentType")
     private String componentType;
 
-    /**
-     * For "component" type: the component props
-     */
     @JsonProperty("props")
     private Object props;
 
-    /**
-     * For recursive nesting (e.g. Container component)
-     */
     @JsonProperty("children")
-    private java.util.List<ContentBlock> children;
+    private List<ContentBlock> children;
 
-    /**
-     * Create a text block
-     */
     public static ContentBlock text(String value) {
         return ContentBlock.builder()
                 .type("text")
@@ -55,9 +37,6 @@ public class ContentBlock {
                 .build();
     }
 
-    /**
-     * Create a component block
-     */
     public static ContentBlock component(String componentType, Object props) {
         return ContentBlock.builder()
                 .type("component")

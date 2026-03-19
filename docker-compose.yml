@@ -21,8 +21,8 @@ services:
 
   backend:
     build:
-      context: ./backend-java
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend-java/Dockerfile
     container_name: genui-backend
     ports:
       - "8080:5001"
@@ -93,5 +93,4 @@ networks:
 
 volumes:
   postgres_data:
-
 

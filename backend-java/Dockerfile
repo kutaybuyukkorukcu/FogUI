@@ -1,14 +1,21 @@
 FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
-WORKDIR /app
+WORKDIR /workspace
 
-# Copy pom and download dependencies (cached layer)
+# Copy reactor + module poms first (cache-friendly)
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+COPY fogui-java-core/pom.xml fogui-java-core/pom.xml
+COPY fogui-spring-starter/pom.xml fogui-spring-starter/pom.xml
+COPY backend-java/pom.xml backend-java/pom.xml
 
-# Copy source and build
-COPY src ./src
-RUN mvn package -DskipTests -B
+# Download dependencies for backend and transitive modules
+RUN mvn -q -DskipTests -pl backend-java -am dependency:go-offline
+
+# Copy source trees and build backend with required modules
+COPY fogui-java-core/src fogui-java-core/src
+COPY fogui-spring-starter/src fogui-spring-starter/src
+COPY backend-java/src backend-java/src
+RUN mvn -q -DskipTests -pl backend-java -am package
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
@@ -16,7 +23,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy the built JAR
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder /workspace/backend-java/target/*.jar app.jar
 
 # Expose port
 EXPOSE 5001

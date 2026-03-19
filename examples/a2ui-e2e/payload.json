@@ -1,0 +1,25 @@
+{
+  "thinking": [
+    {
+      "status": "complete",
+      "message": "Generating KPI overview"
+    }
+  ],
+  "content": [
+    {
+      "type": "text",
+      "value": "Here is your KPI snapshot."
+    },
+    {
+      "type": "component",
+      "componentType": "Card",
+      "props": {
+        "title": "Revenue",
+        "description": "Up 18% QoQ"
+      }
+    },
+    {
+      "foo": "unsupported-node-shape"
+    }
+  ]
+}

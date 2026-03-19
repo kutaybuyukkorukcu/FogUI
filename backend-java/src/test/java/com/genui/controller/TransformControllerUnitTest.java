@@ -7,6 +7,7 @@ import com.genui.model.transform.TransformRequest;
 import com.genui.repository.UserRepository;
 import com.genui.security.ApiKeyUserDetails;
 import com.genui.service.ChatClientFactory;
+import com.genui.service.StreamPatchReconciler;
 import com.genui.service.UIResponseParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,7 @@ class TransformControllerUnitTest {
 
     private ChatClientFactory chatClientFactory;
     private UIResponseParser responseParser;
+    private StreamPatchReconciler streamPatchReconciler;
     private UserRepository userRepository;
     private TransformController controller;
 
@@ -45,9 +47,11 @@ class TransformControllerUnitTest {
     void setUp() {
         chatClientFactory = Mockito.mock(ChatClientFactory.class);
         responseParser = Mockito.mock(UIResponseParser.class);
+        streamPatchReconciler = Mockito.mock(StreamPatchReconciler.class);
         userRepository = Mockito.mock(UserRepository.class);
 
-        controller = new TransformController(chatClientFactory, responseParser, userRepository);
+        when(streamPatchReconciler.reconcile(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
+        controller = new TransformController(chatClientFactory, responseParser, streamPatchReconciler, userRepository);
     }
 
     @Test

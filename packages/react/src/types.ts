@@ -7,9 +7,9 @@
  */
 export interface FogUIConfig {
   /**
-   * Your FogUI API key (get it from https://fogui.dev/dashboard)
+   * Optional API key. If omitted, SDK calls are sent without Authorization header.
    */
-  apiKey: string;
+  apiKey?: string;
 }
 
 export interface TransformOptions {

@@ -8,10 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 
-/**
- * Represents a thinking/reasoning step shown to the user
- * Aligns with frontend ThinkingItem
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -24,7 +20,7 @@ public class ThinkingItem {
 
     @JsonProperty("status")
     @Builder.Default
-    private String status = "active"; // "active" or "complete"
+    private String status = "active";
 
     @JsonProperty("timestamp")
     @Builder.Default

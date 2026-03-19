@@ -8,6 +8,7 @@ import com.genui.model.transform.TransformResponse;
 import com.genui.repository.UserRepository;
 import com.genui.security.ApiKeyUserDetails;
 import com.genui.service.ChatClientFactory;
+import com.genui.service.StreamPatchReconciler;
 import com.genui.service.TransformPrompts;
 import com.genui.service.UIResponseParser;
 import io.swagger.v3.oas.annotations.Operation;
@@ -57,6 +58,7 @@ public class TransformController {
 
     private final ChatClientFactory chatClientFactory;
     private final UIResponseParser responseParser;
+    private final StreamPatchReconciler streamPatchReconciler;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -229,16 +231,17 @@ public class TransformController {
             AtomicReference<GenerativeUIResponse> previousResponse
     ) {
         var partial = responseParser.tryParsePartial(fullContent.toString());
-        if (partial == null || Objects.equals(partial, previousResponse.get())) {
+        var reconciled = streamPatchReconciler.reconcile(previousResponse.get(), partial);
+        if (reconciled == null || Objects.equals(reconciled, previousResponse.get())) {
             return;
         }
 
-        previousResponse.set(partial);
+        previousResponse.set(reconciled);
 
         try {
             emitter.send(SseEmitter.event()
                     .name("result")
-                    .data(objectMapper.writeValueAsString(partial)));
+                    .data(objectMapper.writeValueAsString(reconciled)));
         } catch (IOException e) {
             log.error("Error sending partial result", e);
         }

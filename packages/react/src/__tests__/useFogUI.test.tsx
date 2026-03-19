@@ -63,6 +63,10 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   <FogUIProvider apiKey="test-key">{children}</FogUIProvider>
 );
 
+const noKeyWrapper = ({ children }: { children: React.ReactNode }) => (
+  <FogUIProvider>{children}</FogUIProvider>
+);
+
 describe('useFogUI', () => {
 
   it('should successfully transform content and return a valid result', async () => {
@@ -130,6 +134,29 @@ describe('useFogUI', () => {
       preferredComponents: ['Card', 'Badge'],
       instructions: 'be concise',
     });
+  });
+
+  it('should omit Authorization header when apiKey is not provided', async () => {
+    const mockResponse = {
+      success: true,
+      result: {
+        thinking: [],
+        content: [{ type: 'text', value: 'No key mode' }],
+      },
+    };
+
+    fetchMock.mockReturnValue(createFetchResponse(mockResponse));
+    const { result } = renderHook(() => useFogUI(), { wrapper: noKeyWrapper });
+
+    await waitFor(async () => {
+      await result.current.transform('prompt without key');
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const headers = requestInit.headers as Record<string, string>;
+
+    expect(headers['Content-Type']).toBe('application/json');
+    expect(headers.Authorization).toBeUndefined();
   });
 
   it('should set hook error when API returns success false', async () => {

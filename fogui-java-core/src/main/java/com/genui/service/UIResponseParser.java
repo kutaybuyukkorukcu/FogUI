@@ -3,15 +3,10 @@ package com.genui.service;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.genui.model.genui.GenerativeUIResponse;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 /**
- * Handles partial JSON recovery for the streaming path.
- * The non-streaming path uses Spring AI structured outputs (.entity()) and does not need this class.
+ * Partial JSON recovery utility for streaming scenarios.
  */
-@Slf4j
-@Service
 public class UIResponseParser {
 
     private final ObjectMapper objectMapper;
@@ -21,10 +16,6 @@ public class UIResponseParser {
         this.objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    /**
-     * Attempts to parse partial JSON during streaming.
-     * Mid-stream chunks are incomplete JSON; this method closes open brackets to get a parseable snapshot.
-     */
     public GenerativeUIResponse tryParsePartial(String json) {
         try {
             String candidate = extractJsonCandidate(json);

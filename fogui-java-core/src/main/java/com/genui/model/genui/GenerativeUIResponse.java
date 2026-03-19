@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The main response format for Generative UI - aligns with frontend GenerativeUIResponse
+ * Canonical FogUI response shared between backend services and frontend renderers.
  */
 @Data
 @Builder

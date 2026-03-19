@@ -1,12 +1,20 @@
 # @fogui/react
 
-Transform agent/LLM output into real React UI using your existing component system.
+Render FogUI transform responses using your own React component system.
 
 ## Installation
 
 ```bash
 npm install @fogui/react
 ```
+
+## Core API
+
+- `FogUIProvider`
+- `useFogUI`
+- `FogUIRenderer`
+- `createAdapter`
+- Prebuilt adapters: `shadcnAdapter`, `headlessAdapter`
 
 ## Quick Start
 
@@ -17,11 +25,10 @@ import {
   FogUIRenderer,
   createAdapter,
   useFogUI,
-  type Adapter,
   type FogUIResponse,
 } from '@fogui/react';
 
-const adapter: Adapter = createAdapter({
+const adapter = createAdapter({
   components: {
     Card: ({ title, description, children }) => (
       <section>
@@ -31,224 +38,96 @@ const adapter: Adapter = createAdapter({
       </section>
     ),
     Button: ({ label, onAction }) => (
-      <button type="button" onClick={() => onAction?.('button_click', { id: 'cta' })}>
-        {label}
-      </button>
+      <button onClick={() => onAction?.('cta_click', { id: 'primary' })}>{label}</button>
     ),
   },
 });
 
-const ChatView = () => {
+function Demo() {
   const { transform, isLoading, error } = useFogUI();
-  const [response, setResponse] = useState<FogUIResponse | null>(null);
+  const [result, setResult] = useState<FogUIResponse | null>(null);
 
-  const onGenerate = async () => {
-    const result = await transform('Create a card with a call-to-action button', {
+  const run = async () => {
+    const response = await transform('Create a card with a CTA button', {
       intent: 'lead_capture',
       preferredComponents: ['Card', 'Button'],
+      instructions: 'Keep it compact',
     });
 
-    if (result.success && result.result) {
-      setResponse(result.result);
+    if (response.success && response.result) {
+      setResult(response.result);
     }
   };
 
   return (
     <>
-      <button type="button" onClick={onGenerate} disabled={isLoading}>
-        {isLoading ? 'Generating...' : 'Generate UI'}
-      </button>
-
+      <button disabled={isLoading} onClick={run}>Generate</button>
       {error && <p>{error}</p>}
-      {response && <FogUIRenderer response={response} />}
+      {result && <FogUIRenderer response={result} />}
     </>
   );
-};
+}
 
 export default function App() {
   return (
     <FogUIProvider
-      apiKey="fog_xxx"
+      endpoint="http://localhost:5001"
       adapter={adapter}
-      onAction={(action, data) => {
-        console.log('FogUI action:', action, data);
-      }}
-      onActionStart={(payload) => {
-        console.log('Action start:', payload);
-      }}
-      onActionComplete={(payload) => {
-        console.log('Action complete:', payload);
-      }}
-      onActionError={(payload) => {
-        console.error('Action error:', payload.error);
-      }}
+      onAction={(action, data) => console.log(action, data)}
     >
-      <ChatView />
+      <Demo />
     </FogUIProvider>
   );
 }
 ```
 
-## Core Concepts
-
-- Canonical schema from your backend is rendered by `FogUIRenderer`.
-- `adapter` maps canonical component types (like `Card`, `Table`) to your UI components.
-- `useFogUI` transforms raw model output into the canonical schema.
-- `onAction` allows component interactions to feed back into your app/agent loop.
-
-## Provider API
+## Provider
 
 ```tsx
 <FogUIProvider
-  apiKey="fog_xxx"
-  endpoint="https://api.virtuoapps.com" // optional
-  adapter={myAdapter} // optional, defaults to headless adapter
-  onAction={(action, data) => { /* optional */ }}
-  onActionStart={(payload) => { /* optional */ }}
-  onActionComplete={(payload) => { /* optional */ }}
-  onActionError={(payload) => { /* optional */ }}
+  apiKey="fog_xxx" // optional
+  endpoint="http://localhost:5001" // optional, defaults to self-host friendly localhost
+  adapter={adapter} // optional, defaults to headlessAdapter
+  onAction={(action, data) => {}}
+  onActionStart={(payload) => {}}
+  onActionComplete={(payload) => {}}
+  onActionError={(payload) => {}}
 >
   <App />
 </FogUIProvider>
 ```
 
-| Prop | Type | Required | Description |
-| --- | --- | --- | --- |
-| `apiKey` | `string` | Yes | FogUI API key |
-| `endpoint` | `string` | No | Custom FogUI backend endpoint |
-| `adapter` | `Adapter` | No | Design system mapping |
-| `onAction` | `(action: string, data?: unknown) => void` | No | Global action handler |
-| `onActionStart` | `(payload: FogUIActionPayload) => void \| Promise<void>` | No | Lifecycle hook fired before action dispatch |
-| `onActionComplete` | `(payload: FogUIActionPayload) => void \| Promise<void>` | No | Lifecycle hook fired after successful action dispatch |
-| `onActionError` | `(payload: FogUIActionErrorPayload) => void \| Promise<void>` | No | Lifecycle hook fired when action dispatch fails |
-
-## Action Lifecycle
-
-`onAction` remains backward-compatible and still receives `(action, data)`.
-
-Lifecycle payload shape:
-
-```ts
-{
-  action: string;
-  data?: unknown;
-  timestamp: string; // ISO timestamp
-  sourceComponent: string;
-}
-```
-
-Lifecycle order is deterministic:
-
-1. `onActionStart`
-2. `onAction`
-3. `onActionComplete`
-
-If action dispatch throws/rejects, `onActionError` is fired instead of `onActionComplete`.
-
-## Renderer API
-
-```tsx
-<FogUIRenderer
-  response={fogUIResponse}
-  className="fogui-output"
-  style={{ maxWidth: 720 }}
-  onAction={(action, data) => {
-    // Optional per-render override, falls back to provider onAction
-  }}
-/>
-```
-
-When a component type is missing from your adapter, renderer:
-
-- renders an inline fallback block,
-- prints a warning with available adapter components,
-- suggests a likely component match if possible.
-
-## Hook API
+## Hook
 
 ```tsx
 const { transform, transformStream, isLoading, error, clearError } = useFogUI();
 ```
 
-### `transform`
+- `transform(content, options)` calls `POST /fogui/transform`.
+- `transformStream(content, options)` consumes SSE from `POST /fogui/transform/stream`.
+- Stream events: `result`, `usage`, `error`, `done`.
+- If `apiKey` is omitted, requests are sent without `Authorization` header.
 
-```tsx
-const result = await transform(content, {
-  intent: 'dashboard',
-  preferredComponents: ['Card', 'Table'],
-  instructions: 'Use compact spacing',
-});
-```
+## Renderer Behavior
 
-### `transformStream`
+- Renders `text` and `component` blocks.
+- Supports nested component trees through `children`.
+- Supports `props.children` fallback when block-level `children` is empty.
+- Resolves adapter component names case-insensitively.
+- Shows an inline warning block for unmapped component types.
 
-```tsx
-for await (const event of transformStream(content, { intent: 'chat' })) {
-  if (event.type === 'result') {
-    // validated canonical response
-  }
-  if (event.type === 'error') {
-    // stream-level errors
-  }
-  if (event.type === 'done') {
-    // stream completed
-  }
-}
-```
+## Built-in Adapters
 
-## Adapter Template
-
-```tsx
-import { createAdapter, type Adapter } from '@fogui/react';
-
-export const myAdapter: Adapter = createAdapter({
-  components: {
-    Card: MyCard,
-    Table: MyTable,
-    List: MyList,
-    Form: MyForm,
-    Input: MyInput,
-    Button: MyButton,
-    Stack: MyStack,
-    Grid: MyGrid,
-    Tabs: MyTabs,
-    TabPane: MyTabPane,
-    Badge: MyBadge,
-  },
-  mapProps: (componentType, props) => {
-    if (componentType === 'Button') {
-      return {
-        ...props,
-        onClick: props.action ? () => console.log(props.action) : undefined,
-      };
-    }
-    return props;
-  },
-});
-```
-
-## Canonical Components
-
-- `Card`
-- `Table`
-- `List`
-- `Form`
-- `Input`
-- `Button`
-- `Stack`
-- `Grid`
-- `Tabs`
-- `TabPane`
-- `Badge`
+- `shadcnAdapter`: Tailwind/Shadcn-style primitives and layouts.
+- `headlessAdapter`: unstyled primitives for custom composition.
 
 ## Local Development
 
 ```bash
+cd packages/react
+npm install
 npm run test
 npm run typecheck
+npm run lint
 npm run build
 ```
-
-## License
-
-MIT

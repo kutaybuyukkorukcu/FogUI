@@ -46,6 +46,18 @@
             <artifactId>spring-ai-starter-model-openai</artifactId>
         </dependency>
 
+        <!-- FogUI OSS compatibility engine modules -->
+        <dependency>
+            <groupId>com.genui</groupId>
+            <artifactId>fogui-java-core</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.genui</groupId>
+            <artifactId>fogui-spring-starter</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+
         <!-- OpenAPI/Swagger UI for API contracts -->
         <dependency>
             <groupId>org.springdoc</groupId>
