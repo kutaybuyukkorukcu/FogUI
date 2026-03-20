@@ -1,17 +1,22 @@
 # Development Dockerfile with hot reload
 FROM maven:3.9-eclipse-temurin-21
 
-WORKDIR /app
+WORKDIR /workspace
 
-# Copy pom and download dependencies
+# Copy reactor + module poms
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+COPY fogui-java-core/pom.xml fogui-java-core/pom.xml
+COPY fogui-spring-starter/pom.xml fogui-spring-starter/pom.xml
+COPY backend-java/pom.xml backend-java/pom.xml
+RUN mvn -q -DskipTests -pl backend-java -am dependency:go-offline
 
-# Copy source
-COPY src ./src
+# Copy source trees
+COPY fogui-java-core/src fogui-java-core/src
+COPY fogui-spring-starter/src fogui-spring-starter/src
+COPY backend-java/src backend-java/src
 
 # Expose port and debug port
 EXPOSE 5001 5005
 
 # Run with DevTools and remote debugging
-CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Dspring.devtools.restart.enabled=true"]
+CMD ["mvn", "-pl", "backend-java", "-am", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Dspring.devtools.restart.enabled=true"]

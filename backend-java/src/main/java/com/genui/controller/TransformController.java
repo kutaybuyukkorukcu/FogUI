@@ -3,20 +3,22 @@ package com.genui.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.genui.entity.User;
 import com.genui.model.genui.GenerativeUIResponse;
-import com.genui.model.transform.StreamPatchOperation;
 import com.genui.model.transform.TransformRequest;
 import com.genui.model.transform.TransformResponse;
 import com.genui.repository.UserRepository;
 import com.genui.security.ApiKeyUserDetails;
 import com.genui.service.ChatClientFactory;
-import com.genui.service.StreamPatchGenerator;
+import com.genui.service.StreamPatchReconciler;
 import com.genui.service.TransformPrompts;
 import com.genui.service.UIResponseParser;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,7 +28,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,13 +51,14 @@ import java.util.concurrent.Executors;
 @RestController
 @RequestMapping("/fogui")
 @RequiredArgsConstructor
+@Tag(name = "Transform", description = "Transform raw LLM output into FogUI structured responses")
 public class TransformController {
 
     private static final String ERROR_KEY = "error";
 
     private final ChatClientFactory chatClientFactory;
     private final UIResponseParser responseParser;
-    private final StreamPatchGenerator streamPatchGenerator;
+    private final StreamPatchReconciler streamPatchReconciler;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -66,6 +69,7 @@ public class TransformController {
      * Requires API key authentication.
      */
     @PostMapping("/transform")
+    @Operation(summary = "Transform content", description = "Converts raw model text into structured FogUI response")
     public ResponseEntity<TransformResponse> transform(
             @AuthenticationPrincipal ApiKeyUserDetails userDetails,
             @RequestBody TransformRequest request) {
@@ -102,11 +106,10 @@ public class TransformController {
             var prompt = new Prompt(
                     new SystemMessage(TransformPrompts.TRANSFORM_SYSTEM_PROMPT),
                     new UserMessage(TransformPrompts.buildTransformPrompt(request.getContent(), contextHints)));
-            var response = chatClient.prompt(prompt).call();
-            var content = response.content();
-
-            // Parse the UI response
-            var uiResponse = responseParser.parse(content);
+            // Structured output: model is constrained to emit valid GenerativeUIResponse JSON
+            var uiResponse = chatClient.prompt(prompt)
+                    .call()
+                    .entity(GenerativeUIResponse.class);
 
             if (uiResponse == null) {
                 return ResponseEntity.status(500)
@@ -115,7 +118,7 @@ public class TransformController {
 
             // Calculate usage
             long processingTime = System.currentTimeMillis() - startTime;
-            int estimatedTokens = (request.getContent().length() / 4) + (content.length() / 4);
+            int estimatedTokens = request.getContent().length() / 4;
             BigDecimal estimatedCost = new BigDecimal(estimatedTokens)
                     .divide(new BigDecimal("1000000"), 6, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("0.60")); // Approximate cost
@@ -152,6 +155,7 @@ public class TransformController {
      * Useful for real-time transformation as content arrives.
      */
     @PostMapping(value = "/transform/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "Transform content (SSE)", description = "Streams incremental FogUI transform events over Server-Sent Events")
     public SseEmitter transformStream(@RequestBody TransformRequest request) {
         SseEmitter emitter = new SseEmitter(120000L); // 2 min timeout
         executor.execute(() -> processStreamRequest(request, emitter));
@@ -169,22 +173,13 @@ public class TransformController {
             var prompt = buildStreamPrompt(request);
             var fullContent = new StringBuilder();
             var previousResponse = new AtomicReference<GenerativeUIResponse>(null);
-            boolean includeChunks = request.isIncludeChunks();
-            boolean preferPatches = request.isPreferPatches();
 
             chatClient.prompt(prompt)
                     .stream()
                     .content()
                     .doOnNext(chunk -> {
-                        if (includeChunks) {
-                            handleStreamChunk(chunk, emitter, fullContent);
-                        } else {
-                            fullContent.append(chunk);
-                        }
-
-                        if (preferPatches) {
-                            emitPatchesFromPartial(fullContent, emitter, previousResponse);
-                        }
+                        fullContent.append(chunk);
+                        emitPartialResult(fullContent, emitter, previousResponse);
                     })
                     .doOnComplete(() -> handleStreamComplete(emitter, fullContent, request, startTime))
                     .doOnError(error -> handleStreamError(error, emitter))
@@ -230,40 +225,25 @@ public class TransformController {
         return null;
     }
 
-    private void handleStreamChunk(String chunk, SseEmitter emitter, StringBuilder fullContent) {
-        fullContent.append(chunk);
-        try {
-            emitter.send(SseEmitter.event()
-                    .name("chunk")
-                    .data(chunk));
-        } catch (IOException e) {
-            log.error("Error sending chunk", e);
-        }
-    }
-
-    private void emitPatchesFromPartial(
+    private void emitPartialResult(
             StringBuilder fullContent,
             SseEmitter emitter,
             AtomicReference<GenerativeUIResponse> previousResponse
     ) {
         var partial = responseParser.tryParsePartial(fullContent.toString());
-        if (partial == null) {
+        var reconciled = streamPatchReconciler.reconcile(previousResponse.get(), partial);
+        if (reconciled == null || Objects.equals(reconciled, previousResponse.get())) {
             return;
         }
 
-        List<StreamPatchOperation> patches = streamPatchGenerator.generatePatches(previousResponse.get(), partial);
-        if (patches.isEmpty()) {
-            return;
-        }
-
-        previousResponse.set(partial);
+        previousResponse.set(reconciled);
 
         try {
             emitter.send(SseEmitter.event()
-                    .name("patch")
-                    .data(objectMapper.writeValueAsString(patches)));
+                    .name("result")
+                    .data(objectMapper.writeValueAsString(reconciled)));
         } catch (IOException e) {
-            log.error("Error sending patch", e);
+            log.error("Error sending partial result", e);
         }
     }
 
@@ -280,11 +260,13 @@ public class TransformController {
     }
 
     private void sendStreamResult(SseEmitter emitter, String content) throws IOException {
-        var uiResponse = responseParser.parse(content);
-        if (uiResponse != null) {
+        try {
+            var uiResponse = objectMapper.readValue(content, GenerativeUIResponse.class);
             emitter.send(SseEmitter.event()
                     .name("result")
                     .data(objectMapper.writeValueAsString(uiResponse)));
+        } catch (Exception e) {
+            log.warn("Could not deserialize stream final content: {}", e.getMessage());
         }
     }
 

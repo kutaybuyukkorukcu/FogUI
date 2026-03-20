@@ -7,6 +7,8 @@ import com.genui.entity.User;
 import com.genui.repository.ApiKeyRepository;
 import com.genui.security.ApiKeyAuthenticationFilter;
 import com.genui.security.ApiKeyUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -27,6 +29,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/keys")
 @RequiredArgsConstructor
+@Tag(name = "API Keys", description = "Create, list, revoke, and rotate API keys")
 public class ApiKeyController {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -39,6 +42,7 @@ public class ApiKeyController {
      * List all API keys for the current user.
      */
     @GetMapping
+    @Operation(summary = "List API keys", description = "Returns all API keys for the authenticated user")
     public ResponseEntity<List<ApiKeyResponse>> listKeys(
             @AuthenticationPrincipal ApiKeyUserDetails userDetails) {
 
@@ -56,6 +60,7 @@ public class ApiKeyController {
      * The full key is returned only ONCE on creation.
      */
     @PostMapping
+    @Operation(summary = "Create API key", description = "Creates a new API key and returns full key once")
     public ResponseEntity<ApiKeyResponse> createKey(
             @AuthenticationPrincipal ApiKeyUserDetails userDetails,
             @RequestBody(required = false) CreateApiKeyRequest request) {
@@ -95,6 +100,7 @@ public class ApiKeyController {
      * Revoke an API key.
      */
     @DeleteMapping("/{id}")
+    @Operation(summary = "Revoke API key", description = "Revokes an existing API key by id")
     public ResponseEntity<Map<String, String>> revokeKey(
             @AuthenticationPrincipal ApiKeyUserDetails userDetails,
             @PathVariable UUID id) {
@@ -117,6 +123,7 @@ public class ApiKeyController {
      * Rotate an API key (revoke old, create new).
      */
     @PostMapping("/{id}/rotate")
+    @Operation(summary = "Rotate API key", description = "Revokes old key and creates a replacement key")
     public ResponseEntity<ApiKeyResponse> rotateKey(
             @AuthenticationPrincipal ApiKeyUserDetails userDetails,
             @PathVariable UUID id) {

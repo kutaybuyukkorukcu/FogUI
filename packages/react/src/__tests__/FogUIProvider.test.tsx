@@ -20,20 +20,14 @@ describe('FogUIProvider', () => {
       expect(screen.getByTestId('child')).toBeInTheDocument();
     });
 
-    it('should warn when API key is missing', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      
+    it('should allow rendering without API key for renderer-only use cases', () => {
       render(
-        <FogUIProvider apiKey="">
-          <div>Test</div>
+        <FogUIProvider>
+          <div data-testid="no-key">Test</div>
         </FogUIProvider>
       );
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('API key is required')
-      );
-      
-      consoleSpy.mockRestore();
+      expect(screen.getByTestId('no-key')).toBeInTheDocument();
     });
   });
 
@@ -67,7 +61,7 @@ describe('FogUIProvider', () => {
         </FogUIProvider>
       );
 
-      expect(screen.getByTestId('endpoint')).toHaveTextContent('https://api.virtuoapps.com');
+      expect(screen.getByTestId('endpoint')).toHaveTextContent('http://localhost:5001');
     });
 
     it('should use custom endpoint when specified', () => {

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.genui.entity.ApiKey;
 import com.genui.entity.User;
 import com.genui.entity.UserRole;
+import com.genui.model.genui.ContentBlock;
+import com.genui.model.genui.GenerativeUIResponse;
+import com.genui.model.genui.ThinkingItem;
 import com.genui.model.transform.TransformRequest;
 import com.genui.repository.ApiKeyRepository;
 import com.genui.repository.UserRepository;
@@ -25,6 +28,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -97,22 +102,11 @@ class TransformControllerTest {
         @Test
         @DisplayName("should transform content with card component")
         void shouldTransformContentWithCardComponent() throws Exception {
-            // Mock LLM response
-            String llmResponse = """
-                    <genui>
-                    {
-                        "thinking": [{"message": "Analyzing content", "status": "complete"}],
-                        "content": [
-                            {
-                                "type": "component",
-                                "componentType": "card",
-                                "props": {"title": "Tesla Model 3", "description": "Electric vehicle"}
-                            }
-                        ]
-                    }
-                    </genui>
-                    """;
-            mockChatClient(llmResponse);
+            GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                    .thinking(List.of(ThinkingItem.builder().message("Analyzing content").status("complete").build()))
+                    .content(List.of(ContentBlock.component("card", java.util.Map.of("title", "Tesla Model 3", "description", "Electric vehicle"))))
+                    .build();
+            mockChatClient(uiResponse);
 
             TransformRequest request = new TransformRequest();
             request.setContent("Tell me about the Tesla Model 3");
@@ -129,24 +123,11 @@ class TransformControllerTest {
         @Test
         @DisplayName("should transform content with table component")
         void shouldTransformContentWithTableComponent() throws Exception {
-            String llmResponse = """
-                    <genui>
-                    {
-                        "thinking": [{"message": "Creating comparison", "status": "complete"}],
-                        "content": [
-                            {
-                                "type": "component",
-                                "componentType": "table",
-                                "props": {
-                                    "columns": [{"key": "name", "label": "Name"}],
-                                    "rows": [{"name": "Item 1"}]
-                                }
-                            }
-                        ]
-                    }
-                    </genui>
-                    """;
-            mockChatClient(llmResponse);
+            GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                    .thinking(List.of(ThinkingItem.builder().message("Creating comparison").status("complete").build()))
+                    .content(List.of(ContentBlock.component("table", java.util.Map.of("columns", List.of(), "rows", List.of()))))
+                    .build();
+            mockChatClient(uiResponse);
 
             TransformRequest request = new TransformRequest();
             request.setContent("Compare iPhone and Android");
@@ -215,15 +196,10 @@ class TransformControllerTest {
         @Test
         @DisplayName("should include usage information in response")
         void shouldIncludeUsageInformation() throws Exception {
-            String llmResponse = """
-                    <genui>
-                    {
-                        "thinking": [],
-                        "content": [{"type": "text", "value": "Hello"}]
-                    }
-                    </genui>
-                    """;
-            mockChatClient(llmResponse);
+            GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                    .content(List.of(ContentBlock.text("Hello")))
+                    .build();
+            mockChatClient(uiResponse);
 
             TransformRequest request = new TransformRequest();
             request.setContent("Say hello");
@@ -240,21 +216,11 @@ class TransformControllerTest {
         @Test
         @DisplayName("should transform content with context hints")
         void shouldTransformContentWithContextHints() throws Exception {
-            String llmResponse = """
-                    <genui>
-                    {
-                        "thinking": [{"message": "Using context hints", "status": "complete"}],
-                        "content": [
-                            {
-                                "type": "component",
-                                "componentType": "chart",
-                                "props": {"type": "bar", "data": []}
-                            }
-                        ]
-                    }
-                    </genui>
-                    """;
-            mockChatClient(llmResponse);
+            GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                    .thinking(List.of(ThinkingItem.builder().message("Using context hints").status("complete").build()))
+                    .content(List.of(ContentBlock.component("chart", java.util.Map.of("chartData", List.of()))))
+                    .build();
+            mockChatClient(uiResponse);
 
             TransformRequest request = new TransformRequest();
             request.setContent("Show sales data for Q1");
@@ -277,15 +243,10 @@ class TransformControllerTest {
         @Test
         @DisplayName("should increment user usage after successful transform")
         void shouldIncrementUserUsageAfterTransform() throws Exception {
-            String llmResponse = """
-                    <genui>
-                    {
-                        "thinking": [],
-                        "content": [{"type": "text", "value": "Test"}]
-                    }
-                    </genui>
-                    """;
-            mockChatClient(llmResponse);
+            GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                    .content(List.of(ContentBlock.text("Test")))
+                    .build();
+            mockChatClient(uiResponse);
 
             int initialUsage = testUser.getUsedThisMonth();
 
@@ -321,37 +282,12 @@ class TransformControllerTest {
         }
 
         @Test
-        @DisplayName("should return fallback text response for unparseable LLM output")
-        void shouldReturnFallbackForUnparseableLlmOutput() throws Exception {
-            // Return invalid/unparseable content - parser wraps as fallback text
-            String invalidResponse = "This is plain text, not valid genui format";
-            mockChatClient(invalidResponse);
-
-            TransformRequest request = new TransformRequest();
-            request.setContent("Some content");
-
-            mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.result.metadata.fallback").value(true))
-                    .andExpect(jsonPath("$.result.content[0].type").value("text"));
-        }
-
-        @Test
         @DisplayName("should include model name in usage response")
         void shouldIncludeModelNameInUsage() throws Exception {
-            String llmResponse = """
-                    <genui>
-                    {
-                        "thinking": [],
-                        "content": [{"type": "text", "value": "Test"}]
-                    }
-                    </genui>
-                    """;
-            mockChatClient(llmResponse);
+            GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                    .content(List.of(ContentBlock.text("Test")))
+                    .build();
+            mockChatClient(uiResponse);
             when(chatClientFactory.getActiveModelName()).thenReturn("gpt-4");
 
             TransformRequest request = new TransformRequest();
@@ -387,7 +323,7 @@ class TransformControllerTest {
         @Test
         @DisplayName("should stream chunk, result, usage, and done events")
         void shouldStreamChunkResultUsageAndDoneEvents() throws Exception {
-            String llmResponse = "<genui>{\"thinking\":[],\"content\":[{\"type\":\"text\",\"value\":\"Hello\"}]}</genui>";
+            String llmResponse = "{\"thinking\":[],\"content\":[{\"type\":\"text\",\"value\":\"Hello\"}]}";
 
             mockStreamingChatClient(llmResponse);
 
@@ -427,16 +363,17 @@ class TransformControllerTest {
         }
     }
 
-    // Helper method to mock ChatClient
-    private void mockChatClient(String responseContent) {
+    // Helper method to mock ChatClient using structured output (.entity()) path
+    private void mockChatClient(GenerativeUIResponse response) {
         ChatClient mockClient = Mockito.mock(ChatClient.class);
         ChatClient.ChatClientRequestSpec mockRequestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
         ChatClient.CallResponseSpec mockCallSpec = Mockito.mock(ChatClient.CallResponseSpec.class);
 
         when(chatClientFactory.createClient()).thenReturn(mockClient);
         when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
+        when(mockRequestSpec.options(any())).thenReturn(mockRequestSpec);
         when(mockRequestSpec.call()).thenReturn(mockCallSpec);
-        when(mockCallSpec.content()).thenReturn(responseContent);
+        when(mockCallSpec.entity(GenerativeUIResponse.class)).thenReturn(response);
     }
 
     private void mockStreamingChatClient(String... chunks) {

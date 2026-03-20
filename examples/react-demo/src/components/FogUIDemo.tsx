@@ -390,14 +390,28 @@ function FogUIDemoContent({ actionLog, onAction, onApplyPatch, onStreamLog, mode
               ? resultData.content.map((block) => `${block.type}:${'componentType' in block ? String(block.componentType) : 'text'}`)
               : [],
           };
+
+          const metadata =
+            resultData?.metadata && typeof resultData.metadata === 'object'
+              ? (resultData.metadata as Record<string, unknown>)
+              : undefined;
+          const isFallbackResult = metadata?.fallback === true;
+          const isSingleTextResult =
+            Array.isArray(resultData?.content)
+            && resultData.content.length === 1
+            && resultData.content[0]?.type === 'text';
+          const shouldKeepPatchState = patches > 0 && isFallbackResult && isSingleTextResult;
+
           const hasRenderableContent = Array.isArray(resultData?.content) && resultData.content.length > 0;
-          if (hasRenderableContent) {
+          if (hasRenderableContent && !shouldKeepPatchState) {
             setResponse(resultData);
             onStreamLog({ kind: 'stream:result', note: 'final canonical snapshot received' });
           } else {
             onStreamLog({
               kind: 'stream:result',
-              note: 'final snapshot was empty; keeping patch-rendered state',
+              note: shouldKeepPatchState
+                ? 'final snapshot is fallback text; keeping patch-rendered state'
+                : 'final snapshot was empty; keeping patch-rendered state',
               data: resultData,
             });
           }

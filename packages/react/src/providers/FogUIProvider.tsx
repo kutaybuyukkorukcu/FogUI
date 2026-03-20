@@ -4,16 +4,16 @@ import { headlessAdapter } from '../adapters/headless';
 import type { FogUIActionErrorPayload, FogUIActionPayload } from '../types';
 
 /**
- * FogUI Platform API endpoint
+ * Default self-host friendly API endpoint.
  */
-const FOGUI_API_ENDPOINT = 'https://api.virtuoapps.com';
+const FOGUI_API_ENDPOINT = 'http://localhost:5001';
 
 
 
 
 
 interface FogUIContextValue {
-  apiKey: string;
+  apiKey?: string;
   endpoint: string;
   adapter: Adapter;
   onAction?: (action: string, data?: unknown) => void;
@@ -27,12 +27,13 @@ const FogUIContext = createContext<FogUIContextValue | null>(null);
 export interface FogUIProviderProps {
   readonly children: React.ReactNode;
   /**
-   * Your FogUI API key (get it from https://fogui.dev/dashboard)
+   * Optional API key.
+   * If provided, `useFogUI` attaches it as a bearer token.
    */
-  readonly apiKey: string;
+  readonly apiKey?: string;
   /**
    * Custom API endpoint (for self-hosted deployments)
-   * @default 'https://api.virtuoapps.com'
+   * @default 'http://localhost:5001'
    */
   readonly endpoint?: string;
   /**
@@ -71,10 +72,6 @@ export function FogUIProvider({
   onActionComplete,
   onActionError,
 }: FogUIProviderProps) {
-  if (!apiKey) {
-    console.warn('[FogUI] API key is required. Get one at https://fogui.dev/dashboard');
-  }
-
   const value = useMemo<FogUIContextValue>(() => ({
     apiKey,
     endpoint: endpoint || FOGUI_API_ENDPOINT,

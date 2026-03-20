@@ -1,5 +1,7 @@
 package com.genui.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,12 +12,14 @@ import java.util.Map;
  * Health check and API info endpoints
  */
 @RestController
+@Tag(name = "Health", description = "Health and service metadata endpoints")
 public class HealthController {
 
         /**
          * Health check endpoint
          */
         @GetMapping("/health")
+        @Operation(summary = "Health check", description = "Returns service health and basic runtime metadata")
         public ResponseEntity<Map<String, Object>> health() {
                 return ResponseEntity.ok(Map.of(
                                 "status", "healthy",
@@ -28,6 +32,7 @@ public class HealthController {
          * API info endpoint
          */
         @GetMapping("/")
+        @Operation(summary = "API info", description = "Returns API metadata and endpoint overview")
         public ResponseEntity<Map<String, Object>> info() {
                 return ResponseEntity.ok(Map.of(
                                 "name", "GenUI API",
