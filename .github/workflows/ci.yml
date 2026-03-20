@@ -35,7 +35,7 @@ jobs:
 
       - name: Package with Sentry source context upload
         run: |
-          ./mvnw -B package -DskipTests dependency:copy-dependencies \
+          ./mvnw -B -f ../pom.xml -pl backend-java -am package -DskipTests dependency:copy-dependencies \
             -Dsentry.org=${{ secrets.SENTRY_ORG }} \
             -Dsentry.project=${{ secrets.SENTRY_PROJECT_BACKEND }} \
             -Dsentry.authToken=${{ secrets.SENTRY_AUTH_TOKEN }} \
