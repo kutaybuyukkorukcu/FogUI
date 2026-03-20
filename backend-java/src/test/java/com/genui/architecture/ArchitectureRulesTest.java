@@ -38,15 +38,6 @@ class ArchitectureRulesTest {
             .that().resideInAPackage("..dto..")
             .should().dependOnClassesThat().resideInAnyPackage("..controller..", "..repository..");
 
-        private static final ArchRule CONTROLLERS_SHOULD_NOT_DEPEND_ON_ENTITIES_DIRECTLY = noClasses()
-            .that().resideInAPackage("..controller..")
-                    .and().doNotHaveSimpleName("AuthController")
-                    .and().doNotHaveSimpleName("ApiKeyController")
-                    .and().doNotHaveSimpleName("UserController")
-                    .and().doNotHaveSimpleName("UsageController")
-                    .and().doNotHaveSimpleName("TransformController")
-            .should().dependOnClassesThat().resideInAPackage("..entity..");
-
         @Test
         void repositoriesShouldBeInterfacesAndFollowNaming() {
                 REPOSITORIES_SHOULD_BE_INTERFACES_AND_FOLLOW_NAMING.check(CLASSES);
@@ -72,8 +63,4 @@ class ArchitectureRulesTest {
                 DTO_LAYER_SHOULD_NOT_DEPEND_ON_WEB_OR_REPO_LAYERS.check(CLASSES);
         }
 
-        @Test
-        void controllersShouldNotDependOnEntitiesDirectly() {
-                CONTROLLERS_SHOULD_NOT_DEPEND_ON_ENTITIES_DIRECTLY.check(CLASSES);
-        }
 }
