@@ -31,7 +31,7 @@ jobs:
           cache: maven
 
       - name: Build, Test & Generate Coverage
-        run: ./mvnw -B verify
+        run: ./mvnw -f ../pom.xml -pl backend-java -am test
 
       - name: Package with Sentry source context upload
         run: |
