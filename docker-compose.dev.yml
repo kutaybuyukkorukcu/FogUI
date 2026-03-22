@@ -19,8 +19,15 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - GENUI_PROVIDER=${GENUI_PROVIDER:-openai}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Keep non-empty by default so Spring AI does not fail-fast at startup.
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-local-dev-key}
       - LOGGING_LEVEL_COM_GENUI=DEBUG
+    # First dev boot can take longer while Maven pulls dependencies.
+    healthcheck:
+      start_period: 180s
+      interval: 20s
+      timeout: 10s
+      retries: 10
 
   frontend:
     build:

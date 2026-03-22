@@ -37,7 +37,8 @@ services:
       - AI_PROVIDER=${AI_PROVIDER:-openai}
       # OpenAI-Compatible Provider (Groq, OpenRouter, OpenAI, etc.)
       - GROQ_API_KEY=${GROQ_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Keep non-empty by default so Spring AI does not fail-fast at startup.
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-local-dev-key}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://host.docker.internal:11434}
       - OPENAI_MODEL=${OPENAI_MODEL:-llama-3.3-70b-versatile}
       # Google Gemini Provider
@@ -56,6 +57,7 @@ services:
       start_period: 30s
 
   frontend:
+    profiles: ["ui"]
     build:
       context: ./examples/react-demo
       dockerfile: Dockerfile
@@ -71,6 +73,7 @@ services:
       - NODE_ENV=production
 
   dashboard:
+    profiles: ["ui"]
     build:
       context: ./dashboard
       dockerfile: Dockerfile
@@ -93,4 +96,3 @@ networks:
 
 volumes:
   postgres_data:
-
