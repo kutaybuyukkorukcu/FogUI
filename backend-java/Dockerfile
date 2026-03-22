@@ -8,9 +8,6 @@ COPY fogui-java-core/pom.xml fogui-java-core/pom.xml
 COPY fogui-spring-starter/pom.xml fogui-spring-starter/pom.xml
 COPY backend-java/pom.xml backend-java/pom.xml
 
-# Download dependencies for backend and transitive modules
-RUN mvn -q -DskipTests -pl backend-java -am dependency:go-offline
-
 # Copy source trees and build backend with required modules
 COPY fogui-java-core/src fogui-java-core/src
 COPY fogui-spring-starter/src fogui-spring-starter/src

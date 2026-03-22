@@ -28,10 +28,12 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ./examples/react-demo:/app
+      - ./packages/react:/packages/react
+      - /app/node_modules
     ports:
       - "5173:5173"
     environment:
       - NODE_ENV=development
       - DOCKER_CONTAINER=true
       - VITE_API_URL=http://localhost:5001
-    command: [ "npm", "run", "dev", "--", "--host", "0.0.0.0" ]
+    command: [ "sh", "-c", "rm -rf node_modules/* node_modules/.[!.]* 2>/dev/null || true; npm install --no-package-lock --no-audit --no-fund && npm run dev -- --host 0.0.0.0" ]

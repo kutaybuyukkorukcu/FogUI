@@ -8,7 +8,6 @@ COPY pom.xml .
 COPY fogui-java-core/pom.xml fogui-java-core/pom.xml
 COPY fogui-spring-starter/pom.xml fogui-spring-starter/pom.xml
 COPY backend-java/pom.xml backend-java/pom.xml
-RUN mvn -q -DskipTests -pl backend-java -am dependency:go-offline
 
 # Copy source trees
 COPY fogui-java-core/src fogui-java-core/src
@@ -18,5 +17,5 @@ COPY backend-java/src backend-java/src
 # Expose port and debug port
 EXPOSE 5001 5005
 
-# Run with DevTools and remote debugging
-CMD ["mvn", "-pl", "backend-java", "-am", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-Dspring.devtools.restart.enabled=true"]
+# Install library modules, then run only the backend Spring Boot app.
+CMD ["sh", "-c", "mvn -q -DskipTests -pl fogui-java-core,fogui-spring-starter install && mvn -pl backend-java spring-boot:run -Dspring-boot.run.jvmArguments='-Dspring.devtools.restart.enabled=true'"]
