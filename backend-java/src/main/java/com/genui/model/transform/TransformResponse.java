@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
- * Response body for the /genui/transform endpoint.
+ * Response body for the /fogui/transform endpoint.
  */
 @Data
 @Builder

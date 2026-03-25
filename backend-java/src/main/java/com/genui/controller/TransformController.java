@@ -64,7 +64,7 @@ public class TransformController {
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     /**
-     * POST /genui/transform
+     * POST /fogui/transform
      * Transform raw LLM text into structured UI components.
      * Requires API key authentication.
      */
@@ -150,7 +150,7 @@ public class TransformController {
     }
 
     /**
-     * POST /genui/transform/stream
+     * POST /fogui/transform/stream
      * Streaming version - transforms content and returns SSE events.
      * Useful for real-time transformation as content arrives.
      */

@@ -26,7 +26,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@Tag(name = "Authentication", description = "User registration and login endpoints")
+@Tag(
+        name = "Authentication (Reference Optional)",
+        description = "Optional reference-server account registration and login endpoints")
 public class AuthController {
 
     private final UserRepository userRepository;

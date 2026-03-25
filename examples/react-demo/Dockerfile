@@ -1,12 +1,14 @@
 FROM node:20-alpine AS builder
-WORKDIR /app
+WORKDIR /workspace
 
-COPY package*.json ./
-RUN npm install
+COPY packages/react ./packages/react
+COPY examples/react-demo ./examples/react-demo
 
-COPY . .
-RUN npm run build
+RUN npm --prefix packages/react ci --no-audit --no-fund
+RUN npm --prefix packages/react run build
+RUN npm --prefix examples/react-demo ci --no-audit --no-fund
+RUN npm --prefix examples/react-demo run build
 
 FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /workspace/examples/react-demo/dist /usr/share/nginx/html
 EXPOSE 80

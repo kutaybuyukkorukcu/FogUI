@@ -1,52 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
-
-:root {
-  --bg-0: #06141f;
-  --bg-1: #0d2232;
-  --panel: rgba(7, 27, 41, 0.82);
-  --panel-border: rgba(116, 196, 224, 0.24);
-  --text-strong: #e8f7ff;
-  --text: #c1dbe8;
-  --text-dim: #83a9bb;
-  --accent: #51d5f3;
-  --accent-2: #9df0c0;
-  --warning: #ffd166;
-
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
-  line-height: 1.5;
-  font-weight: 500;
-  color: var(--text);
-  background: radial-gradient(circle at 15% 15%, #15445f 0%, transparent 35%),
-              radial-gradient(circle at 90% 10%, #1d3a52 0%, transparent 38%),
-              linear-gradient(150deg, var(--bg-0), var(--bg-1) 60%, #0f1f31);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-* {
-  box-sizing: border-box;
-}
-
 html,
 body,
 #root {
   min-height: 100%;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  color: var(--text);
-}
-
-h1,
-h2,
-h3,
-h4 {
-  color: var(--text-strong);
-  font-family: 'Space Grotesk', 'Manrope', sans-serif;
-  letter-spacing: 0.01em;
 }

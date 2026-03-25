@@ -23,13 +23,15 @@ import java.util.UUID;
 
 /**
  * API Key management controller.
- * Requires JWT authentication (dashboard access).
+ * Requires JWT authentication for optional reference-server account management APIs.
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/keys")
 @RequiredArgsConstructor
-@Tag(name = "API Keys", description = "Create, list, revoke, and rotate API keys")
+@Tag(
+        name = "API Keys (Reference Optional)",
+        description = "Optional reference-server endpoints to create, list, revoke, and rotate API keys")
 public class ApiKeyController {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();

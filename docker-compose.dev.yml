@@ -43,4 +43,4 @@ services:
       - NODE_ENV=development
       - DOCKER_CONTAINER=true
       - VITE_API_URL=http://localhost:5001
-    command: [ "sh", "-c", "rm -rf node_modules/* node_modules/.[!.]* 2>/dev/null || true; npm install --no-package-lock --no-audit --no-fund && npm run dev -- --host 0.0.0.0" ]
+    command: [ "sh", "-c", "rm -rf node_modules/* node_modules/.[!.]* 2>/dev/null || true; npm --prefix /packages/react install --no-package-lock --no-audit --no-fund && npm --prefix /packages/react run build && npm install --no-package-lock --no-audit --no-fund && npm run dev -- --host 0.0.0.0" ]

@@ -15,38 +15,37 @@ import java.util.Map;
 @Tag(name = "Health", description = "Health and service metadata endpoints")
 public class HealthController {
 
-        /**
-         * Health check endpoint
-         */
-        @GetMapping("/health")
-        @Operation(summary = "Health check", description = "Returns service health and basic runtime metadata")
-        public ResponseEntity<Map<String, Object>> health() {
-                return ResponseEntity.ok(Map.of(
-                                "status", "healthy",
-                                "version", "1.0.0",
-                                "timestamp", System.currentTimeMillis() // Added to trigger deployment
-                ));
-        }
+    /**
+     * Health check endpoint
+     */
+    @GetMapping("/health")
+    @Operation(summary = "Health check", description = "Returns service health and basic runtime metadata")
+    public ResponseEntity<Map<String, Object>> health() {
+        return ResponseEntity.ok(Map.of(
+                "status", "healthy",
+                "version", "1.0.0",
+                "timestamp", System.currentTimeMillis()
+        ));
+    }
 
-        /**
-         * API info endpoint
-         */
-        @GetMapping("/")
-        @Operation(summary = "API info", description = "Returns API metadata and endpoint overview")
-        public ResponseEntity<Map<String, Object>> info() {
-                return ResponseEntity.ok(Map.of(
-                                "name", "GenUI API",
-                                "version", "1.0.0",
-                                "description", "OpenAI-compatible API with Generative UI capabilities",
-                                "endpoints", Map.of(
-                                                "chatCompletions", "POST /v1/chat/completions",
-                                                "health", "GET /health"),
-                                "headers", Map.of(
-                                                "required", new String[] { "X-LLM-API-Key: Your OpenAI/Azure API key" },
-                                                "optional", new String[] {
-                                                                "X-LLM-Provider: openai | azure",
-                                                                "X-Azure-Endpoint: Azure OpenAI endpoint URL",
-                                                                "X-Azure-Deployment: Azure deployment name"
-                                                })));
-        }
+    /**
+     * API info endpoint.
+     * Reflects currently supported reference-server APIs.
+     */
+    @GetMapping("/")
+    @Operation(summary = "API info", description = "Returns API metadata and endpoint overview")
+    public ResponseEntity<Map<String, Object>> info() {
+        return ResponseEntity.ok(Map.of(
+                "name", "FogUI Reference Server",
+                "version", "1.0.0",
+                "description", "Reference implementation for FogUI deterministic transform and compatibility APIs",
+                "endpoints", Map.of(
+                        "health", "GET /health",
+                        "transform", "POST /fogui/transform",
+                        "transformStream", "POST /fogui/transform/stream",
+                        "compatA2UiInbound", "POST /fogui/compat/a2ui/inbound"),
+                "notes", Map.of(
+                        "coreOssApis", "Transform and compatibility endpoints are the primary OSS reference surface",
+                        "referenceOptionalApis", "Auth/API-key/usage/profile endpoints are optional reference-server capabilities")));
+    }
 }

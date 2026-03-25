@@ -13,8 +13,10 @@ public class OpenApiConfig {
     public OpenAPI fogUiOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("FogUI Backend API")
-                        .description("Backend API for authentication, API keys, and FogUI transform endpoints")
+                        .title("FogUI Reference Server API")
+                        .description(
+                                "Reference server for FogUI deterministic transform, stream, and compatibility APIs. "
+                                        + "Auth/API-key endpoints are optional reference capabilities.")
                         .version("1.0.0")
                         .license(new License().name("MIT")));
     }

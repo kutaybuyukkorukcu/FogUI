@@ -80,24 +80,6 @@ jobs:
           args: --severity-threshold=high --file=packages/react/package.json
 
   # ================================
-  # Snyk - Node.js Dependencies (Dashboard)
-  # ================================
-  snyk-node-dashboard:
-    name: Snyk (Dashboard)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/node@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high --file=dashboard/package.json
-
-  # ================================
   # Snyk - Docker Container Scan
   # ================================
   snyk-container:
@@ -137,7 +119,7 @@ jobs:
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
-    needs: [trufflehog, snyk-java, snyk-node-package, snyk-node-dashboard]
+    needs: [trufflehog, snyk-java, snyk-node-package]
     if: always()
     steps:
       - name: Generate summary
@@ -149,6 +131,5 @@ jobs:
           echo "| Secret Scan (TruffleHog) | ${{ needs.trufflehog.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Java Dependencies | ${{ needs.snyk-java.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| React Package | ${{ needs.snyk-node-package.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dashboard | ${{ needs.snyk-node-dashboard.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "View detailed results in the Snyk dashboard: https://app.snyk.io" >> $GITHUB_STEP_SUMMARY

@@ -1,6 +1,6 @@
 # FogUI OSS Quickstart
 
-FogUI v1 is designed to run fully self-hosted with BYOK.
+FogUI is designed to run self-hosted with BYOK and a reference server.
 
 ## Build all Java modules
 
@@ -25,11 +25,21 @@ cd backend-java
 
 ## Configure BYOK
 
-Set your provider credentials in environment:
+Set provider credentials in environment:
 
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL` (optional; defaults to OpenAI API)
 - `OPENAI_MODEL` (optional)
+
+## Core OSS reference APIs
+
+- `POST /fogui/transform`
+- `POST /fogui/transform/stream`
+- `POST /fogui/compat/a2ui/inbound`
+
+## Reference-server optional APIs
+
+`backend-java` also includes optional product-style reference endpoints for auth/API keys/usage/profile. They are useful for integration testing, but not part of FogUI core OSS contract.
 
 ## Use transform endpoint
 
@@ -38,4 +48,11 @@ curl -X POST http://localhost:5001/fogui/transform \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer fog_live_xxx" \
   -d '{"content":"Summarize pipeline health"}'
+```
+
+## Run minimal demo (optional)
+
+```bash
+cd packages/react && npm install && npm run build
+cd ../examples/react-demo && npm install && npm run dev
 ```

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
-@Tag(name = "User", description = "User profile endpoints")
+@Tag(name = "User (Reference Optional)", description = "Optional reference-server user profile endpoints")
 public class UserController {
 
     private final UserRepository userRepository;
