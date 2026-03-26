@@ -326,6 +326,17 @@
 
     <repositories>
         <repository>
+            <id>github</id>
+            <name>GitHub Packages - FogUI</name>
+            <url>https://maven.pkg.github.com/kutaybuyukkorukcu/FogUI</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
             <id>spring-milestones</id>
             <name>Spring Milestones</name>
             <url>https://repo.spring.io/milestone</url>
