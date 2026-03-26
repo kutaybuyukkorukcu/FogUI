@@ -1,0 +1,47 @@
+name: Java Publish
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'java-v*.*.*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-java-modules:
+    name: Publish Java Modules to GitHub Packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+
+      - name: Publish fogui-java-core and fogui-spring-starter
+        run: |
+          mvn -B -f pom.xml -pl fogui-java-core,fogui-spring-starter -am deploy -DskipTests \
+            -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish summary
+        run: |
+          echo "## Java Artifacts Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Repository: https://github.com/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "Registry: https://maven.pkg.github.com/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "Published modules:" >> $GITHUB_STEP_SUMMARY
+          echo "- com.genui:fogui-java-core" >> $GITHUB_STEP_SUMMARY
+          echo "- com.genui:fogui-spring-starter" >> $GITHUB_STEP_SUMMARY
