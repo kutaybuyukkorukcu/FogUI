@@ -2,6 +2,8 @@
 
 > This document captures non-OSS product ideas. These items are intentionally out of active OSS scope.
 
+Active OSS execution roadmap: `docs/ROADMAP_OSS.md`
+
 ## Deferred Themes
 
 ### Billing and Monetization

@@ -4,12 +4,13 @@ This document provides essential guidelines for AI agents operating within the F
 
 ## 1. Project Overview
 
-FogUI is an OSS-first deterministic agent UI compatibility and rendering layer. The core of the project is in `backend-java` and `packages/react`.
+FogUI is an OSS-first deterministic agent UI compatibility and rendering layer.
 
-- **`backend-java`**: A Spring Boot backend providing the core API for transforming natural language into UI components. (Java 21, Spring Boot 3, Maven).
-- **`packages/react`**: A publishable NPM library (`@fogui/react`) containing core React components, hooks, and the provider for rendering the generated UI. (React 18+, TypeScript, Vitest, tsup).
+- **`fogui-java-core`**: Canonical contracts, validation, translation primitives, and deterministic stream utilities.
+- **`fogui-spring-starter`**: Spring Boot integration glue for wiring FogUI core services.
+- **`packages/react`**: Publishable NPM library (`@fogui/react`) for canonical rendering and design-system adapters.
+- **`backend-java`**: Reference Spring Boot server exposing transform, stream, and compatibility APIs.
 - **`examples/react-demo`**: Minimal React demo app that validates transform, stream, and compatibility flows.
-- **`archive/dashboard`**: Archived dashboard application. Do not prioritize development work here unless explicitly requested.
 
 ## 2. Build, Lint, and Test Commands
 
@@ -24,7 +25,7 @@ This project enforces **80% code coverage** through SonarCloud quality gates. Th
 - **React Package** (`packages/react`): TypeScript coverage via Vitest/Istanbul
   - Report path: `coverage/lcov.info`
   - Coverage target: 80% minimum
-- **Excluded**: `archive/dashboard` app (not prioritized for coverage)
+- **Excluded**: no extra frontend app module is analyzed beyond `packages/react`
 
 **Important**: When modifying code, ensure tests are added/updated to maintain coverage above 80%.
 

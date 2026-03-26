@@ -2,6 +2,8 @@
 
 Goal: publish `fogui-java-core` and `fogui-spring-starter` as consumable OSS artifacts for external Java/Spring teams.
 
+Roadmap alignment: targeted for Phase 4 in `docs/ROADMAP_OSS.md` (September to October 2026).
+
 ## Plan
 
 1. Choose distribution target (Maven Central recommended).

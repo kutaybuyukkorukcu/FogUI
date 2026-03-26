@@ -2,6 +2,8 @@
 
 FogUI is designed to run self-hosted with BYOK and a reference server.
 
+Roadmap context: `docs/ROADMAP_OSS.md`
+
 ## Build all Java modules
 
 From repository root:
@@ -56,3 +58,13 @@ curl -X POST http://localhost:5001/fogui/transform \
 cd packages/react && npm install && npm run build
 cd ../examples/react-demo && npm install && npm run dev
 ```
+
+## Deterministic Runtime Check (Recommended)
+
+Run these checks after startup:
+
+1. Call `/fogui/transform` twice with the same payload and confirm canonical response shape remains stable.
+2. Call `/fogui/transform/stream` and confirm ordered SSE event lifecycle: `result` -> `usage` -> `done` (or `error`).
+3. Call `/fogui/compat/a2ui/inbound` with a mixed-valid payload and confirm translation and validation diagnostics are returned deterministically.
+
+These checks align with Phase 1 and Phase 2 goals in `docs/ROADMAP_OSS.md`.

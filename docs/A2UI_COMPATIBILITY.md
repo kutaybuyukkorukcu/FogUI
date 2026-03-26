@@ -2,6 +2,8 @@
 
 FogUI v1 supports **A2UI inbound translation** into FogUI canonical output.
 
+Positioning note: FogUI interoperates with A2UI payloads; it does not attempt to replace A2UI as a protocol.
+
 ## Supported contract version
 
 - Pinned target: `A2UI 0.8` (best-effort inbound mapping)
@@ -34,4 +36,3 @@ FogUI v1 supports **A2UI inbound translation** into FogUI canonical output.
   ]
 }
 ```
-
