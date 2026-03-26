@@ -1,6 +1,8 @@
-# FogUI Backend (Spring Boot)
+# FogUI Reference Server (Spring Boot)
 
-Spring Boot backend for authentication, API key management, quotas, and FogUI transform endpoints.
+`backend-java` is the **reference implementation** for FogUI integration.
+
+It demonstrates how to expose deterministic transform/stream/compatibility APIs and includes optional product-style endpoints for auth/API-key management.
 
 ## Tech Stack
 
@@ -17,18 +19,9 @@ Spring Boot backend for authentication, API key management, quotas, and FogUI tr
 cd backend-java && ./mvnw spring-boot:run
 ```
 
-Backend runs on: `http://localhost:5001`
+Reference server URL: `http://localhost:5001`
 
-## Main Endpoints
-
-### Public
-
-- `GET /health`
-- `GET /`
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-
-### FogUI Transform
+## Core OSS Reference APIs
 
 - `POST /fogui/transform`
 - `POST /fogui/transform/stream` (SSE)
@@ -36,8 +29,14 @@ Backend runs on: `http://localhost:5001`
 
 These require `Authorization: Bearer <fog_live_... | fog_test_...>`.
 
-### Account and Keys
+## Reference-Server Optional APIs
 
+These are useful for integration harness scenarios, but are not considered FogUI core OSS contract APIs:
+
+- `GET /health`
+- `GET /`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
 - `GET /api/auth/me`
 - `GET /api/keys`
 - `POST /api/keys`
@@ -74,7 +73,7 @@ cd backend-java
 
 ## Notes
 
-- Non-stream transform path uses `.entity(GenerativeUIResponse.class)`.
+- Non-stream transform uses structured output mapping to `GenerativeUIResponse`.
 - Stream path emits SSE events (`result`, `usage`, `error`, `done`).
-- Stream partial snapshots are reconciled through `StreamPatchReconciler` for deterministic incremental output.
-- Core canonical and translation services are provided by `fogui-java-core` and wired through `fogui-spring-starter`.
+- Stream partial snapshots are reconciled through `StreamPatchReconciler`.
+- Core canonical + translation services are provided by `fogui-java-core` and wired through `fogui-spring-starter`.

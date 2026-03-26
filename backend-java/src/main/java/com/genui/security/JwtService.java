@@ -15,7 +15,7 @@ import java.util.UUID;
 
 /**
  * Service for JWT token generation and validation.
- * Used for dashboard authentication (not API key auth).
+ * Used for optional reference-server account authentication (not API key auth).
  */
 @Slf4j
 @Service

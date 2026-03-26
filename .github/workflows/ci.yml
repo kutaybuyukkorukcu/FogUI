@@ -29,6 +29,11 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build, Test & Generate Coverage
         run: ./mvnw -f ../pom.xml -pl backend-java -am test
@@ -104,14 +109,14 @@ jobs:
         if: always()
 
   # ================================
-  # Dashboard Build
+  # Minimal React Demo Smoke
   # ================================
-  dashboard:
-    name: Dashboard
+  react-demo-smoke:
+    name: React Demo Smoke
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./dashboard
+        working-directory: ./examples/react-demo
 
     steps:
       - name: Checkout code
@@ -124,21 +129,19 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: dashboard/package-lock.json
+          cache-dependency-path: examples/react-demo/package-lock.json
 
-      - name: Install dependencies
+      - name: Build local React package (demo dependency)
+        working-directory: ./packages/react
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install demo dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Build (with Sentry source maps on main)
+      - name: Demo build smoke
         run: npm run build
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT_FRONTEND }}
 
   # ================================
   # SonarCloud Analysis
@@ -146,7 +149,7 @@ jobs:
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
-    needs: [backend, frontend-package, dashboard]
+    needs: [backend, frontend-package, react-demo-smoke]
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
 
     steps:

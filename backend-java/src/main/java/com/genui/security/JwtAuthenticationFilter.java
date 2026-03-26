@@ -17,7 +17,7 @@ import java.util.UUID;
 
 /**
  * Filter that authenticates requests using JWT tokens.
- * Used for dashboard/API key management endpoints.
+ * Used for optional reference-server account management endpoints.
  */
 @Slf4j
 @Component

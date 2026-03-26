@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Request body for the /genui/transform endpoint.
+ * Request body for the /fogui/transform endpoint.
  * Accepts raw LLM output and optional context hints.
  */
 @Data
