@@ -1,5 +1,6 @@
 package com.genui.contract.a2ui;
 
+import com.genui.contract.FogUiCanonicalContract;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -32,6 +33,9 @@ class A2UiInboundTranslatorTest {
         assertEquals(2, result.getResponse().getContent().size());
         assertEquals("text", result.getResponse().getContent().get(0).getType());
         assertEquals("component", result.getResponse().getContent().get(1).getType());
+        assertEquals(
+                FogUiCanonicalContract.CURRENT_CONTRACT_VERSION,
+                result.getResponse().getMetadata().get(FogUiCanonicalContract.METADATA_CONTRACT_VERSION_KEY));
     }
 
     @Test
@@ -45,6 +49,7 @@ class A2UiInboundTranslatorTest {
         A2UiTranslationResult result = translator.translate(payload);
 
         assertFalse(result.getErrors().isEmpty());
+        assertEquals("COMPATIBILITY", result.getErrors().getFirst().getCategory());
         assertEquals("A2UiUnsupportedNode", result.getResponse().getContent().get(0).getComponentType());
     }
 }

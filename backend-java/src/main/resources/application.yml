@@ -36,12 +36,31 @@ spring:
       chat:
         options:
           model: ${OPENAI_MODEL:gpt-4.1-nano}
-          temperature: 0.7
+          temperature: 0.0
 
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:your-super-secret-jwt-key-min-32-chars}
   expiration-hours: ${JWT_EXPIRATION_HOURS:24}
+
+# FogUI deterministic generation policy
+fogui:
+  deterministic:
+    temperature: ${FOGUI_TEMPERATURE:0.0}
+    top-p: ${FOGUI_TOP_P:1.0}
+    capabilities:
+      temperature: ${FOGUI_CAP_TEMPERATURE:true}
+      top-p: ${FOGUI_CAP_TOP_P:true}
+      seed: ${FOGUI_CAP_SEED:true}
+      max-tokens: ${FOGUI_CAP_MAX_TOKENS:true}
+      max-completion-tokens: ${FOGUI_CAP_MAX_COMPLETION_TOKENS:true}
+  advisors:
+    enabled: ${FOGUI_ADVISORS_ENABLED:true}
+    fail-fast: ${FOGUI_ADVISORS_FAIL_FAST:true}
+    deterministic-options:
+      enabled: ${FOGUI_ADVISORS_DETERMINISTIC_OPTIONS_ENABLED:true}
+    canonical-validation:
+      enabled: ${FOGUI_ADVISORS_CANONICAL_VALIDATION_ENABLED:true}
 
 # Logging
 logging:

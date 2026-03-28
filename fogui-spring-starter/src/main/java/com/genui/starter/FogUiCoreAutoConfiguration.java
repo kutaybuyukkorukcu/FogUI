@@ -3,12 +3,24 @@ package com.genui.starter;
 import com.genui.contract.FogUiCanonicalValidator;
 import com.genui.contract.CanonicalOutboundMapper;
 import com.genui.contract.a2ui.A2UiInboundTranslator;
+import com.genui.starter.advisor.CanonicalValidationAdvisor;
+import com.genui.starter.advisor.DeterministicOptionsAdvisor;
+import com.genui.starter.advisor.FogUiAdvisorsProperties;
+import com.genui.starter.policy.FogUiGenerationPolicyProperties;
+import com.genui.starter.policy.FogUiGenerationPolicyService;
 import com.genui.service.StreamPatchReconciler;
 import com.genui.service.UIResponseParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration
+@EnableConfigurationProperties({
+        FogUiGenerationPolicyProperties.class,
+        FogUiAdvisorsProperties.class
+})
 public class FogUiCoreAutoConfiguration {
 
     @Bean
@@ -34,5 +46,40 @@ public class FogUiCoreAutoConfiguration {
     @Bean
     public StreamPatchReconciler streamPatchReconciler() {
         return new StreamPatchReconciler();
+    }
+
+    @Bean
+    public FogUiGenerationPolicyService fogUiGenerationPolicyService(
+            FogUiGenerationPolicyProperties properties
+    ) {
+        return new FogUiGenerationPolicyService(properties);
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+            prefix = "fogui.advisors",
+            name = {"enabled", "deterministic-options.enabled"},
+            havingValue = "true",
+            matchIfMissing = true)
+    public DeterministicOptionsAdvisor deterministicOptionsAdvisor(
+            FogUiGenerationPolicyService generationPolicyService
+    ) {
+        return new DeterministicOptionsAdvisor(generationPolicyService);
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+            prefix = "fogui.advisors",
+            name = {"enabled", "canonical-validation.enabled"},
+            havingValue = "true",
+            matchIfMissing = true)
+    public CanonicalValidationAdvisor canonicalValidationAdvisor(
+            FogUiCanonicalValidator canonicalValidator,
+            FogUiAdvisorsProperties advisorsProperties
+    ) {
+        return new CanonicalValidationAdvisor(
+                canonicalValidator,
+                new ObjectMapper(),
+                advisorsProperties.isFailFast());
     }
 }

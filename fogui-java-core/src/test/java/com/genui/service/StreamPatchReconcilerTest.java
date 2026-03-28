@@ -10,6 +10,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class StreamPatchReconcilerTest {
 
@@ -65,5 +66,39 @@ class StreamPatchReconcilerTest {
 
         assertNotNull(merged.getContent());
         assertEquals("new-content", merged.getContent().getFirst().getValue());
+    }
+
+    @Test
+    void shouldShallowMergeMetadataWithIncomingPrecedence() {
+        GenerativeUIResponse previous = GenerativeUIResponse.builder()
+                .content(List.of(ContentBlock.text("old-content")))
+                .metadata(Map.of("sourceProtocol", "a2ui", "contractVersion", "fogui/1.0"))
+                .build();
+
+        GenerativeUIResponse incoming = GenerativeUIResponse.builder()
+                .content(List.of(ContentBlock.text("new-content")))
+                .metadata(Map.of("sourceProtocol", "transform", "model", "gpt-4.1-nano"))
+                .build();
+
+        GenerativeUIResponse merged = reconciler.reconcile(previous, incoming);
+
+        assertEquals("transform", merged.getMetadata().get("sourceProtocol"));
+        assertEquals("fogui/1.0", merged.getMetadata().get("contractVersion"));
+        assertEquals("gpt-4.1-nano", merged.getMetadata().get("model"));
+    }
+
+    @Test
+    void shouldReturnNullMetadataWhenBothSnapshotsHaveNoMetadata() {
+        GenerativeUIResponse previous = GenerativeUIResponse.builder()
+                .content(List.of(ContentBlock.text("old-content")))
+                .build();
+
+        GenerativeUIResponse incoming = GenerativeUIResponse.builder()
+                .content(List.of(ContentBlock.text("new-content")))
+                .build();
+
+        GenerativeUIResponse merged = reconciler.reconcile(previous, incoming);
+
+        assertNull(merged.getMetadata());
     }
 }

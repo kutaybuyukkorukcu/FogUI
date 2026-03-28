@@ -34,6 +34,16 @@ public class TransformResponse {
     private String error;
 
     /**
+     * Stable machine-readable error code.
+     */
+    private String errorCode;
+
+    /**
+     * Optional structured error diagnostics.
+     */
+    private Object errorDetails;
+
+    /**
      * Usage statistics for the transformation
      */
     private TransformUsage usage;
@@ -42,6 +52,11 @@ public class TransformResponse {
      * Session ID for streaming continuity
      */
     private String sessionId;
+
+    /**
+     * Request correlation ID.
+     */
+    private String requestId;
 
     @Data
     @Builder
@@ -75,21 +90,29 @@ public class TransformResponse {
     /**
      * Create a successful response
      */
-    public static TransformResponse success(GenerativeUIResponse result, TransformUsage usage) {
+    public static TransformResponse success(
+            GenerativeUIResponse result,
+            TransformUsage usage,
+            String requestId
+    ) {
         return TransformResponse.builder()
                 .success(true)
                 .result(result)
                 .usage(usage)
+                .requestId(requestId)
                 .build();
     }
 
     /**
      * Create an error response
      */
-    public static TransformResponse error(String message) {
+    public static TransformResponse error(String message, String errorCode, Object errorDetails, String requestId) {
         return TransformResponse.builder()
                 .success(false)
                 .error(message)
+                .errorCode(errorCode)
+                .errorDetails(errorDetails)
+                .requestId(requestId)
                 .build();
     }
 }

@@ -1,10 +1,18 @@
 package com.genui.service;
 
+import com.genui.starter.policy.FogUiGenerationPolicy;
+import com.genui.starter.policy.FogUiGenerationPolicyService;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Factory for creating Spring AI ChatClient instances.
@@ -15,12 +23,20 @@ import org.springframework.stereotype.Service;
 public class ChatClientFactory {
 
     private final OpenAiChatModel openAiChatModel;
+    private final FogUiGenerationPolicyService generationPolicyService;
+    private final List<Advisor> defaultAdvisors;
 
     @Value("${spring.ai.openai.chat.options.model:gpt-4.1-nano}")
     private String openAiModel;
 
-    public ChatClientFactory(OpenAiChatModel openAiChatModel) {
+    public ChatClientFactory(
+            OpenAiChatModel openAiChatModel,
+            FogUiGenerationPolicyService generationPolicyService,
+            ObjectProvider<List<Advisor>> advisorProvider
+    ) {
         this.openAiChatModel = openAiChatModel;
+        this.generationPolicyService = generationPolicyService;
+        this.defaultAdvisors = advisorProvider.getIfAvailable(List::of);
         log.info("ChatClientFactory initialized - OpenAI model available: {}", openAiChatModel != null);
     }
 
@@ -32,8 +48,34 @@ public class ChatClientFactory {
             throw new IllegalStateException("OpenAI provider not configured. Set OPENAI_API_KEY and OPENAI_MODEL.");
         }
 
-        log.info("Creating ChatClient with model: {}", getActiveModelName());
-        return ChatClient.builder(openAiChatModel).build();
+        log.info(
+                "Creating ChatClient with model: {} and {} default advisors",
+                getActiveModelName(),
+                defaultAdvisors.size());
+        return ChatClient.builder(openAiChatModel)
+                .defaultAdvisors(defaultAdvisors)
+                .build();
+    }
+
+    /**
+     * Applies deterministic generation policy to a request spec.
+     */
+    public void applyDeterministicOptions(ChatClient.ChatClientRequestSpec requestSpec) {
+        requestSpec.options(buildDeterministicOptions());
+    }
+
+    public OpenAiChatOptions buildDeterministicOptions() {
+        FogUiGenerationPolicy policy = generationPolicyService.resolve(getActiveModelName());
+        OpenAiChatOptions options = OpenAiChatOptions.builder()
+                .model(policy.getModel())
+                .build();
+
+        options.setTemperature(policy.getTemperature());
+        options.setTopP(policy.getTopP());
+        options.setSeed(policy.getSeed());
+        options.setMaxTokens(policy.getMaxTokens());
+        options.setMaxCompletionTokens(policy.getMaxCompletionTokens());
+        return options;
     }
 
     /**
@@ -41,5 +83,19 @@ public class ChatClientFactory {
      */
     public String getActiveModelName() {
         return openAiModel;
+    }
+
+    @PostConstruct
+    void logDeterministicPolicy() {
+        FogUiGenerationPolicy policy = generationPolicyService.resolve(getActiveModelName());
+        log.info(
+                "Deterministic generation policy active: model={}, temperature={}, topP={}, seed={}, maxTokens={}, maxCompletionTokens={}, skipped={}",
+                policy.getModel(),
+                policy.getTemperature(),
+                policy.getTopP(),
+                policy.getSeed(),
+                policy.getMaxTokens(),
+                policy.getMaxCompletionTokens(),
+                policy.getSkippedOptions());
     }
 }

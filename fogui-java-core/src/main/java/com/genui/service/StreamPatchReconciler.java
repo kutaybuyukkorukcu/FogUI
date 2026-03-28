@@ -5,6 +5,7 @@ import com.genui.model.genui.GenerativeUIResponse;
 import com.genui.model.genui.ThinkingItem;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,10 +51,21 @@ public class StreamPatchReconciler {
     }
 
     private Map<String, Object> chooseMetadata(Map<String, Object> previous, Map<String, Object> incoming) {
-        if (incoming != null && !incoming.isEmpty()) {
-            return incoming;
+        boolean hasPrevious = previous != null && !previous.isEmpty();
+        boolean hasIncoming = incoming != null && !incoming.isEmpty();
+
+        if (!hasPrevious && !hasIncoming) {
+            return null;
         }
-        return previous;
+
+        Map<String, Object> merged = new HashMap<>();
+        if (hasPrevious) {
+            merged.putAll(previous);
+        }
+        if (hasIncoming) {
+            merged.putAll(incoming);
+        }
+        return merged;
     }
 
     private GenerativeUIResponse normalize(GenerativeUIResponse source) {

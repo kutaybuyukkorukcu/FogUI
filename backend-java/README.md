@@ -29,6 +29,16 @@ Reference server URL: `http://localhost:5001`
 
 These require `Authorization: Bearer <fog_live_... | fog_test_...>`.
 
+## Deterministic Runtime Defaults
+
+`backend-java` applies deterministic generation policy via `fogui-spring-starter`:
+
+- `fogui.deterministic.temperature` (default `0.0`)
+- `fogui.deterministic.top-p` (default `1.0`)
+- Optional seed/max token options can be enabled by provider capability flags.
+
+Every canonical output includes `metadata.contractVersion = "fogui/1.0"`.
+
 ## Reference-Server Optional APIs
 
 These are useful for integration harness scenarios, but are not considered FogUI core OSS contract APIs:
@@ -55,6 +65,20 @@ Important env vars:
 - `OPENAI_API_KEY` (or `GROQ_API_KEY` fallback)
 - `OPENAI_BASE_URL` (default: `https://api.openai.com`)
 - `OPENAI_MODEL` (default: `gpt-4.1-nano`)
+
+## Correlation and Error Envelope
+
+- Incoming request header: `X-FogUI-Request-Id` (optional).
+- Response header: `X-FogUI-Request-Id` is always returned.
+- `POST /fogui/transform` response includes additive fields:
+  - `requestId`
+  - `errorCode`
+  - `errorDetails` (optional)
+- Stream `error` events include:
+  - `error`
+  - `code`
+  - `requestId`
+  - `details` (optional)
 
 ## Database Configuration
 
