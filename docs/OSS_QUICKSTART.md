@@ -68,3 +68,16 @@ Run these checks after startup:
 3. Call `/fogui/compat/a2ui/inbound` with a mixed-valid payload and confirm translation and validation diagnostics are returned deterministically.
 
 These checks align with Phase 1 and Phase 2 goals in `docs/ROADMAP_OSS.md`.
+
+## Conformance and Replay Verification (Recommended)
+
+From repository root:
+
+```bash
+./backend-java/mvnw -B -f pom.xml -pl fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
+```
+
+This validates:
+
+1. Canonical fixture conformance and deterministic validator output.
+2. Deterministic stream replay behavior across ordered/duplicate/malformed sequences.

@@ -12,6 +12,8 @@ import com.genui.repository.ApiKeyRepository;
 import com.genui.repository.UserRepository;
 import com.genui.security.ApiKeyAuthenticationFilter;
 import com.genui.service.ChatClientFactory;
+import com.genui.service.RequestCorrelationService;
+import com.genui.starter.advisor.FogUiAdvisorException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -30,6 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -113,11 +116,15 @@ class TransformControllerTest {
 
             mockMvc.perform(post("/fogui/transform")
                     .header("Authorization", "Bearer " + apiKey)
+                    .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-transform-1")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.result.content[0].componentType").value("card"));
+                    .andExpect(jsonPath("$.result.content[0].componentType").value("card"))
+                    .andExpect(jsonPath("$.result.metadata.contractVersion").value("fogui/1.0"))
+                    .andExpect(jsonPath("$.requestId").value("req-transform-1"))
+                    .andExpect(header().string(RequestCorrelationService.REQUEST_ID_HEADER, "req-transform-1"));
         }
 
         @Test
@@ -152,7 +159,9 @@ class TransformControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("Content is required"));
+                    .andExpect(jsonPath("$.error").value("Content is required"))
+                    .andExpect(jsonPath("$.errorCode").value("CONTENT_REQUIRED"))
+                    .andExpect(header().exists(RequestCorrelationService.REQUEST_ID_HEADER));
         }
 
         @Test
@@ -278,7 +287,32 @@ class TransformControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isInternalServerError())
-                    .andExpect(jsonPath("$.error").exists());
+                    .andExpect(jsonPath("$.error").exists())
+                    .andExpect(jsonPath("$.errorCode").value("TRANSFORM_FAILED"))
+                    .andExpect(jsonPath("$.requestId").exists())
+                    .andExpect(header().exists(RequestCorrelationService.REQUEST_ID_HEADER));
+        }
+
+        @Test
+        @DisplayName("should return deterministic 422 envelope when advisor fails validation")
+        void shouldReturnDeterministic422EnvelopeWhenAdvisorFailsValidation() throws Exception {
+            mockChatClientFailure(new FogUiAdvisorException(
+                    "Canonical validation failed",
+                    "CANONICAL_VALIDATION_FAILED",
+                    Map.of("diagnostics", List.of(Map.of("code", "MISSING_CONTENT")))));
+
+            TransformRequest request = new TransformRequest();
+            request.setContent("Some content");
+
+            mockMvc.perform(post("/fogui/transform")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-advisor-1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.errorCode").value("CANONICAL_VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.requestId").value("req-advisor-1"))
+                    .andExpect(header().string(RequestCorrelationService.REQUEST_ID_HEADER, "req-advisor-1"));
         }
 
         @Test
@@ -326,21 +360,18 @@ class TransformControllerTest {
             String llmResponse = "{\"thinking\":[],\"content\":[{\"type\":\"text\",\"value\":\"Hello\"}]}";
 
             mockStreamingChatClient(llmResponse);
+            when(chatClientFactory.getActiveModelName()).thenReturn("gpt-4.1-nano");
 
             TransformRequest request = new TransformRequest();
             request.setContent("Stream this");
 
-            String body = mockMvc.perform(post("/fogui/transform/stream")
+            mockMvc.perform(post("/fogui/transform/stream")
                     .header("Authorization", "Bearer " + apiKey)
+                    .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-stream-1")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
-                    .andReturn()
-                    .getResponse()
-                    .getContentAsString();
-
-            // Assert that the response body is empty (mock does not emit SSE events)
-            assertTrue(body.isEmpty(), "Expected empty response body for mock stream");
+                    .andExpect(header().string(RequestCorrelationService.REQUEST_ID_HEADER, "req-stream-1"));
         }
 
         @Test
@@ -350,7 +381,8 @@ class TransformControllerTest {
             request.setContent("   ");
 
             String body = mockMvc.perform(post("/fogui/transform/stream")
-                        .header("Authorization", "Bearer " + apiKey)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-stream-blank")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -360,6 +392,35 @@ class TransformControllerTest {
 
             assertTrue(body.contains("event:error"));
             assertTrue(body.contains("Content is required"));
+            assertTrue(body.contains("\"code\":\"CONTENT_REQUIRED\""));
+            assertTrue(body.contains("\"requestId\":\"req-stream-blank\""));
+        }
+
+        @Test
+        @DisplayName("should emit deterministic advisor error event for stream failures")
+        void shouldEmitDeterministicAdvisorErrorEventForStreamFailures() throws Exception {
+            mockStreamingChatClientFlux(Flux.error(new FogUiAdvisorException(
+                    "Canonical validation failed",
+                    "CANONICAL_VALIDATION_FAILED",
+                    Map.of("diagnostics", List.of(Map.of("code", "MISSING_CONTENT"))))));
+
+            TransformRequest request = new TransformRequest();
+            request.setContent("Stream this");
+
+            String body = mockMvc.perform(post("/fogui/transform/stream")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-stream-advisor")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+
+            assertTrue(body.contains("event:error"));
+            assertTrue(body.contains("\"code\":\"CANONICAL_VALIDATION_FAILED\""));
+            assertTrue(body.contains("\"requestId\":\"req-stream-advisor\""));
+            assertTrue(body.contains("diagnostics"));
         }
     }
 
@@ -371,9 +432,19 @@ class TransformControllerTest {
 
         when(chatClientFactory.createClient()).thenReturn(mockClient);
         when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
-        when(mockRequestSpec.options(any())).thenReturn(mockRequestSpec);
         when(mockRequestSpec.call()).thenReturn(mockCallSpec);
         when(mockCallSpec.entity(GenerativeUIResponse.class)).thenReturn(response);
+    }
+
+    private void mockChatClientFailure(RuntimeException exception) {
+        ChatClient mockClient = Mockito.mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec mockRequestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.CallResponseSpec mockCallSpec = Mockito.mock(ChatClient.CallResponseSpec.class);
+
+        when(chatClientFactory.createClient()).thenReturn(mockClient);
+        when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
+        when(mockRequestSpec.call()).thenReturn(mockCallSpec);
+        when(mockCallSpec.entity(GenerativeUIResponse.class)).thenThrow(exception);
     }
 
     private void mockStreamingChatClient(String... chunks) {
@@ -385,5 +456,16 @@ class TransformControllerTest {
         when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
         when(mockRequestSpec.stream()).thenReturn(mockStreamSpec);
         when(mockStreamSpec.content()).thenReturn(Flux.fromArray(chunks));
+    }
+
+    private void mockStreamingChatClientFlux(Flux<String> chunks) {
+        ChatClient mockClient = Mockito.mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec mockRequestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.StreamResponseSpec mockStreamSpec = Mockito.mock(ChatClient.StreamResponseSpec.class);
+
+        when(chatClientFactory.createClient()).thenReturn(mockClient);
+        when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
+        when(mockRequestSpec.stream()).thenReturn(mockStreamSpec);
+        when(mockStreamSpec.content()).thenReturn(chunks);
     }
 }

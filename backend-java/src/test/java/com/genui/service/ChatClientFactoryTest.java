@@ -1,16 +1,24 @@
 package com.genui.service;
 
+import com.genui.starter.policy.FogUiGenerationPolicy;
+import com.genui.starter.policy.FogUiGenerationPolicyService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.List;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for ChatClientFactory.
@@ -20,6 +28,16 @@ import static org.mockito.Mockito.mock;
 @ExtendWith(MockitoExtension.class)
 class ChatClientFactoryTest {
 
+    private ObjectProvider<List<Advisor>> advisorProvider(List<Advisor> advisors) {
+        ObjectProvider<List<Advisor>> provider = mock(ObjectProvider.class);
+        when(provider.getIfAvailable((Supplier<List<Advisor>>) org.mockito.ArgumentMatchers.any())).thenReturn(advisors);
+        return provider;
+    }
+
+    private FogUiGenerationPolicyService mockPolicyService() {
+        return mock(FogUiGenerationPolicyService.class);
+    }
+
     @Nested
     @DisplayName("getActiveModelName")
     class GetActiveModelName {
@@ -28,7 +46,10 @@ class ChatClientFactoryTest {
         @DisplayName("should return configured OpenAI model")
         void shouldReturnConfiguredOpenAiModel() {
             OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
-            ChatClientFactory factory = new ChatClientFactory(mockOpenAiModel);
+            ChatClientFactory factory = new ChatClientFactory(
+                    mockOpenAiModel,
+                    mockPolicyService(),
+                    advisorProvider(List.of()));
             ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4.1-nano");
 
             String modelName = factory.getActiveModelName();
@@ -45,7 +66,10 @@ class ChatClientFactoryTest {
         @DisplayName("should create ChatClient with OpenAI model")
         void shouldCreateChatClientWithOpenAiModel() {
             OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
-            ChatClientFactory factory = new ChatClientFactory(mockOpenAiModel);
+            ChatClientFactory factory = new ChatClientFactory(
+                    mockOpenAiModel,
+                    mockPolicyService(),
+                    advisorProvider(List.of()));
             ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4.1-nano");
 
             ChatClient client = factory.createClient();
@@ -61,7 +85,10 @@ class ChatClientFactoryTest {
         @Test
         @DisplayName("should throw when OpenAI model is not configured")
         void shouldThrowWhenOpenAiNotConfigured() {
-            ChatClientFactory factory = new ChatClientFactory(null);
+            ChatClientFactory factory = new ChatClientFactory(
+                    null,
+                    mockPolicyService(),
+                    advisorProvider(List.of()));
 
             assertThrows(IllegalStateException.class, factory::createClient);
         }
@@ -69,7 +96,10 @@ class ChatClientFactoryTest {
         @Test
         @DisplayName("should throw with helpful message")
         void shouldThrowWithAppropriateMessageForOpenAi() {
-            ChatClientFactory factory = new ChatClientFactory(null);
+            ChatClientFactory factory = new ChatClientFactory(
+                    null,
+                    mockPolicyService(),
+                    advisorProvider(List.of()));
 
             IllegalStateException exception = assertThrows(
                     IllegalStateException.class,
@@ -78,5 +108,55 @@ class ChatClientFactoryTest {
 
             assertTrue(exception.getMessage().contains("OpenAI"));
         }
+    }
+
+    @Test
+    @DisplayName("buildDeterministicOptions should apply policy values")
+    void buildDeterministicOptionsShouldApplyPolicyValues() {
+        OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
+        FogUiGenerationPolicyService service = mock(FogUiGenerationPolicyService.class);
+        FogUiGenerationPolicy policy = new FogUiGenerationPolicy();
+        policy.setModel("gpt-4.1-nano");
+        policy.setTemperature(0.1);
+        policy.setTopP(0.95);
+        policy.setSeed(42);
+        policy.setMaxTokens(1024);
+        policy.setMaxCompletionTokens(512);
+        when(service.resolve("gpt-4.1-nano")).thenReturn(policy);
+
+        ChatClientFactory factory = new ChatClientFactory(
+                mockOpenAiModel,
+                service,
+                advisorProvider(List.of()));
+        ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4.1-nano");
+
+        var options = factory.buildDeterministicOptions();
+
+        assertEquals("gpt-4.1-nano", options.getModel());
+        assertEquals(0.1, options.getTemperature());
+        assertEquals(0.95, options.getTopP());
+        assertEquals(42, options.getSeed());
+        assertEquals(1024, options.getMaxTokens());
+        assertEquals(512, options.getMaxCompletionTokens());
+    }
+
+    @Test
+    @DisplayName("createClient should support configured advisor list")
+    void createClientShouldSupportConfiguredAdvisors() {
+        OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
+        Advisor advisor = mock(Advisor.class);
+        ChatClientFactory factory = new ChatClientFactory(
+                mockOpenAiModel,
+                mockPolicyService(),
+                advisorProvider(List.of(advisor)));
+        ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4.1-nano");
+
+        ChatClient client = factory.createClient();
+
+        assertNotNull(client);
+        @SuppressWarnings("unchecked")
+        List<Advisor> configured = (List<Advisor>) ReflectionTestUtils.getField(factory, "defaultAdvisors");
+        assertNotNull(configured);
+        assertEquals(1, configured.size());
     }
 }

@@ -5,6 +5,7 @@ import com.genui.contract.a2ui.A2UiInboundTranslator;
 import com.genui.contract.a2ui.A2UiTranslationError;
 import com.genui.model.genui.ContentBlock;
 import com.genui.model.genui.GenerativeUIResponse;
+import com.genui.service.RequestCorrelationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,8 @@ class A2UiCompatibilityControllerTest {
     void setupController() {
         controller = new A2UiCompatibilityController(
                 new A2UiInboundTranslator(),
-                new FogUiCanonicalValidator()
+                new FogUiCanonicalValidator(),
+                new RequestCorrelationService()
         );
     }
 
@@ -38,7 +40,7 @@ class A2UiCompatibilityControllerTest {
                 )
         );
 
-        ResponseEntity<Map<String, Object>> response = controller.translateInboundA2Ui(payload);
+        ResponseEntity<Map<String, Object>> response = controller.translateInboundA2Ui(null, payload);
         Map<String, Object> body = response.getBody();
 
         assertEquals(200, response.getStatusCode().value());
@@ -49,9 +51,11 @@ class A2UiCompatibilityControllerTest {
         ContentBlock content = result.getContent().getFirst();
         assertEquals("text", content.getType());
         assertEquals("hello from a2ui", content.getValue());
+        assertEquals("fogui/1.0", result.getMetadata().get("contractVersion"));
 
         assertTrue(cast(body.get("translationErrors"), java.util.List.class).isEmpty());
         assertTrue(cast(body.get("validationErrors"), java.util.List.class).isEmpty());
+        assertTrue(response.getHeaders().containsKey(RequestCorrelationService.REQUEST_ID_HEADER));
     }
 
     @Test
@@ -62,7 +66,7 @@ class A2UiCompatibilityControllerTest {
                 )
         );
 
-        ResponseEntity<Map<String, Object>> response = controller.translateInboundA2Ui(payload);
+        ResponseEntity<Map<String, Object>> response = controller.translateInboundA2Ui("req-123", payload);
         Map<String, Object> body = response.getBody();
 
         assertEquals(200, response.getStatusCode().value());
@@ -73,6 +77,9 @@ class A2UiCompatibilityControllerTest {
         java.util.List<A2UiTranslationError> translationErrors =
                 (java.util.List<A2UiTranslationError>) body.get("translationErrors");
         assertEquals("UNSUPPORTED_NODE", translationErrors.getFirst().getCode());
+        assertEquals("COMPATIBILITY", translationErrors.getFirst().getCategory());
+        assertEquals("req-123", body.get("requestId"));
+        assertEquals("req-123", response.getHeaders().getFirst(RequestCorrelationService.REQUEST_ID_HEADER));
 
         GenerativeUIResponse result = cast(body.get("result"), GenerativeUIResponse.class);
         ContentBlock content = result.getContent().getFirst();

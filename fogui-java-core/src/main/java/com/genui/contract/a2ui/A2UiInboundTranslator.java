@@ -1,10 +1,13 @@
 package com.genui.contract.a2ui;
 
+import com.genui.contract.FogUiCanonicalContract;
+import com.genui.contract.FogUiErrorCode;
 import com.genui.model.genui.ContentBlock;
 import com.genui.model.genui.GenerativeUIResponse;
 import com.genui.model.genui.ThinkingItem;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,20 +26,21 @@ public class A2UiInboundTranslator {
         GenerativeUIResponse response = GenerativeUIResponse.builder().build();
 
         if (a2uiPayload == null) {
-            errors.add(error("$", "NULL_PAYLOAD", "A2UI payload must not be null"));
+            errors.add(error("$", FogUiErrorCode.NULL_PAYLOAD, "A2UI payload must not be null"));
             return A2UiTranslationResult.builder().response(response).errors(errors).build();
         }
 
-        response.setMetadata(Map.of(
-                "sourceProtocol", "a2ui",
-                "supportedVersion", SUPPORTED_A2UI_VERSION
-        ));
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("sourceProtocol", "a2ui");
+        metadata.put("supportedVersion", SUPPORTED_A2UI_VERSION);
+        metadata.put(FogUiCanonicalContract.METADATA_CONTRACT_VERSION_KEY, FogUiCanonicalContract.CURRENT_CONTRACT_VERSION);
+        response.setMetadata(metadata);
 
         response.setThinking(translateThinking(a2uiPayload.get("thinking"), errors));
         response.setContent(translateContent(a2uiPayload.get("content"), errors, "$.content"));
 
         return A2UiTranslationResult.builder()
-                .response(response)
+                .response(FogUiCanonicalContract.ensureContractVersionMetadata(response))
                 .errors(errors)
                 .build();
     }
@@ -48,14 +52,17 @@ public class A2UiInboundTranslator {
         }
 
         if (!(rawThinking instanceof List<?> list)) {
-            errors.add(error("$.thinking", "INVALID_THINKING", "thinking must be an array"));
+            errors.add(error("$.thinking", FogUiErrorCode.INVALID_THINKING, "thinking must be an array"));
             return items;
         }
 
         for (int i = 0; i < list.size(); i++) {
             Object raw = list.get(i);
             if (!(raw instanceof Map<?, ?> map)) {
-                errors.add(error("$.thinking[" + i + "]", "INVALID_THINKING_ITEM", "thinking item must be an object"));
+                errors.add(error(
+                        "$.thinking[" + i + "]",
+                        FogUiErrorCode.INVALID_THINKING_ITEM,
+                        "thinking item must be an object"));
                 continue;
             }
 
@@ -84,7 +91,7 @@ public class A2UiInboundTranslator {
         }
 
         if (!(rawContent instanceof List<?> list)) {
-            errors.add(error(path, "INVALID_CONTENT", "content must be an array"));
+            errors.add(error(path, FogUiErrorCode.INVALID_CONTENT, "content must be an array"));
             return blocks;
         }
 
@@ -96,7 +103,7 @@ public class A2UiInboundTranslator {
 
     private ContentBlock translateBlock(Object rawBlock, String path, List<A2UiTranslationError> errors) {
         if (!(rawBlock instanceof Map<?, ?> map)) {
-            errors.add(error(path, "INVALID_BLOCK", "content block must be an object"));
+            errors.add(error(path, FogUiErrorCode.INVALID_BLOCK, "content block must be an object"));
             return fallbackBlock(rawBlock, "invalid_block");
         }
 
@@ -107,7 +114,7 @@ public class A2UiInboundTranslator {
                 value = stringify(map.get("text"));
             }
             if (value == null) {
-                errors.add(error(path + ".value", "MISSING_TEXT", "text block requires value/text"));
+                errors.add(error(path + ".value", FogUiErrorCode.MISSING_TEXT, "text block requires value/text"));
                 value = "";
             }
             return ContentBlock.text(value);
@@ -130,7 +137,7 @@ public class A2UiInboundTranslator {
             return block;
         }
 
-        errors.add(error(path, "UNSUPPORTED_NODE", "unsupported A2UI node, fallback emitted"));
+        errors.add(error(path, FogUiErrorCode.UNSUPPORTED_NODE, "unsupported A2UI node, fallback emitted"));
         return fallbackBlock(castMap(map), "unsupported_node");
     }
 
@@ -171,10 +178,11 @@ public class A2UiInboundTranslator {
         return value == null ? null : String.valueOf(value);
     }
 
-    private A2UiTranslationError error(String path, String code, String message) {
+    private A2UiTranslationError error(String path, FogUiErrorCode code, String message) {
         return A2UiTranslationError.builder()
                 .path(path)
-                .code(code)
+                .code(code.code())
+                .category(code.category().name())
                 .message(message)
                 .build();
     }

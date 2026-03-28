@@ -38,6 +38,9 @@ jobs:
       - name: Build, Test & Generate Coverage
         run: ./mvnw -f ../pom.xml -pl backend-java -am test
 
+      - name: Deterministic Conformance and Replay Suites
+        run: ./mvnw -f ../pom.xml -pl fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
+
       - name: Package with Sentry source context upload
         run: |
           ./mvnw -B -f ../pom.xml -pl backend-java -am package -DskipTests dependency:copy-dependencies \

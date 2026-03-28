@@ -15,9 +15,11 @@ Positioning note: FogUI interoperates with A2UI payloads; it does not attempt to
 ## Behavior
 
 - Converts A2UI-like `thinking` + `content` payloads into `GenerativeUIResponse`.
+- Stamps canonical metadata with `contractVersion: "fogui/1.0"`.
 - Returns deterministic translation errors for unsupported shapes.
 - Emits fallback component blocks (`A2UiUnsupportedNode`) for unknown nodes.
 - Runs canonical validation and returns validation error details.
+- Supports request correlation with `X-FogUI-Request-Id` request/response header.
 
 ## Example request
 
