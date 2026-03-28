@@ -57,31 +57,46 @@ public class A2UiInboundTranslator {
         }
 
         for (int i = 0; i < list.size(); i++) {
-            Object raw = list.get(i);
-            if (!(raw instanceof Map<?, ?> map)) {
-                errors.add(error(
-                        "$.thinking[" + i + "]",
-                        FogUiErrorCode.INVALID_THINKING_ITEM,
-                        "thinking item must be an object"));
-                continue;
+            ThinkingItem item = translateThinkingItem(list.get(i), i, errors);
+            if (item != null) {
+                items.add(item);
             }
-
-            String message = stringify(map.get("message"));
-            Object rawStatus = map.containsKey("status") ? map.get("status") : "complete";
-            String status = stringify(rawStatus);
-            String timestamp = stringify(map.get("timestamp"));
-
-            ThinkingItem item = ThinkingItem.builder()
-                    .message(message == null ? "" : message)
-                    .status(status == null || status.isBlank() ? "complete" : status)
-                    .build();
-            if (timestamp != null && !timestamp.isBlank()) {
-                item.setTimestamp(timestamp);
-            }
-            items.add(item);
         }
 
         return items;
+    }
+
+    private ThinkingItem translateThinkingItem(
+            Object raw,
+            int index,
+            List<A2UiTranslationError> errors
+    ) {
+        if (!(raw instanceof Map<?, ?> map)) {
+            errors.add(error(
+                    "$.thinking[" + index + "]",
+                    FogUiErrorCode.INVALID_THINKING_ITEM,
+                    "thinking item must be an object"));
+            return null;
+        }
+
+        String message = stringify(map.get("message"));
+        Object rawStatus = map.containsKey("status") ? map.get("status") : "complete";
+        String status = stringify(rawStatus);
+        String timestamp = stringify(map.get("timestamp"));
+
+        ThinkingItem item = ThinkingItem.builder()
+                .message(message == null ? "" : message)
+                .status(status == null || status.isBlank() ? "complete" : status)
+                .build();
+
+        if (timestamp != null && !timestamp.isBlank()) {
+            item.setTimestamp(timestamp);
+        } else {
+            // Avoid default Instant.now() so translation stays deterministic for the same payload.
+            item.setTimestamp(null);
+        }
+
+        return item;
     }
 
     private List<ContentBlock> translateContent(Object rawContent, List<A2UiTranslationError> errors, String path) {
