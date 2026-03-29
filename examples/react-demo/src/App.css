@@ -108,6 +108,26 @@ pre {
   font-size: 0.9rem;
 }
 
+.section-label {
+  font-weight: 600;
+  color: #1f2d45;
+}
+
+.event-log {
+  min-height: 180px;
+}
+
+.details-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.details-panel summary {
+  cursor: pointer;
+  color: #1f2d45;
+  font-weight: 600;
+}
+
 .error {
   margin: 0;
   color: #b42318;

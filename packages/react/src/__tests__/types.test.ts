@@ -50,7 +50,11 @@ describe('FogUI Types', () => {
 
       expect(containerBlock.componentType).toBe('container');
       expect(containerBlock.children).toHaveLength(2);
-      expect(containerBlock.children?.[0].componentType).toBe('card');
+      const firstChild = containerBlock.children?.[0];
+      expect(firstChild?.type).toBe('component');
+      if (firstChild?.type === 'component') {
+        expect(firstChild.componentType).toBe('card');
+      }
     });
 
     it('should support deeply nested containers', () => {
@@ -72,7 +76,11 @@ describe('FogUI Types', () => {
 
       const innerContainer = deeplyNested.children?.[0] as ComponentBlock;
       expect(innerContainer.componentType).toBe('container');
-      expect(innerContainer.children?.[0].componentType).toBe('card');
+      const nestedChild = innerContainer.children?.[0];
+      expect(nestedChild?.type).toBe('component');
+      if (nestedChild?.type === 'component') {
+        expect(nestedChild.componentType).toBe('card');
+      }
     });
   });
 

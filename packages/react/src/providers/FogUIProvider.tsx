@@ -1,11 +1,33 @@
-import React, { createContext, useContext, useMemo } from 'react';
-import { Adapter } from '../types/adapter';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import type { Adapter, AdapterConformanceResult } from '../types/adapter';
 import { headlessAdapter } from '../adapters/headless';
 import type { FogUIActionErrorPayload, FogUIActionPayload } from '../types';
+import { getAdapterConformance } from '../utils';
 
 /**
  * Default self-host friendly API endpoint.
  */
+
+export const DEFAULT_FOGUI_CONTRACT_VERSION = 'fogui/1.0';
+
+export interface FogUIContractVersionConfig {
+  /**
+   * Expected canonical contract version emitted by the backend.
+   * @default 'fogui/1.0'
+   */
+  readonly expected?: string;
+  /**
+   * When true, missing or mismatched versions fail transform calls and emit stream errors.
+   * When false, the runtime only warns.
+   * @default false
+   */
+  readonly strict?: boolean;
+}
+
+interface ResolvedFogUIContractVersionConfig {
+  readonly expected: string;
+  readonly strict: boolean;
+}
 const FOGUI_API_ENDPOINT = 'http://localhost:5001';
 
 
@@ -13,13 +35,17 @@ const FOGUI_API_ENDPOINT = 'http://localhost:5001';
 
 
 interface FogUIContextValue {
-  apiKey?: string;
-  endpoint: string;
-  adapter: Adapter;
-  onAction?: (action: string, data?: unknown) => void;
-  onActionStart?: (payload: FogUIActionPayload) => void | Promise<void>;
-  onActionComplete?: (payload: FogUIActionPayload) => void | Promise<void>;
-  onActionError?: (payload: FogUIActionErrorPayload) => void | Promise<void>;
+  readonly apiKey?: string;
+  readonly endpoint: string;
+  readonly adapter: Adapter;
+  readonly adapterConformance: AdapterConformanceResult;
+  readonly requestHeaders?: Readonly<Record<string, string>>;
+  readonly fetchImplementation?: typeof fetch;
+  readonly contractVersion: ResolvedFogUIContractVersionConfig;
+  readonly onAction?: (action: string, data?: unknown) => void;
+  readonly onActionStart?: (payload: FogUIActionPayload) => void | Promise<void>;
+  readonly onActionComplete?: (payload: FogUIActionPayload) => void | Promise<void>;
+  readonly onActionError?: (payload: FogUIActionErrorPayload) => void | Promise<void>;
 }
 
 const FogUIContext = createContext<FogUIContextValue | null>(null);
@@ -36,6 +62,18 @@ export interface FogUIProviderProps {
    * @default 'http://localhost:5001'
    */
   readonly endpoint?: string;
+  /**
+   * Optional headers attached to transform and stream requests.
+   */
+  readonly headers?: Readonly<Record<string, string>>;
+  /**
+   * Optional fetch override for tests or custom runtimes.
+   */
+  readonly fetchImplementation?: typeof fetch;
+  /**
+   * Canonical contract-version handling. Warns by default, strict mode is opt-in.
+   */
+  readonly contractVersion?: FogUIContractVersionConfig;
   /**
    * Custom component adapter for your design system.
    * @see https://fogui.dev/docs/adapters
@@ -66,21 +104,53 @@ export function FogUIProvider({
   children,
   apiKey,
   endpoint,
+  headers,
+  fetchImplementation,
+  contractVersion,
   adapter,
   onAction,
   onActionStart,
   onActionComplete,
   onActionError,
 }: FogUIProviderProps) {
+  const resolvedAdapter = adapter || headlessAdapter;
+  const adapterConformance = useMemo(() => getAdapterConformance(resolvedAdapter), [resolvedAdapter]);
+  const resolvedContractVersion = useMemo<ResolvedFogUIContractVersionConfig>(() => ({
+    expected: contractVersion?.expected ?? DEFAULT_FOGUI_CONTRACT_VERSION,
+    strict: contractVersion?.strict ?? false,
+  }), [contractVersion]);
+
+  useEffect(() => {
+    for (const issue of adapterConformance.issues) {
+      console.warn(`[FogUI] ${issue.message}`);
+    }
+  }, [adapterConformance]);
+
   const value = useMemo<FogUIContextValue>(() => ({
     apiKey,
     endpoint: endpoint || FOGUI_API_ENDPOINT,
-    adapter: adapter || headlessAdapter,
+    adapter: resolvedAdapter,
+    adapterConformance,
+    requestHeaders: headers,
+    fetchImplementation,
+    contractVersion: resolvedContractVersion,
     onAction,
     onActionStart,
     onActionComplete,
     onActionError,
-  }), [apiKey, endpoint, adapter, onAction, onActionStart, onActionComplete, onActionError]);
+  }), [
+    adapterConformance,
+    apiKey,
+    resolvedContractVersion,
+    endpoint,
+    fetchImplementation,
+    headers,
+    onAction,
+    onActionComplete,
+    onActionError,
+    onActionStart,
+    resolvedAdapter,
+  ]);
 
   return (
     <FogUIContext.Provider value={value}>

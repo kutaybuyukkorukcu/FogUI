@@ -59,13 +59,21 @@ cd packages/react && npm install && npm run build
 cd ../examples/react-demo && npm install && npm run dev
 ```
 
+## Validate demo integration (recommended)
+
+```bash
+cd packages/react && npm run build
+cd ../examples/react-demo && npm run smoke
+```
+
 ## Deterministic Runtime Check (Recommended)
 
 Run these checks after startup:
 
-1. Call `/fogui/transform` twice with the same payload and confirm canonical response shape remains stable.
+1. Call `/fogui/transform` twice with the same payload and confirm canonical response shape remains stable and includes `metadata.contractVersion = "fogui/1.0"`.
 2. Call `/fogui/transform/stream` and confirm ordered SSE event lifecycle: `result` -> `usage` -> `done` (or `error`).
 3. Call `/fogui/compat/a2ui/inbound` with a mixed-valid payload and confirm translation and validation diagnostics are returned deterministically.
+4. Run `examples/react-demo` smoke validation and confirm transform, stream, and compatibility flows pass against the built `@fogui/react` package.
 
 These checks align with Phase 1 and Phase 2 goals in `docs/ROADMAP_OSS.md`.
 

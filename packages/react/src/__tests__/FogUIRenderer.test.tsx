@@ -180,9 +180,9 @@ describe('FogUIRenderer', () => {
   });
 
   it('applies adapter.mapProps before rendering components', () => {
-    const mapProps = vi.fn((_type: string, props: Record<string, unknown>) => ({
+    const mapProps = vi.fn(({ componentType, props }: { componentType: string; props: Record<string, unknown> }) => ({
       ...props,
-      title: `Mapped ${String(props.title)}`,
+      title: `Mapped ${componentType} ${String(props.title)}`,
     }));
 
     const mappedAdapter: Adapter = {
@@ -210,8 +210,46 @@ describe('FogUIRenderer', () => {
       </FogUIProvider>
     );
 
-    expect(mapProps).toHaveBeenCalledWith('Card', { title: 'Original' });
-    expect(screen.getByTestId('card-title')).toHaveTextContent('Mapped Original');
+    expect(mapProps).toHaveBeenCalledWith({ componentType: 'Card', props: { title: 'Original' } });
+    expect(screen.getByTestId('card-title')).toHaveTextContent('Mapped Card Original');
+  });
+
+  it('renders fallback output when adapter.mapProps throws', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const failingAdapter: Adapter = {
+      components: {
+        Card: MockCard,
+      },
+      mapProps: () => {
+        throw new Error('mapProps failed');
+      },
+    };
+
+    const response: FogUIResponse = {
+      thinking: [],
+      content: [
+        {
+          type: 'component',
+          componentType: 'Card',
+          props: { title: 'Original' },
+          children: [],
+        },
+      ],
+    };
+
+    render(
+      <FogUIProvider adapter={failingAdapter} apiKey="test">
+        <FogUIRenderer response={response} />
+      </FogUIProvider>
+    );
+
+    expect(screen.getByText(/Adapter prop mapping failed/)).toBeInTheDocument();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[FogUI] Adapter mapProps failed for "Card". Did you mean "Card"? Available adapter components: Card.'
+    );
+
+    consoleSpy.mockRestore();
   });
 
   it('should fire the onAction callback when a component triggers it', async () => {
@@ -375,7 +413,7 @@ describe('FogUIRenderer', () => {
     expect(screen.getByText(/Unmapped component: "UnmappedComponent"/)).toBeInTheDocument();
     expect(screen.getByText(/Available adapter components: Card/)).toBeInTheDocument();
     expect(consoleSpy).toHaveBeenCalledWith(
-      '[FogUI] Unmapped component: "UnmappedComponent". Available adapter components: Card. Add a "UnmappedComponent" mapping in adapter.components.'
+      '[FogUI] Unmapped component "UnmappedComponent" received from canonical response. Available adapter components: Card.'
     );
 
     consoleSpy.mockRestore();

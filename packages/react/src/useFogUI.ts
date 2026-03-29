@@ -1,116 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { validateContractVersion } from './internal/contractVersion';
+import { readSseResponse } from './internal/stream';
 import { useFogUIContext } from './providers/FogUIProvider';
-import { fogUIResponseSchema } from './types/schema.zod';
-import type {
-  FogUIResponse,
-  StreamDoneEvent,
-  StreamErrorEvent,
-  StreamEvent,
-  StreamResultEvent,
-  StreamUsageEvent,
-  TransformOptions,
-  TransformResult,
-  UseFogUIReturn,
-} from './types';
-
-type StreamEventType = StreamEvent['type'];
-
-interface SseFrame {
-  event: string;
-  data: string;
-}
-
-function parseJsonPayload(data: string): unknown {
-  return JSON.parse(data);
-}
-
-function isSupportedEventType(value: string): value is StreamEventType {
-  return value === 'result'
-    || value === 'usage'
-    || value === 'error'
-    || value === 'done';
-}
-
-function parseSseFrames(chunkBuffer: string): { frames: SseFrame[]; remainder: string } {
-  const rawFrames = chunkBuffer.split('\n\n');
-  const remainder = rawFrames.pop() ?? '';
-
-  const frames: SseFrame[] = rawFrames
-    .map((raw): SseFrame | null => {
-      const lines = raw.split('\n').map((line) => line.trim()).filter((line) => line.length > 0);
-      if (lines.length === 0) return null;
-
-      let event = 'message';
-      const dataParts: string[] = [];
-
-      for (const line of lines) {
-        if (line.startsWith('event:')) {
-          event = line.substring(6).trim();
-        } else if (line.startsWith('data:')) {
-          dataParts.push(line.substring(5).trim());
-        }
-      }
-
-      return {
-        event,
-        data: dataParts.join('\n'),
-      };
-    })
-    .filter((frame): frame is SseFrame => frame !== null);
-
-  return { frames, remainder };
-}
-
-function toStreamEvents(frame: SseFrame): StreamEvent[] {
-  if (frame.data === '[DONE]' || frame.event === 'done') {
-    const doneEvent: StreamDoneEvent = { type: 'done', data: null };
-    return [doneEvent];
-  }
-
-  if (!isSupportedEventType(frame.event) || frame.data.length === 0) {
-    return [];
-  }
-
-  if (frame.event === 'result') {
-    try {
-      const parsed = parseJsonPayload(frame.data);
-      const validation = fogUIResponseSchema.safeParse(parsed);
-      if (validation.success) {
-        const event: StreamResultEvent = { type: 'result', data: validation.data as FogUIResponse };
-        return [event];
-      }
-
-      console.error(validation.error.issues);
-      return [{ type: 'error', data: { error: 'Stream validation failed' } }];
-    } catch {
-      return [];
-    }
-  }
-
-  if (frame.event === 'usage') {
-    try {
-      const parsed = parseJsonPayload(frame.data);
-      return [{ type: 'usage', data: (parsed as StreamUsageEvent['data']) ?? {} }];
-    } catch {
-      return [];
-    }
-  }
-
-  if (frame.event === 'error') {
-    try {
-      const parsed = parseJsonPayload(frame.data);
-      if (parsed && typeof parsed === 'object' && typeof (parsed as { error?: unknown }).error === 'string') {
-        return [{ type: 'error', data: parsed as StreamErrorEvent['data'] }];
-      }
-
-      return [{ type: 'error', data: { error: 'Stream processing failed', details: parsed } }];
-    } catch {
-      return [{ type: 'error', data: { error: 'Stream processing failed' } }];
-    }
-  }
-
-  return [];
-}
+import { fogUITransformResultSchema } from './types/schema.zod';
+import type { FogUIResponse, StreamEvent, TransformOptions, TransformResult, UseFogUIReturn } from './types';
 
 /**
  * useFogUI - Main hook for transforming LLM output into structured UI.
@@ -140,9 +33,109 @@ function toStreamEvents(frame: SseFrame): StreamEvent[] {
  * ```
  */
 export function useFogUI(): UseFogUIReturn {
-  const { endpoint, apiKey } = useFogUIContext();
+  const { endpoint, apiKey, fetchImplementation, requestHeaders, contractVersion } = useFogUIContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchClient = fetchImplementation ?? fetch;
+
+  const createRequestHeaders = useCallback(() => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (requestHeaders) {
+      Object.assign(headers, requestHeaders);
+    }
+
+    if (apiKey) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+
+    return headers;
+  }, [apiKey, requestHeaders]);
+
+  const createRequestBody = useCallback((content: string, options: TransformOptions = {}) => ({
+    content,
+    context: options.intent || options.preferredComponents || options.instructions
+      ? {
+          intent: options.intent,
+          preferredComponents: options.preferredComponents,
+          instructions: options.instructions,
+        }
+      : undefined,
+  }), []);
+
+  const enforceContractVersion = useCallback((response: FogUIResponse): string | null => {
+    const validation = validateContractVersion(response, contractVersion.expected);
+    if (validation.ok) {
+      return null;
+    }
+
+    const message = validation.message ?? 'Canonical contractVersion validation failed';
+    if (contractVersion.strict) {
+      setError(message);
+      return message;
+    }
+
+    console.warn(`[FogUI] ${message}`);
+    return null;
+  }, [contractVersion]);
+
+  const parseTransformResponse = useCallback(async (response: Response): Promise<TransformResult> => {
+    const json = await response.json();
+    const validation = fogUITransformResultSchema.safeParse(json);
+
+    if (!validation.success) {
+      const validationError = 'API response validation failed';
+      setError(validationError);
+      console.error(validation.error.issues);
+      return { success: false, error: validationError };
+    }
+
+    const result = validation.data;
+    const canonicalResult = result.result as FogUIResponse | undefined;
+
+    if (canonicalResult) {
+      const contractVersionError = enforceContractVersion(canonicalResult);
+      if (contractVersionError) {
+        const upstreamError = result.success ? null : result.error || 'Transformation failed';
+        const combinedError = upstreamError
+          ? `${upstreamError}; ${contractVersionError}`
+          : contractVersionError;
+        setError(combinedError);
+        return {
+          success: false,
+          error: combinedError,
+          result: canonicalResult,
+          usage: result.usage,
+        };
+      }
+    }
+
+    if (!result.success) {
+      const message = result.error || 'Transformation failed';
+      setError(message);
+      return {
+        success: false,
+        error: message,
+        result: canonicalResult,
+        usage: result.usage,
+      };
+    }
+
+    return {
+      success: true,
+      result: canonicalResult as FogUIResponse,
+      usage: result.usage,
+    };
+  }, [enforceContractVersion]);
+
+  const shouldSuppressPostDoneNetworkError = useCallback((streamError: unknown, seenDoneEvent: boolean): boolean => (
+    seenDoneEvent &&
+    (streamError instanceof Error || streamError instanceof TypeError) &&
+    String(streamError.message).toLowerCase().includes('network')
+  ), []);
 
   /**
    * Transform raw LLM text into structured UI (non-streaming)
@@ -155,20 +148,10 @@ export function useFogUI(): UseFogUIReturn {
     setError(null);
 
     try {
-      const response = await fetch(`${endpoint}/fogui/transform`, {
+      const response = await fetchClient(`${endpoint}/fogui/transform`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
-        },
-        body: JSON.stringify({
-          content,
-          context: options.intent || options.preferredComponents || options.instructions ? {
-            intent: options.intent,
-            preferredComponents: options.preferredComponents,
-            instructions: options.instructions,
-          } : undefined,
-        }),
+        headers: createRequestHeaders(),
+        body: JSON.stringify(createRequestBody(content, options)),
       });
 
       if (!response.ok) {
@@ -176,26 +159,7 @@ export function useFogUI(): UseFogUIReturn {
         throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      const json = await response.json();
-      const validation = fogUIResponseSchema.safeParse(json.result);
-
-      if (!validation.success) {
-        const validationError = 'API response validation failed';
-        setError(validationError);
-        console.error(validation.error.issues);
-        return { success: false, error: validationError };
-      }
-
-      const result: TransformResult = {
-        ...json,
-        result: validation.data,
-      };
-      
-      if (!result.success) {
-        setError(result.error || 'Transformation failed');
-      }
-
-      return result;
+      return parseTransformResponse(response);
 
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -204,7 +168,7 @@ export function useFogUI(): UseFogUIReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [endpoint, apiKey]);
+  }, [createRequestBody, createRequestHeaders, endpoint, fetchClient]);
 
   /**
    * Transform with streaming - returns an async generator
@@ -220,72 +184,28 @@ export function useFogUI(): UseFogUIReturn {
     let seenDoneEvent = false;
 
     try {
-      const response = await fetch(`${endpoint}/fogui/transform/stream`, {
+      const response = await fetchClient(`${endpoint}/fogui/transform/stream`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
-        },
-        body: JSON.stringify({
-          content,
-          context: options.intent || options.preferredComponents || options.instructions ? {
-            intent: options.intent,
-            preferredComponents: options.preferredComponents,
-            instructions: options.instructions,
-          } : undefined,
-        }),
+        headers: createRequestHeaders(),
+        body: JSON.stringify(createRequestBody(content, options)),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No response body');
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const parsed = parseSseFrames(buffer);
-        buffer = parsed.remainder;
-
-        for (const frame of parsed.frames) {
-          const events = toStreamEvents(frame);
-          for (const event of events) {
-            if (event.type === 'done') {
-              seenDoneEvent = true;
-            }
-            yield event;
+      for await (const event of readSseResponse(response)) {
+        if (event.type === 'result') {
+          const contractVersionError = enforceContractVersion(event.data);
+          if (contractVersionError) {
+            yield { type: 'error', data: { error: contractVersionError } };
+            continue;
           }
         }
-      }
 
-      // Flush a trailing frame when stream does not end with an empty line.
-      if (buffer.trim().length > 0) {
-        const parsed = parseSseFrames(`${buffer}\n\n`);
-        for (const frame of parsed.frames) {
-          const events = toStreamEvents(frame);
-          for (const event of events) {
-            if (event.type === 'done') {
-              seenDoneEvent = true;
-            }
-            yield event;
-          }
-        }
+        seenDoneEvent = seenDoneEvent || event.type === 'done';
+        yield event;
       }
 
     } catch (err) {
       // Some environments can throw a terminal network error after a valid done event.
-      if ((err instanceof TypeError || err instanceof Error) &&
-          seenDoneEvent &&
-          String(err.message).toLowerCase().includes('network')) {
+      if (shouldSuppressPostDoneNetworkError(err, seenDoneEvent)) {
         return;
       }
 
@@ -295,7 +215,7 @@ export function useFogUI(): UseFogUIReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [endpoint, apiKey]);
+  }, [createRequestBody, createRequestHeaders, endpoint, enforceContractVersion, fetchClient, shouldSuppressPostDoneNetworkError]);
 
   const clearError = useCallback(() => {
     setError(null);

@@ -59,6 +59,14 @@ const createStreamingResponse = (lines: string[], ok = true, hasBody = true) => 
   } as unknown as Response);
 };
 
+const withContractVersion = <T extends Record<string, unknown>>(result: T): T & { metadata: Record<string, unknown> } => ({
+  ...result,
+  metadata: {
+    contractVersion: 'fogui/1.0',
+    ...((result.metadata as Record<string, unknown> | undefined) ?? {}),
+  },
+});
+
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <FogUIProvider apiKey="test-key">{children}</FogUIProvider>
 );
@@ -67,15 +75,19 @@ const noKeyWrapper = ({ children }: { children: React.ReactNode }) => (
   <FogUIProvider>{children}</FogUIProvider>
 );
 
+const strictContractWrapper = ({ children }: { children: React.ReactNode }) => (
+  <FogUIProvider apiKey="test-key" contractVersion={{ strict: true }}>{children}</FogUIProvider>
+);
+
 describe('useFogUI', () => {
 
   it('should successfully transform content and return a valid result', async () => {
     const mockResponse = {
       success: true,
-      result: {
+      result: withContractVersion({
         thinking: [],
         content: [{ type: 'text', value: 'Hello' }]
-      }
+      })
     };
     const validatedResponse = fogUIResponseSchema.parse(mockResponse.result);
     fetchMock.mockReturnValue(createFetchResponse({ ...mockResponse, result: validatedResponse }));
@@ -100,7 +112,9 @@ describe('useFogUI', () => {
     await waitFor(async () => {
       const transformResult = await result.current.transform('some content');
       expect(transformResult.success).toBe(false);
-      expect(transformResult.error).toContain('API Error');
+      if (!transformResult.success) {
+        expect(transformResult.error).toContain('API Error');
+      }
     });
 
     expect(result.current.isLoading).toBe(false);
@@ -109,10 +123,10 @@ describe('useFogUI', () => {
   it('should include context when transform options are provided', async () => {
     const mockResponse = {
       success: true,
-      result: {
+      result: withContractVersion({
         thinking: [],
         content: [{ type: 'text', value: 'With context' }],
-      },
+      }),
     };
 
     fetchMock.mockReturnValue(createFetchResponse(mockResponse));
@@ -139,10 +153,10 @@ describe('useFogUI', () => {
   it('should omit Authorization header when apiKey is not provided', async () => {
     const mockResponse = {
       success: true,
-      result: {
+      result: withContractVersion({
         thinking: [],
         content: [{ type: 'text', value: 'No key mode' }],
-      },
+      }),
     };
 
     fetchMock.mockReturnValue(createFetchResponse(mockResponse));
@@ -163,10 +177,10 @@ describe('useFogUI', () => {
     const mockResponse = {
       success: false,
       error: 'Transformation failed from API',
-      result: {
+      result: withContractVersion({
         thinking: [],
         content: [{ type: 'text', value: 'fallback' }],
-      },
+      }),
     };
 
     fetchMock.mockReturnValue(createFetchResponse(mockResponse));
@@ -185,23 +199,78 @@ describe('useFogUI', () => {
     // but the schema now strictly validates rather than normalizing
     const invalidResponse = { success: true, result: { content: [{ type: 'invalid' }] } };
     fetchMock.mockReturnValue(createFetchResponse(invalidResponse));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
     const { result } = renderHook(() => useFogUI(), { wrapper });
     
     await waitFor(async () => {
       const transformResult = await result.current.transform('some content');
       expect(transformResult.success).toBe(false);
-      expect(transformResult.error).toBeDefined();
+      if (!transformResult.success) {
+        expect(transformResult.error).toBeDefined();
+      }
     });
+
+    consoleSpy.mockRestore();
+  });
+
+  it('should warn by default when transform result contractVersion is missing', async () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    fetchMock.mockReturnValue(createFetchResponse({
+      success: true,
+      result: {
+        thinking: [],
+        content: [{ type: 'text', value: 'No contract version' }],
+      },
+    }));
+
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    await waitFor(async () => {
+      const transformResult = await result.current.transform('missing contract version');
+      expect(transformResult.success).toBe(true);
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[FogUI] Missing canonical contractVersion. Expected "fogui/1.0" in response metadata.'
+    );
+    expect(result.current.error).toBe(null);
+
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('should fail transform when strict contractVersion enforcement is enabled', async () => {
+    fetchMock.mockReturnValue(createFetchResponse({
+      success: true,
+      result: {
+        thinking: [],
+        content: [{ type: 'text', value: 'Wrong contract version' }],
+        metadata: {
+          contractVersion: 'fogui/0.9',
+        },
+      },
+    }));
+
+    const { result } = renderHook(() => useFogUI(), { wrapper: strictContractWrapper });
+
+    await waitFor(async () => {
+      const transformResult = await result.current.transform('strict contract version');
+      expect(transformResult.success).toBe(false);
+      if (!transformResult.success) {
+        expect(transformResult.error).toContain('Canonical contractVersion mismatch');
+      }
+    });
+
+    expect(result.current.error).toContain('Canonical contractVersion mismatch');
   });
 
   it('should handle streaming transformations', async () => {
     const mockResponse = {
       success: true,
-      result: {
+      result: withContractVersion({
         thinking: [],
         content: [{ type: 'text', value: 'Streamed Hello' }]
-      }
+      })
     };
     const validatedResponse = fogUIResponseSchema.parse(mockResponse.result);
     fetchMock.mockReturnValue(createFetchResponse({ ...mockResponse, result: validatedResponse }));
@@ -247,10 +316,10 @@ describe('useFogUI', () => {
   });
 
   it('should stream result and done events', async () => {
-    const resultPayload = {
+    const resultPayload = withContractVersion({
       thinking: [],
       content: [{ type: 'text', value: 'Final state' }],
-    };
+    });
 
     const lines = [
       'event: result\n',
@@ -305,6 +374,7 @@ describe('useFogUI', () => {
 
     fetchMock.mockReturnValue(createStreamingResponse(lines));
     const { result } = renderHook(() => useFogUI(), { wrapper });
+    const eventTypes: string[] = [];
 
     await waitFor(async () => {
       const stream = result.current.transformStream('stream prompt', {
@@ -312,12 +382,12 @@ describe('useFogUI', () => {
         preferredComponents: ['Card', 'Table'],
         instructions: 'Return concise UI',
       });
-      for await (const event of stream) {
-        console.log(event);
-        // exhaust stream without processing events
+      for await (const streamEvent of stream) {
+        eventTypes.push(streamEvent.type);
       }
     });
 
+    expect(eventTypes).toEqual(['done']);
     const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
     const parsedBody = JSON.parse(String(requestInit.body));
 
@@ -351,6 +421,42 @@ describe('useFogUI', () => {
 
     // Should emit an error (validation failed) and then done
     expect(events.some(e => e.type === 'error')).toBe(true);
+    expect(events).toContainEqual({ type: 'done', data: null });
+  });
+
+  it('should emit stream error instead of result when strict contractVersion enforcement fails', async () => {
+    const lines = [
+      'event: result\n',
+      'data: {"thinking":[],"content":[{"type":"text","value":"wrong version"}],"metadata":{"contractVersion":"fogui/0.9"}}\n\n',
+      'event: done\n',
+      'data: [DONE]\n\n',
+    ];
+    fetchMock.mockReturnValue(createStreamingResponse(lines));
+
+    const { result } = renderHook(() => useFogUI(), { wrapper: strictContractWrapper });
+
+    const events: Array<{ type: string; data: any }> = [];
+    await waitFor(async () => {
+      const stream = result.current.transformStream('strict stream');
+      for await (const streamEvent of stream) {
+        events.push(streamEvent);
+      }
+    });
+
+    expect(events).not.toContainEqual({
+      type: 'result',
+      data: {
+        thinking: [],
+        content: [{ type: 'text', value: 'wrong version' }],
+        metadata: { contractVersion: 'fogui/0.9' },
+      },
+    });
+    expect(events).toContainEqual({
+      type: 'error',
+      data: {
+        error: 'Canonical contractVersion mismatch. Expected "fogui/1.0" but received "fogui/0.9".',
+      },
+    });
     expect(events).toContainEqual({ type: 'done', data: null });
   });
 
