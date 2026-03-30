@@ -1,25 +1,9 @@
 /**
- * Pre-built adapters for popular design systems.
- * 
- * These adapters map FogUI component types to components from popular UI libraries.
- * Simply import and use as your adapter.
- * 
- * @example Using the Shadcn adapter
- * ```tsx
- * import { FogUIProvider } from '@fogui/react';
- * import { shadcnAdapter } from '@fogui/react/adapters';
- * 
- * function App() {
- *   return (
- *     <FogUIProvider apiKey="fog_xxx" adapter={shadcnAdapter}>
- *       <MyApp />
- *     </FogUIProvider>
- *   );
- * }
- * ```
- * 
- * @packageDocumentation
+ * Minimal reference adapters for FogUI canonical rendering.
+ *
+ * The package keeps these adapters intentionally small so application teams can
+ * map canonical components into their own design systems without coupling to a
+ * bundled UI kit.
  */
 
-export { shadcnAdapter } from './shadcn';
 export { headlessAdapter } from './headless';

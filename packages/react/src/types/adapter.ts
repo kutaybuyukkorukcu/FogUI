@@ -1,5 +1,43 @@
 import React from 'react';
-import { FogUIComponent } from './schema';
+import type { ComponentBlock } from './schema';
+
+export type AdapterComponent = React.ComponentType<any>;
+export type AdapterComponentRegistry = Readonly<Record<string, AdapterComponent>>;
+
+export interface AdapterMapPropsInput {
+  readonly componentType: string;
+  readonly props: Readonly<Record<string, unknown>>;
+}
+
+export interface AdapterConformance {
+  readonly requiredComponents?: readonly string[];
+}
+
+export interface AdapterConformanceIssue {
+  readonly kind: 'missing-component';
+  readonly componentType: string;
+  readonly message: string;
+}
+
+export interface AdapterConformanceResult {
+  readonly ok: boolean;
+  readonly issues: readonly AdapterConformanceIssue[];
+  readonly requiredComponents: readonly string[];
+}
+
+export interface AdapterRenderIssue {
+  readonly kind: 'map-props-failed' | 'unmapped-component';
+  readonly componentType: string;
+  readonly message: string;
+  readonly error?: unknown;
+}
+
+export interface AdapterFallbackProps {
+  readonly block: ComponentBlock;
+  readonly issue: AdapterRenderIssue;
+  readonly availableComponents: readonly string[];
+  readonly suggestion: string | null;
+}
 
 /**
  * Defines the shape of a component adapter for a specific design system.
@@ -7,24 +45,9 @@ import { FogUIComponent } from './schema';
  * actual components in the target design system.
  */
 export interface Adapter {
-  /**
-   * A map where keys are canonical component types (e.g., 'Card', 'Table')
-   * and values are the corresponding React components from the design system.
-   */
-  components: {
-    [K in FogUIComponent['componentType']]?: React.ComponentType<any>;
-  };
+  readonly components: AdapterComponentRegistry;
 
-  /**
-   * An optional function to transform props from the canonical FogUI schema
-   * to the props expected by the target component library.
-   *
-   * @param componentType The canonical type of the component (e.g., 'Card').
-   * @param props The props from the FogUI response.
-   * @returns The transformed props to be passed to the target component.
-   */
-  mapProps?: (
-    componentType: FogUIComponent['componentType'],
-    props: any
-  ) => any;
+  readonly mapProps?: (input: AdapterMapPropsInput) => Record<string, unknown>;
+  readonly renderFallback?: React.ComponentType<AdapterFallbackProps>;
+  readonly conformance?: AdapterConformance;
 }

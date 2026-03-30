@@ -1,151 +1,85 @@
-/**
- * FogUI SDK - Core types and interfaces
- */
+import type { FogUIResponse } from './types/schema';
 
-/**
- * Configuration for the FogUI SDK
- */
+export type { ContentBlock, FogUIResponse, ThinkingItem } from './types/schema';
+export * from './types/schema';
+
 export interface FogUIConfig {
-  /**
-   * Optional API key. If omitted, SDK calls are sent without Authorization header.
-   */
-  apiKey?: string;
+  readonly apiKey?: string;
 }
 
 export interface TransformOptions {
-  /**
-   * Hints about the user's intent (e.g., "weather_query", "data_analysis")
-   */
-  intent?: string;
-
-  /**
-   * Preferred component types to use
-   */
-  preferredComponents?: string[];
-
-  /**
-   * Custom instructions for transformation
-   */
-  instructions?: string;
+  readonly intent?: string;
+  readonly preferredComponents?: readonly string[];
+  readonly instructions?: string;
 }
 
 export interface FogUIActionPayload {
-  action: string;
-  data?: unknown;
-  timestamp: string;
-  sourceComponent: string;
+  readonly action: string;
+  readonly data?: unknown;
+  readonly timestamp: string;
+  readonly sourceComponent: string;
 }
 
 export interface FogUIActionErrorPayload extends FogUIActionPayload {
-  error: unknown;
+  readonly error: unknown;
 }
 
-export interface TransformResult {
-  success: boolean;
-  result?: FogUIResponse;
-  error?: string;
-  usage?: {
-    transformTokens: number;
-    model: string;
-    estimatedCost: number;
-    processingTimeMs: number;
-  };
+export interface TransformUsage {
+  readonly transformTokens?: number;
+  readonly model?: string;
+  readonly estimatedCost?: number;
+  readonly processingTimeMs?: number;
+  readonly [key: string]: unknown;
 }
+
+export interface TransformSuccessResult {
+  readonly success: true;
+  readonly result: FogUIResponse;
+  readonly usage?: TransformUsage;
+}
+
+export interface TransformFailureResult {
+  readonly success: false;
+  readonly error: string;
+  readonly result?: FogUIResponse;
+  readonly usage?: TransformUsage;
+}
+
+export type TransformResult = TransformSuccessResult | TransformFailureResult;
 
 export interface UseFogUIReturn {
-  /**
-   * Transform raw LLM text into structured UI
-   */
-  transform: (content: string, options?: TransformOptions) => Promise<TransformResult>;
-
-  /**
-   * Transform with streaming - returns an async generator
-   */
-  transformStream: (content: string, options?: TransformOptions) => AsyncGenerator<StreamEvent>;
-
-  /**
-   * Whether a transformation is in progress
-   */
-  isLoading: boolean;
-
-  /**
-   * Current error if any
-   */
-  error: string | null;
-
-  /**
-   * Clear error state
-   */
-  clearError: () => void;
+  readonly transform: (content: string, options?: TransformOptions) => Promise<TransformResult>;
+  readonly transformStream: (content: string, options?: TransformOptions) => AsyncGenerator<StreamEvent>;
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  readonly clearError: () => void;
 }
 
 export interface StreamResultEvent {
-  type: 'result';
-  data: FogUIResponse;
+  readonly type: 'result';
+  readonly data: FogUIResponse;
 }
 
 export interface StreamUsageEvent {
-  type: 'usage';
-  data: {
-    transformTokens?: number;
-    processingTimeMs?: number;
-    [key: string]: unknown;
+  readonly type: 'usage';
+  readonly data: {
+    readonly transformTokens?: number;
+    readonly processingTimeMs?: number;
+    readonly [key: string]: unknown;
   };
 }
 
 export interface StreamErrorEvent {
-  type: 'error';
-  data: {
-    error: string;
-    [key: string]: unknown;
+  readonly type: 'error';
+  readonly data: {
+    readonly error: string;
+    readonly [key: string]: unknown;
   };
 }
 
 export interface StreamDoneEvent {
-  type: 'done';
-  data: null;
+  readonly type: 'done';
+  readonly data: null;
 }
 
-export type StreamEvent =
-  | StreamResultEvent
-  | StreamUsageEvent
-  | StreamErrorEvent
-  | StreamDoneEvent;
-
-export * from './types/schema';
-
-// ============================================
-// FogUI Response Types
-// ============================================
-
-export interface ThinkingItem {
-  status: 'active' | 'complete';
-  message: string;
-  timestamp?: string;
-}
-
-export type ContentBlock = TextBlock | ComponentBlock;
-
-export interface TextBlock {
-  type: 'text';
-  value: string;
-}
-
-export interface ComponentBlock {
-  type: 'component';
-  componentType: string;
-  props: Record<string, unknown>;
-  children?: ComponentBlock[];
-}
-
-export interface FogUIResponse {
-  thinking: ThinkingItem[];
-  content: ContentBlock[];
-  metadata?: {
-    timestamp?: string;
-    version?: string;
-    modelUsed?: string;
-    queryType?: string;
-    [key: string]: unknown;
-  };
-}
+export type StreamEvent = StreamResultEvent | StreamUsageEvent | StreamErrorEvent | StreamDoneEvent;

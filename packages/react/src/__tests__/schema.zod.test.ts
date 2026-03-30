@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { fogUIResponseSchema } from '../types/schema.zod';
+import {
+  fogUIResponseSchema,
+  fogUITransformResultSchema,
+} from '../types/schema.zod';
 
 describe('fogUIResponseSchema', () => {
   it('accepts a canonical response with text and component blocks', () => {
@@ -132,5 +135,42 @@ describe('fogUIResponseSchema', () => {
 
     expect(fogUIResponseSchema.safeParse(withNull).success).toBe(true);
     expect(fogUIResponseSchema.safeParse(withRecord).success).toBe(true);
+  });
+
+  it('accepts metadata with canonical contract version', () => {
+    const payload = {
+      thinking: [],
+      content: [],
+      metadata: {
+        contractVersion: 'fogui/1.0',
+        modelUsed: 'test-model',
+      },
+    };
+
+    expect(fogUIResponseSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it('accepts successful transform envelopes with canonical payloads', () => {
+    const payload = {
+      success: true,
+      result: {
+        thinking: [],
+        content: [{ type: 'text', value: 'done' }],
+      },
+      usage: {
+        transformTokens: 12,
+        model: 'test-model',
+      },
+    };
+
+    expect(fogUITransformResultSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it('rejects successful transform envelopes without results', () => {
+    const payload = {
+      success: true,
+    };
+
+    expect(fogUITransformResultSchema.safeParse(payload).success).toBe(false);
   });
 });

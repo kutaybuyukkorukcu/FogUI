@@ -1,10 +1,14 @@
 package com.genui.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.genui.contract.CanonicalValidationContext;
+import com.genui.contract.CanonicalValidationError;
 import com.genui.contract.FogUiCanonicalContract;
+import com.genui.contract.FogUiCanonicalValidator;
 import com.genui.model.genui.GenerativeUIResponse;
 import com.genui.model.transform.TransformRequest;
 import com.genui.starter.advisor.FogUiAdvisorContextKeys;
+import com.genui.starter.advisor.FogUiAdvisorErrorCodes;
 import com.genui.starter.advisor.FogUiAdvisorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +20,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -26,10 +32,13 @@ import java.util.concurrent.atomic.AtomicReference;
 public class TransformStreamProcessor {
 
     private static final String ERROR_KEY = "error";
+    private static final String REQUEST_ID_KEY = "requestId";
+    private static final String EXCEPTION_TYPE_KEY = "exceptionType";
 
     private final ChatClientFactory chatClientFactory;
     private final UIResponseParser responseParser;
     private final StreamPatchReconciler streamPatchReconciler;
+    private final FogUiCanonicalValidator canonicalValidator;
     private final ObjectMapper objectMapper;
 
     public void processStreamRequest(TransformRequest request, SseEmitter emitter, String requestId) {
@@ -43,10 +52,11 @@ public class TransformStreamProcessor {
             var prompt = buildStreamPrompt(request);
             var fullContent = new StringBuilder();
             var previousResponse = new AtomicReference<GenerativeUIResponse>(null);
+            String advisorRequestId = requestId == null ? "" : requestId;
 
-            var requestSpec = chatClient.prompt(prompt);
+            var requestSpec = chatClient.prompt(Objects.requireNonNull(prompt));
             requestSpec.advisors(spec -> spec
-                    .param(FogUiAdvisorContextKeys.REQUEST_ID, requestId)
+                .param(FogUiAdvisorContextKeys.REQUEST_ID, advisorRequestId)
                     .param(FogUiAdvisorContextKeys.ROUTE_MODE, FogUiAdvisorContextKeys.ROUTE_TRANSFORM_STREAM));
             requestSpec
                     .stream()
@@ -98,20 +108,20 @@ public class TransformStreamProcessor {
         var errorJson = objectMapper.createObjectNode();
         errorJson.put(ERROR_KEY, errorMessage);
         errorJson.put("code", errorCode);
-        errorJson.put("requestId", requestId);
+        errorJson.put(REQUEST_ID_KEY, requestId == null ? "" : requestId);
         if (details != null) {
             errorJson.set("details", objectMapper.valueToTree(details));
         }
         emitter.send(SseEmitter.event()
                 .name(ERROR_KEY)
-                .data(objectMapper.writeValueAsString(errorJson)));
+            .data(Objects.requireNonNull(objectMapper.writeValueAsString(errorJson))));
     }
 
     private Prompt buildStreamPrompt(TransformRequest request) {
         String contextHints = extractContextHints(request);
         return new Prompt(
                 new SystemMessage(TransformPrompts.TRANSFORM_SYSTEM_PROMPT),
-                new UserMessage(TransformPrompts.buildTransformPrompt(request.getContent(), contextHints)));
+                new UserMessage(Objects.requireNonNull(TransformPrompts.buildTransformPrompt(request.getContent(), contextHints))));
     }
 
     private String extractContextHints(TransformRequest request) {
@@ -128,17 +138,17 @@ public class TransformStreamProcessor {
     ) {
         var partial = responseParser.tryParsePartial(fullContent.toString());
         var reconciled = streamPatchReconciler.reconcile(previousResponse.get(), partial);
-        FogUiCanonicalContract.ensureContractVersionMetadata(reconciled);
-        if (reconciled == null || Objects.equals(reconciled, previousResponse.get())) {
+        var normalized = normalizeCanonicalResponse(reconciled, false, null);
+        if (normalized == null || Objects.equals(normalized, previousResponse.get())) {
             return;
         }
 
-        previousResponse.set(reconciled);
+        previousResponse.set(normalized);
 
         try {
             emitter.send(SseEmitter.event()
                     .name("result")
-                    .data(objectMapper.writeValueAsString(reconciled)));
+                    .data(Objects.requireNonNull(objectMapper.writeValueAsString(normalized))));
         } catch (IOException e) {
             log.error("Error sending partial result", e);
         }
@@ -152,26 +162,105 @@ public class TransformStreamProcessor {
             String requestId
     ) {
         try {
-            sendStreamResult(emitter, fullContent.toString());
+            sendStreamResult(emitter, fullContent.toString(), requestId);
             sendStreamUsage(emitter, request, fullContent, startTime, requestId);
             emitter.send(SseEmitter.event().name("done").data("[DONE]"));
             emitter.complete();
         } catch (Exception e) {
-            log.error("Error completing stream", e);
-            emitter.completeWithError(e);
+            handleStreamError(e, emitter, requestId);
         }
     }
 
-    private void sendStreamResult(SseEmitter emitter, String content) throws IOException {
-        try {
-            var uiResponse = objectMapper.readValue(content, GenerativeUIResponse.class);
-            FogUiCanonicalContract.ensureContractVersionMetadata(uiResponse);
-            emitter.send(SseEmitter.event()
-                    .name("result")
-                    .data(objectMapper.writeValueAsString(uiResponse)));
-        } catch (Exception e) {
-            log.warn("Could not deserialize stream final content: {}", e.getMessage());
+    private void sendStreamResult(SseEmitter emitter, String content, String requestId) throws IOException {
+        emitter.send(SseEmitter.event()
+                .name("result")
+            .data(Objects.requireNonNull(objectMapper.writeValueAsString(parseAndNormalizeFinalResponse(content, requestId)))));
+    }
+
+    private GenerativeUIResponse parseAndNormalizeFinalResponse(String content, String requestId) {
+        if (content == null || content.isBlank()) {
+            throw missingResponseException(requestId, "Assistant content is empty");
         }
+
+        try {
+            GenerativeUIResponse response = objectMapper.readValue(content, GenerativeUIResponse.class);
+            return normalizeCanonicalResponse(response, true, requestId);
+        } catch (FogUiAdvisorException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw parseException(requestId, ex);
+        }
+    }
+
+    private GenerativeUIResponse normalizeCanonicalResponse(
+            GenerativeUIResponse response,
+            boolean failOnInvalid,
+            String requestId
+    ) {
+        if (response == null) {
+            return null;
+        }
+
+        List<CanonicalValidationError> diagnostics = validateCanonicalResponse(response);
+        if (!diagnostics.isEmpty()) {
+            if (failOnInvalid) {
+                throw validationException(requestId, diagnostics);
+            }
+            return null;
+        }
+
+        return FogUiCanonicalContract.ensureContractVersionMetadata(response);
+    }
+
+    private List<CanonicalValidationError> validateCanonicalResponse(GenerativeUIResponse response) {
+        String declaredContractVersion = FogUiCanonicalContract.readContractVersion(response);
+        if (declaredContractVersion == null || declaredContractVersion.isBlank()) {
+            return canonicalValidator.validate(response, CanonicalValidationContext.empty());
+        }
+
+        return canonicalValidator.validate(
+                response,
+                CanonicalValidationContext.builder()
+                        .expectedContractVersion(FogUiCanonicalContract.CURRENT_CONTRACT_VERSION)
+                        .build());
+    }
+
+    private FogUiAdvisorException missingResponseException(String requestId, String reason) {
+        Map<String, Object> details = baseDetails(requestId);
+        details.put("reason", reason);
+        return new FogUiAdvisorException(
+                "Canonical response is missing",
+                FogUiAdvisorErrorCodes.CANONICAL_RESPONSE_MISSING,
+                details);
+    }
+
+    private FogUiAdvisorException parseException(String requestId, Exception ex) {
+        Map<String, Object> details = baseDetails(requestId);
+        details.put(EXCEPTION_TYPE_KEY, ex.getClass().getSimpleName());
+        details.put("reason", ex.getMessage());
+        return new FogUiAdvisorException(
+                "Canonical response parsing failed",
+                FogUiAdvisorErrorCodes.CANONICAL_PARSE_FAILED,
+                details);
+    }
+
+    private FogUiAdvisorException validationException(String requestId, List<CanonicalValidationError> diagnostics) {
+        Map<String, Object> details = baseDetails(requestId);
+        details.put("diagnostics", diagnostics);
+        return new FogUiAdvisorException(
+                "Canonical validation failed",
+                FogUiAdvisorErrorCodes.CANONICAL_VALIDATION_FAILED,
+                details);
+    }
+
+    private Map<String, Object> baseDetails(String requestId) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("expectedContractVersion", FogUiCanonicalContract.CURRENT_CONTRACT_VERSION);
+        details.put("routeMode", FogUiAdvisorContextKeys.ROUTE_TRANSFORM_STREAM);
+        if (requestId != null) {
+            details.put("requestId", requestId);
+        }
+        return details;
     }
 
     private void sendStreamUsage(
@@ -187,17 +276,17 @@ public class TransformStreamProcessor {
         usageJson.put("transformTokens", tokens);
         usageJson.put("processingTimeMs", processingTime);
         usageJson.put("model", chatClientFactory.getActiveModelName());
-        usageJson.put("requestId", requestId);
+        usageJson.put(REQUEST_ID_KEY, requestId == null ? "" : requestId);
         emitter.send(SseEmitter.event()
                 .name("usage")
-                .data(objectMapper.writeValueAsString(usageJson)));
+            .data(Objects.requireNonNull(objectMapper.writeValueAsString(usageJson))));
     }
 
     private void handleStreamError(Throwable error, SseEmitter emitter, String requestId) {
         log.error("Stream error", error);
         try {
             String errorCode = TransformErrorCodes.STREAM_FAILED;
-            Object details = Map.of("exceptionType", error.getClass().getSimpleName());
+            Object details = Map.of(EXCEPTION_TYPE_KEY, error.getClass().getSimpleName());
             if (error instanceof FogUiAdvisorException advisorException) {
                 errorCode = advisorException.getErrorCode();
                 details = advisorException.getDetails();
@@ -218,7 +307,7 @@ public class TransformStreamProcessor {
     private void handleProcessError(Exception ex, SseEmitter emitter, String requestId) {
         log.error("Transform stream error", ex);
         String errorCode = TransformErrorCodes.STREAM_FAILED;
-        Object details = Map.of("exceptionType", ex.getClass().getSimpleName());
+        Object details = Map.of(EXCEPTION_TYPE_KEY, ex.getClass().getSimpleName());
         if (ex instanceof FogUiAdvisorException advisorException) {
             errorCode = advisorException.getErrorCode();
             details = advisorException.getDetails();

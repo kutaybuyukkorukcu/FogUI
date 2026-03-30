@@ -67,7 +67,7 @@ class TransformPromptsTest {
 
             String prompt = TransformPrompts.buildTransformPrompt(content, null);
 
-            assertTrue(prompt.contains("Respond with the JSON structure only."));
+            assertTrue(prompt.contains("Respond with the JSON structure only. Do not add prose or code fences."));
         }
 
         @Test
@@ -77,7 +77,19 @@ class TransformPromptsTest {
 
             String prompt = TransformPrompts.buildTransformPrompt(content, null);
 
-            assertTrue(prompt.startsWith("Transform the following content into structured UI:"));
+            assertTrue(prompt.startsWith("Transform the following content into a FogUI canonical response:"));
+        }
+
+        @Test
+        @DisplayName("should reinforce canonical type rules in the user prompt")
+        void shouldReinforceCanonicalTypeRulesInTheUserPrompt() {
+            String content = "Summarize the Q1 report";
+
+            String prompt = TransformPrompts.buildTransformPrompt(content, null);
+
+            assertTrue(prompt.contains("The only valid `type` values are \"text\" and \"component\"."));
+            assertTrue(prompt.contains("Never return values like \"card\", \"list\", or \"table\" in the top-level \"type\" field."));
+            assertTrue(prompt.contains("\"componentType\":\"Card\""));
         }
 
         @Test
@@ -115,15 +127,15 @@ class TransformPromptsTest {
         }
 
         @Test
-        @DisplayName("should contain component definitions")
-        void shouldContainComponentDefinitions() {
+        @DisplayName("should contain canonical component guidance")
+        void shouldContainCanonicalComponentGuidance() {
             String prompt = TransformPrompts.TRANSFORM_SYSTEM_PROMPT;
 
-            assertTrue(prompt.contains("card"));
-            assertTrue(prompt.contains("list"));
-            assertTrue(prompt.contains("table"));
-            assertTrue(prompt.contains("container"));
-            assertTrue(prompt.contains("chart"));
+            assertTrue(prompt.contains("Card"));
+            assertTrue(prompt.contains("List"));
+            assertTrue(prompt.contains("Table"));
+            assertTrue(prompt.contains("Container"));
+            assertTrue(prompt.contains("Chart"));
         }
 
         @Test
@@ -137,12 +149,14 @@ class TransformPromptsTest {
         }
 
         @Test
-        @DisplayName("should include component selection guidelines")
+        @DisplayName("should include canonical wire shape examples")
         void shouldIncludeDeterministicContractRequirements() {
             String prompt = TransformPrompts.TRANSFORM_SYSTEM_PROMPT;
 
-            assertTrue(prompt.contains("Component Selection Guidelines"));
-            assertTrue(prompt.contains("componentType") || prompt.contains("component"));
+            assertTrue(prompt.contains("The only valid `type` values are \"text\" and \"component\"."));
+            assertTrue(prompt.contains("\"type\": \"component\""));
+            assertTrue(prompt.contains("\"componentType\": \"Card\""));
+            assertTrue(prompt.contains("Never return values like \"card\", \"list\", or \"table\" in the top-level \"type\" field."));
         }
     }
 }

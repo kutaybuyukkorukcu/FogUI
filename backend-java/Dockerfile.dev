@@ -17,5 +17,8 @@ COPY backend-java/src backend-java/src
 # Expose port and debug port
 EXPOSE 5001 5005
 
+# Enable JDWP for VS Code attach debugging in the dev container.
+ENV SPRING_BOOT_RUN_JVM_ARGS="-Dspring.devtools.restart.enabled=true -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+
 # Install library modules, then run only the backend Spring Boot app.
-CMD ["sh", "-c", "mvn -q -DskipTests -pl fogui-java-core,fogui-spring-starter install && mvn -pl backend-java spring-boot:run -Dspring-boot.run.jvmArguments='-Dspring.devtools.restart.enabled=true'"]
+CMD ["sh", "-c", "mvn -q -DskipTests -pl fogui-java-core,fogui-spring-starter install && mvn -pl backend-java spring-boot:run -Dspring-boot.run.jvmArguments=\"$SPRING_BOOT_RUN_JVM_ARGS\""]

@@ -1,6 +1,23 @@
 /* eslint-disable react-refresh/only-export-components */
 import React from 'react';
-import { createAdapter } from '@fogui/react';
+import {
+  createAdapter,
+  getAdapterConformance,
+  type AdapterFallbackProps,
+} from '@fogui/react';
+
+export const DEMO_REQUIRED_COMPONENTS = [
+  'Badge',
+  'Button',
+  'Card',
+  'Form',
+  'Grid',
+  'Input',
+  'List',
+  'Stack',
+  'Table',
+  'Tabs',
+] as const;
 
 const surfaceStyle: React.CSSProperties = {
   border: '1px solid #d5d9e2',
@@ -8,6 +25,14 @@ const surfaceStyle: React.CSSProperties = {
   padding: 14,
   background: '#ffffff',
 };
+
+function stringifyValue(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
+}
 
 const Card = ({ title, description, children }: { title?: string; description?: string; children?: React.ReactNode }) => (
   <section style={{ ...surfaceStyle, marginBottom: 10 }}>
@@ -37,8 +62,8 @@ const Badge = ({ label }: { label: string }) => (
 const List = ({ items = [] as unknown[] }: { items?: unknown[] }) => (
   <ul style={{ margin: 0, paddingLeft: 20 }}>
     {items.map((item, index) => (
-      <li key={`${index}-${String(item)}`} style={{ marginBottom: 4 }}>
-        {typeof item === 'string' || typeof item === 'number' ? String(item) : JSON.stringify(item)}
+      <li key={`${index}-${stringifyValue(item)}`} style={{ marginBottom: 4 }}>
+        {stringifyValue(item)}
       </li>
     ))}
   </ul>
@@ -59,17 +84,22 @@ const Table = ({ headers = [] as string[], rows = [] as unknown[] }: { headers?:
           </tr>
         </thead>
         <tbody>
-          {safeRows.map((row, rowIndex) => {
-            const cells = Array.isArray(row)
-              ? row
-              : typeof row === 'object' && row != null
-                ? Object.values(row as Record<string, unknown>)
-                : [row];
+          {safeRows.map((row) => {
+            let cells: unknown[];
+            if (Array.isArray(row)) {
+              cells = row;
+            } else if (typeof row === 'object' && row != null) {
+              cells = Object.values(row as Record<string, unknown>);
+            } else {
+              cells = [row];
+            }
+
+            const rowKey = `${stringifyValue(row)}-${cells.length}`;
             return (
-              <tr key={rowIndex}>
-                {cells.map((cell, cellIndex) => (
-                  <td key={`${rowIndex}-${cellIndex}`} style={{ border: '1px solid #d5d9e2', padding: 8 }}>
-                    {typeof cell === 'string' || typeof cell === 'number' ? String(cell) : JSON.stringify(cell)}
+              <tr key={rowKey}>
+                {cells.map((cell) => (
+                  <td key={`${rowKey}-${stringifyValue(cell)}`} style={{ border: '1px solid #d5d9e2', padding: 8 }}>
+                    {stringifyValue(cell)}
                   </td>
                 ))}
               </tr>
@@ -125,6 +155,31 @@ const Form = ({ children }: { children?: React.ReactNode }) => (
 
 const Tabs = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
 
+const DemoFallback = ({
+  block,
+  issue,
+  availableComponents,
+  suggestion,
+}: AdapterFallbackProps) => (
+  <div
+    data-testid="demo-adapter-fallback"
+    style={{
+      border: '1px dashed #b42318',
+      borderRadius: 10,
+      padding: 12,
+      background: '#fff4f2',
+      color: '#7a271a',
+      display: 'grid',
+      gap: 6,
+    }}
+  >
+    <strong>{issue.kind === 'map-props-failed' ? 'Adapter prop mapping failed' : 'Unmapped canonical component'}</strong>
+    <span>componentType={block.componentType}</span>
+    <span>available={availableComponents.join(', ') || 'none'}</span>
+    {suggestion ? <span>suggestion={suggestion}</span> : null}
+  </div>
+);
+
 export const demoAdapter = createAdapter({
   components: {
     Card,
@@ -138,4 +193,14 @@ export const demoAdapter = createAdapter({
     Form,
     Tabs,
   },
+  conformance: {
+    requiredComponents: DEMO_REQUIRED_COMPONENTS,
+  },
+  renderFallback: DemoFallback,
 });
+
+export const demoAdapterConformance = getAdapterConformance(demoAdapter);
+
+if (!demoAdapterConformance.ok) {
+  throw new Error(demoAdapterConformance.issues.map((issue) => issue.message).join('\n'));
+}

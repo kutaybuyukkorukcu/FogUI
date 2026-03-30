@@ -9,14 +9,13 @@ describe('module exports', () => {
     expect(RootExports.FogUIProvider).toBeTypeOf('function');
     expect(RootExports.useFogUIContext).toBeTypeOf('function');
     expect(RootExports.createAdapter).toBeTypeOf('function');
+    expect(RootExports.getAdapterConformance).toBeTypeOf('function');
     expect(RootExports.useFogUI).toBeTypeOf('function');
     expect(RootExports.FogUIRenderer).toBeTypeOf('function');
-    expect(RootExports.shadcnAdapter).toBeDefined();
     expect(RootExports.headlessAdapter).toBeDefined();
   });
 
   it('exposes adapter entrypoint exports', () => {
-    expect(AdapterExports.shadcnAdapter).toBeDefined();
     expect(AdapterExports.headlessAdapter).toBeDefined();
   });
 

@@ -1,6 +1,6 @@
 export { FogUIProvider, useFogUIContext } from './providers/FogUIProvider';
-export { createAdapter } from './utils';
-export type { FogUIProviderProps } from './providers/FogUIProvider';
+export { createAdapter, getAdapterConformance } from './utils';
+export type { FogUIContractVersionConfig, FogUIProviderProps } from './providers/FogUIProvider';
 
 // Main Hook
 export { useFogUI } from './useFogUI';
@@ -15,5 +15,4 @@ export * from './types/schema.zod';
 export { FogUIRenderer } from './components/FogUIRenderer';
 
 // Adapters
-export { shadcnAdapter } from './adapters/shadcn';
 export { headlessAdapter } from './adapters/headless';

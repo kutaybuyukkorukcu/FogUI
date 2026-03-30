@@ -1,114 +1,49 @@
-import { ComponentBlock } from '../types';
+export const FOGUI_RECOMMENDED_COMPONENT_TYPES = [
+  'Badge',
+  'Button',
+  'Card',
+  'Form',
+  'Grid',
+  'Input',
+  'List',
+  'Stack',
+  'Table',
+  'Tabs',
+] as const;
 
-export interface CardComponent extends ComponentBlock {
-  componentType: 'Card';
-  props: {
-    title?: string;
-    description?: string;
-    [key: string]: unknown;
-  };
-  children?: ComponentBlock[];
+export type FogUIRecommendedComponentType = typeof FOGUI_RECOMMENDED_COMPONENT_TYPES[number];
+
+export interface TextBlock {
+  readonly type: 'text';
+  readonly value: string;
 }
 
-export interface TableComponent extends ComponentBlock {
-  componentType: 'Table';
-  props: {
-    headers: string[];
-    rows: (string | number | boolean)[][];
-    [key: string]: unknown;
-  };
+export interface ComponentBlock {
+  readonly type: 'component';
+  readonly componentType: string;
+  readonly props?: Readonly<Record<string, unknown>> | null;
+  readonly children?: readonly ContentBlock[] | null;
 }
 
-export interface ListComponent extends ComponentBlock {
-  componentType: 'List';
-  props: {
-    items: string[];
-    ordered?: boolean;
-    [key: string]: unknown;
-  };
+export type ContentBlock = TextBlock | ComponentBlock;
+
+export interface ThinkingItem {
+  readonly status: string;
+  readonly message: string;
+  readonly timestamp?: string | null;
 }
 
-export interface FormComponent extends ComponentBlock {
-  componentType: 'Form';
-  props: {
-    [key: string]: unknown;
-  };
-  children?: (InputComponent | ButtonComponent)[];
+export interface FogUIResponseMetadata {
+  readonly contractVersion?: string;
+  readonly modelUsed?: string;
+  readonly queryType?: string;
+  readonly timestamp?: string;
+  readonly version?: string;
+  readonly [key: string]: unknown;
 }
 
-export interface InputComponent extends ComponentBlock {
-  componentType: 'Input';
-  props: {
-    label?: string;
-    placeholder?: string;
-    type?: 'text' | 'number' | 'password';
-    [key: string]: unknown;
-  };
+export interface FogUIResponse {
+  readonly thinking: readonly ThinkingItem[];
+  readonly content: readonly ContentBlock[];
+  readonly metadata?: FogUIResponseMetadata | null;
 }
-
-export interface ButtonComponent extends ComponentBlock {
-  componentType: 'Button';
-  props: {
-    label: string;
-    action: string;
-    [key: string]: unknown;
-  };
-}
-
-export interface StackComponent extends ComponentBlock {
-  componentType: 'Stack';
-  props: {
-    direction?: 'horizontal' | 'vertical';
-    gap?: number;
-    [key:string]: unknown;
-  };
-  children?: ComponentBlock[];
-}
-
-export interface GridComponent extends ComponentBlock {
-    componentType: 'Grid';
-    props: {
-        columns?: number;
-        gap?: number;
-        [key:string]: unknown;
-    }
-    children?: ComponentBlock[];
-}
-
-export interface TabsComponent extends ComponentBlock {
-    componentType: 'Tabs';
-    props: {
-        [key:string]: unknown;
-    },
-    children?: TabPaneComponent[];
-}
-
-export interface TabPaneComponent extends ComponentBlock {
-    componentType: 'TabPane';
-    props: {
-        title: string;
-        [key:string]: unknown;
-    }
-    children?: ComponentBlock[];
-}
-
-export interface BadgeComponent extends ComponentBlock {
-    componentType: 'Badge';
-    props: {
-        label: string;
-        color?: 'red' | 'green' | 'blue' | 'yellow' | 'gray';
-        [key:string]: unknown;
-    }
-}
-
-export type FogUIComponent = 
-    | CardComponent
-    | TableComponent
-    | ListComponent
-    | FormComponent
-    | InputComponent
-    | ButtonComponent
-    | StackComponent
-    | GridComponent
-    | TabsComponent
-    | BadgeComponent;

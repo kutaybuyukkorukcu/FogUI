@@ -57,11 +57,9 @@ jobs:
         with:
           name: backend-build
           path: |
-            backend-java/target/classes
-            backend-java/target/test-classes
-            backend-java/target/site/jacoco
-            backend-java/target/surefire-reports
-            backend-java/target/dependency
+            fogui-java-core/target
+            fogui-spring-starter/target
+            backend-java/target
           retention-days: 1
 
   # ================================
@@ -171,7 +169,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: backend-build
-          path: backend-java/target
+          path: .
+
+      - name: Verify Java analysis inputs exist
+        run: |
+          test -d fogui-java-core/target/classes
+          test -d fogui-spring-starter/target/classes
+          test -d backend-java/target/classes
+          ls -la fogui-java-core/target | head
+          ls -la fogui-spring-starter/target | head
+          ls -la backend-java/target | head
 
       - name: Download frontend coverage
         uses: actions/download-artifact@v4

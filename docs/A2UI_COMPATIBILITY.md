@@ -21,6 +21,12 @@ Positioning note: FogUI interoperates with A2UI payloads; it does not attempt to
 - Runs canonical validation and returns validation error details.
 - Supports request correlation with `X-FogUI-Request-Id` request/response header.
 
+## React Boundary
+
+- `@fogui/react` does not parse or validate A2UI payloads directly.
+- React consumers call the compatibility endpoint only when they want backend translation.
+- The React package renders the resulting canonical FogUI response through the normal adapter pipeline.
+
 ## Example request
 
 ```json

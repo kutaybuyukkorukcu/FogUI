@@ -67,17 +67,17 @@ public class CanonicalValidationAdvisor implements CallAdvisor {
             return response;
         }
 
-        FogUiCanonicalContract.ensureContractVersionMetadata(canonicalResponse);
-
-        List<CanonicalValidationError> diagnostics = canonicalValidator.validate(
-                canonicalResponse,
-                CanonicalValidationContext.builder()
-                        .expectedContractVersion(FogUiCanonicalContract.CURRENT_CONTRACT_VERSION)
-                        .build());
+        List<CanonicalValidationError> diagnostics = validateCanonicalResponse(canonicalResponse);
 
         if (!diagnostics.isEmpty() && failFast) {
             throw validationException(request, diagnostics);
         }
+
+        if (!diagnostics.isEmpty()) {
+            return response;
+        }
+
+        FogUiCanonicalContract.ensureContractVersionMetadata(canonicalResponse);
 
         try {
             String normalizedJson = objectMapper.writeValueAsString(canonicalResponse);
@@ -88,6 +88,19 @@ public class CanonicalValidationAdvisor implements CallAdvisor {
             }
             return response;
         }
+    }
+
+    private List<CanonicalValidationError> validateCanonicalResponse(GenerativeUIResponse canonicalResponse) {
+        String declaredContractVersion = FogUiCanonicalContract.readContractVersion(canonicalResponse);
+        if (declaredContractVersion == null || declaredContractVersion.isBlank()) {
+            return canonicalValidator.validate(canonicalResponse, CanonicalValidationContext.empty());
+        }
+
+        return canonicalValidator.validate(
+                canonicalResponse,
+                CanonicalValidationContext.builder()
+                        .expectedContractVersion(FogUiCanonicalContract.CURRENT_CONTRACT_VERSION)
+                        .build());
     }
 
     private ChatClientResponse rewriteAssistantContent(
@@ -134,13 +147,16 @@ public class CanonicalValidationAdvisor implements CallAdvisor {
     }
 
     private String readAssistantContent(ChatClientResponse response) {
-        if (response == null || response.chatResponse() == null) {
+        if (response == null) {
             return null;
         }
-        if (response.chatResponse().getResult() == null || response.chatResponse().getResult().getOutput() == null) {
+
+        ChatResponse chatResponse = response.chatResponse();
+        if (chatResponse == null || chatResponse.getResult() == null || chatResponse.getResult().getOutput() == null) {
             return null;
         }
-        return response.chatResponse().getResult().getOutput().getText();
+
+        return chatResponse.getResult().getOutput().getText();
     }
 
     private FogUiAdvisorException missingResponseException(ChatClientRequest request, String reason) {
