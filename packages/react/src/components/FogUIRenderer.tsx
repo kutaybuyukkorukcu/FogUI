@@ -76,12 +76,12 @@ function dispatchActionLifecycle(
   });
 }
 
-function getBlockKey(block: ContentBlock): string {
+function getBlockKey(block: ContentBlock, index: number): string {
   if (block.type === 'text') {
-    return `text:${block.value}`;
+    return 'text:' + index;
   }
 
-  return `component:${block.componentType}:${JSON.stringify(block.props ?? {})}:${JSON.stringify(block.children ?? [])}`;
+  return 'component:' + block.componentType + ':' + index;
 }
 
 function hasActionHandlers(lifecycleHandlers: Readonly<ActionLifecycleHandlers>): boolean {
@@ -226,9 +226,9 @@ function renderMappedComponent(
 
   return (
     <Component {...mappedProps} onAction={wrappedOnAction}>
-      {childBlocks.map((childBlock) => (
+      {childBlocks.map((childBlock, index) => (
         <ContentBlockRenderer
-          key={getBlockKey(childBlock)}
+          key={getBlockKey(childBlock, index)}
           block={childBlock}
           registry={registry}
           lifecycleHandlers={lifecycleHandlers}
