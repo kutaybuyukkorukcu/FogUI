@@ -13,7 +13,7 @@ const Button: React.FC<any> = ({ children, label, ...props }) => (
     <button type="button" {...props}>{children ?? label}</button>
 );
 
-const Card: React.FC<any> = ({ children, description, title, ...props }) => (
+const Card: React.FC<any> = ({ children, description, title, onAction, ...props }) => (
     <section {...props}>
         {title ? <h3>{title}</h3> : null}
         {description ? <p>{description}</p> : null}
