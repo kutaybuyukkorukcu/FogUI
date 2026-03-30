@@ -25,6 +25,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -142,6 +143,46 @@ class TransformControllerUnitTest {
         ResponseEntity<?> response = controller.transform(null, null, request);
 
         assertEquals(400, response.getStatusCode().value());
+    }
+
+    @Test
+    @DisplayName("transform should phrase preferred components as canonical component types in the prompt")
+    void transformShouldPhrasePreferredComponentsAsCanonicalComponentTypesInThePrompt() {
+        ChatClient mockClient = Mockito.mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec mockRequestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.CallResponseSpec mockCallSpec = Mockito.mock(ChatClient.CallResponseSpec.class);
+        GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                .content(List.of(ContentBlock.text("ok")))
+                .build();
+
+        when(chatClientFactory.createClient()).thenReturn(mockClient);
+        when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
+        when(mockRequestSpec.call()).thenReturn(mockCallSpec);
+        when(mockCallSpec.entity(GenerativeUIResponse.class)).thenReturn(uiResponse);
+        when(chatClientFactory.getActiveModelName()).thenReturn("gpt-test");
+
+        TransformRequest request = new TransformRequest();
+        request.setContent("Compare regional sales");
+
+        TransformRequest.TransformContext context = new TransformRequest.TransformContext();
+        context.setIntent("dashboard");
+        context.setPreferredComponents(List.of("chart", "table"));
+        context.setInstructions("Lead with a short summary.");
+        request.setContext(context);
+
+        ResponseEntity<?> response = controller.transform(null, null, request);
+
+        assertEquals(200, response.getStatusCode().value());
+
+        ArgumentCaptor<org.springframework.ai.chat.prompt.Prompt> promptCaptor = ArgumentCaptor.forClass(org.springframework.ai.chat.prompt.Prompt.class);
+        verify(mockClient).prompt(promptCaptor.capture());
+
+        org.springframework.ai.chat.prompt.Prompt prompt = promptCaptor.getValue();
+        assertTrue(prompt.getSystemMessage().getText().contains("The only valid `type` values are \"text\" and \"component\"."));
+        assertTrue(prompt.getUserMessage().getText().contains(
+                "Preferred UI component families (map these to componentType, not the top-level type): chart, table."));
+        assertTrue(prompt.getUserMessage().getText().contains(
+                "Never return values like \"card\", \"list\", or \"table\" in the top-level \"type\" field."));
     }
 
     @Test

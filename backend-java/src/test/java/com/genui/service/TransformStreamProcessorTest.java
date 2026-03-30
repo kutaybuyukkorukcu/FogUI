@@ -1,6 +1,7 @@
 package com.genui.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.genui.contract.FogUiCanonicalValidator;
 import com.genui.model.genui.ContentBlock;
 import com.genui.model.genui.GenerativeUIResponse;
 import com.genui.model.transform.TransformRequest;
@@ -23,7 +24,6 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
@@ -49,6 +49,7 @@ class TransformStreamProcessorTest {
                 chatClientFactory,
                 responseParser,
                 streamPatchReconciler,
+                new FogUiCanonicalValidator(),
                 new ObjectMapper());
     }
 
@@ -120,6 +121,7 @@ class TransformStreamProcessorTest {
                 .map(TransformStreamProcessorTest::flattenEventPayload)
                 .collect(Collectors.joining("\n"));
         assertTrue(payload.contains("event:result"));
+        assertTrue(payload.contains("\"contractVersion\":\"fogui/1.0\""));
         assertTrue(payload.contains("event:usage"));
         assertTrue(payload.contains("event:done"));
         assertEquals("done", eventNames.getLast());
@@ -186,6 +188,46 @@ class TransformStreamProcessorTest {
         assertTrue(payload.contains("\"code\":\"CANONICAL_VALIDATION_FAILED\""));
         assertTrue(payload.contains("\"requestId\":\"req-unit-1\""));
         assertTrue(payload.contains("diagnostics"));
+    }
+
+    @Test
+    @DisplayName("processStreamRequest should reject invalid final canonical payloads")
+    void processStreamRequestShouldRejectInvalidFinalCanonicalPayloads() throws IOException {
+        mockStreamingChatClient(Flux.just("{" +
+                "\"thinking\":[]," +
+                "\"content\":[{" +
+                "\"type\":\"card\"," +
+                "\"componentType\":\"Card\"," +
+                "\"props\":{}" +
+                "}]}"));
+
+        TransformRequest request = new TransformRequest();
+        request.setContent("hello");
+
+        SseEmitter emitter = Mockito.mock(SseEmitter.class);
+        processor.processStreamRequest(request, emitter, "req-invalid-final");
+
+        ArgumentCaptor<SseEmitter.SseEventBuilder> eventCaptor = ArgumentCaptor.forClass(SseEmitter.SseEventBuilder.class);
+        verify(emitter, atLeastOnce()).send(eventCaptor.capture());
+        verify(emitter).complete();
+
+        List<String> eventNames = eventCaptor.getAllValues()
+                .stream()
+                .map(TransformStreamProcessorTest::extractEventName)
+                .toList();
+
+        String payload = eventCaptor.getAllValues()
+                .stream()
+                .map(TransformStreamProcessorTest::flattenEventPayload)
+                .collect(Collectors.joining("\n"));
+
+        assertTrue(payload.contains("event:error"));
+        assertTrue(payload.contains("\"code\":\"CANONICAL_VALIDATION_FAILED\""));
+        assertTrue(payload.contains("\"requestId\":\"req-invalid-final\""));
+        assertTrue(payload.contains("UNSUPPORTED_TYPE"));
+        assertEquals(1L, eventNames.stream().filter("error"::equals).count());
+        assertEquals(0L, eventNames.stream().filter("done"::equals).count());
+        assertEquals(0L, eventNames.stream().filter("usage"::equals).count());
     }
 
     @Test

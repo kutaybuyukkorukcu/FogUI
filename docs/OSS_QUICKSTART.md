@@ -43,6 +43,22 @@ Set provider credentials in environment:
 
 `backend-java` also includes optional product-style reference endpoints for auth/API keys/usage/profile. They are useful for integration testing, but not part of FogUI core OSS contract.
 
+## Create a local API key for the reference server
+
+Use the helper script from repository root:
+
+```bash
+./scripts/create-dev-api-key.sh --email you@example.com --password your-password-123
+```
+
+This will register the user if needed, otherwise log in, then create a `fog_test_...` key by default.
+
+Create a live-style key instead:
+
+```bash
+./scripts/create-dev-api-key.sh --email you@example.com --password your-password-123 --live
+```
+
 ## Use transform endpoint
 
 ```bash

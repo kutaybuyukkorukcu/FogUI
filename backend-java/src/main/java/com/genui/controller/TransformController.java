@@ -96,7 +96,8 @@ public class TransformController {
                 if (ctx.getIntent() != null)
                     hints.append("Intent: ").append(ctx.getIntent()).append(". ");
                 if (ctx.getPreferredComponents() != null) {
-                    hints.append("Preferred components: ").append(String.join(", ", ctx.getPreferredComponents()))
+                                        hints.append("Preferred UI component families (map these to componentType, not the top-level type): ")
+                                                        .append(String.join(", ", ctx.getPreferredComponents()))
                             .append(". ");
                 }
                 if (ctx.getInstructions() != null)

@@ -12,6 +12,7 @@ import com.genui.service.StreamPatchReconciler;
 import com.genui.service.UIResponseParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +23,12 @@ import org.springframework.context.annotation.Bean;
         FogUiAdvisorsProperties.class
 })
 public class FogUiCoreAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ObjectMapper fogUiObjectMapper() {
+        return new ObjectMapper();
+    }
 
     @Bean
     public UIResponseParser uiResponseParser() {
@@ -75,11 +82,12 @@ public class FogUiCoreAutoConfiguration {
             matchIfMissing = true)
     public CanonicalValidationAdvisor canonicalValidationAdvisor(
             FogUiCanonicalValidator canonicalValidator,
+            ObjectMapper objectMapper,
             FogUiAdvisorsProperties advisorsProperties
     ) {
         return new CanonicalValidationAdvisor(
                 canonicalValidator,
-                new ObjectMapper(),
+                objectMapper,
                 advisorsProperties.isFailFast());
     }
 }

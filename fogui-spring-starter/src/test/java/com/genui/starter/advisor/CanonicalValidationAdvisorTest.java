@@ -14,8 +14,10 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -37,7 +39,7 @@ class CanonicalValidationAdvisorTest {
         ChatClientRequest request = requestWithContext("req-1", FogUiAdvisorContextKeys.ROUTE_TRANSFORM);
 
         ChatClientResponse response = assertDoesNotThrow(() -> advisor.adviseCall(request, chain));
-        String outputText = response.chatResponse().getResult().getOutput().getText();
+        String outputText = Objects.requireNonNull(response.chatResponse()).getResult().getOutput().getText();
 
         assertThat(outputText).contains("\"contractVersion\":\"fogui/1.0\"");
     }
@@ -62,14 +64,76 @@ class CanonicalValidationAdvisorTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> details = (Map<String, Object>) exception.getDetails();
-        assertThat(details.get("requestId")).isEqualTo("req-validation");
-        assertThat(details.get("routeMode")).isEqualTo(FogUiAdvisorContextKeys.ROUTE_TRANSFORM);
-        assertThat(details.get("expectedContractVersion")).isEqualTo("fogui/1.0");
+        assertThat(details)
+                .containsEntry("requestId", "req-validation")
+                .containsEntry("routeMode", FogUiAdvisorContextKeys.ROUTE_TRANSFORM)
+                .containsEntry("expectedContractVersion", "fogui/1.0");
 
         @SuppressWarnings("unchecked")
         List<CanonicalValidationError> diagnostics = (List<CanonicalValidationError>) details.get("diagnostics");
         assertThat(diagnostics).isNotEmpty();
         assertThat(diagnostics.getFirst().getCode()).isEqualTo("UNSUPPORTED_TYPE");
+    }
+
+    @Test
+    void shouldRejectLegacyComponentShorthandEvenWhenComponentTypeIsPresent() {
+        CanonicalValidationAdvisor advisor = new CanonicalValidationAdvisor(
+                new FogUiCanonicalValidator(),
+                objectMapper,
+                true);
+
+        FixedCallChain chain = new FixedCallChain(
+                responseWithJson("{" +
+                        "\"thinking\":[]," +
+                        "\"content\":[{" +
+                        "\"type\":\"card\"," +
+                        "\"componentType\":\"Card\"," +
+                        "\"props\":{}" +
+                        "}]}"));
+        ChatClientRequest request = requestWithContext("req-legacy-type", FogUiAdvisorContextKeys.ROUTE_TRANSFORM);
+
+        FogUiAdvisorException exception = assertThrows(
+                FogUiAdvisorException.class,
+                () -> advisor.adviseCall(request, chain));
+
+        assertThat(exception.getErrorCode()).isEqualTo(FogUiAdvisorErrorCodes.CANONICAL_VALIDATION_FAILED);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> details = (Map<String, Object>) exception.getDetails();
+        @SuppressWarnings("unchecked")
+        List<CanonicalValidationError> diagnostics = (List<CanonicalValidationError>) details.get("diagnostics");
+        assertThat(diagnostics).isNotEmpty();
+        assertThat(diagnostics.getFirst().getPath()).isEqualTo("$.content[0].type");
+        assertThat(diagnostics.getFirst().getCode()).isEqualTo("UNSUPPORTED_TYPE");
+    }
+
+    @Test
+    void shouldRejectExplicitContractVersionMismatchBeforeStamping() {
+        CanonicalValidationAdvisor advisor = new CanonicalValidationAdvisor(
+                new FogUiCanonicalValidator(),
+                objectMapper,
+                true);
+
+        FixedCallChain chain = new FixedCallChain(
+                responseWithJson("{" +
+                        "\"thinking\":[]," +
+                        "\"content\":[{\"type\":\"text\",\"value\":\"Stable\"}]," +
+                        "\"metadata\":{\"contractVersion\":\"fogui/0.9\"}" +
+                        "}"));
+        ChatClientRequest request = requestWithContext("req-version-mismatch", FogUiAdvisorContextKeys.ROUTE_TRANSFORM);
+
+        FogUiAdvisorException exception = assertThrows(
+                FogUiAdvisorException.class,
+                () -> advisor.adviseCall(request, chain));
+
+        assertThat(exception.getErrorCode()).isEqualTo(FogUiAdvisorErrorCodes.CANONICAL_VALIDATION_FAILED);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> details = (Map<String, Object>) exception.getDetails();
+        @SuppressWarnings("unchecked")
+        List<CanonicalValidationError> diagnostics = (List<CanonicalValidationError>) details.get("diagnostics");
+        assertThat(diagnostics).isNotEmpty();
+        assertThat(diagnostics.getFirst().getCode()).isEqualTo("CONTRACT_VERSION_MISMATCH");
     }
 
     @Test
@@ -106,18 +170,18 @@ class CanonicalValidationAdvisorTest {
     private ChatClientRequest requestWithContext(String requestId, String route) {
         return ChatClientRequest.builder()
                 .prompt(new Prompt("transform"))
-                .context(Map.of(
+                .context(Map.<String, Object>of(
                         FogUiAdvisorContextKeys.REQUEST_ID, requestId,
                         FogUiAdvisorContextKeys.ROUTE_MODE, route))
                 .build();
     }
 
     private ChatClientResponse responseWithJson(String json) {
-        AssistantMessage message = new AssistantMessage(json);
+        AssistantMessage message = new AssistantMessage(Objects.requireNonNull(json));
         ChatResponse chatResponse = new ChatResponse(List.of(new Generation(message)));
         return ChatClientResponse.builder()
                 .chatResponse(chatResponse)
-                .context(Map.of())
+                .context(Collections.emptyMap())
                 .build();
     }
 
