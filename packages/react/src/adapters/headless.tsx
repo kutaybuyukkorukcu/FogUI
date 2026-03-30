@@ -9,8 +9,8 @@ function stringifyValue(value: unknown): string {
     return JSON.stringify(value);
 }
 
-const Button: React.FC<any> = ({ children, label, ...props }) => (
-    <button type="button" {...props}>{children ?? label}</button>
+const Button: React.FC<any> = ({ children, label, onAction, ...props }) => (
+    <button type="button" onClick={() => onAction?.('click')} {...props}>{children ?? label}</button>
 );
 
 const Card: React.FC<any> = ({ children, description, title, onAction, ...props }) => (
