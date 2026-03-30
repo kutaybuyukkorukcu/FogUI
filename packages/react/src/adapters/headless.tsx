@@ -21,7 +21,7 @@ const Card: React.FC<any> = ({ children, description, title, ...props }) => (
     </section>
 );
 
-const Input: React.FC<any> = ({ label, ...props }) => (
+const Input: React.FC<any> = ({ label, onAction, ...props }) => (
     <label>
         {label ? <span>{label}</span> : null}
         <input {...props} />
