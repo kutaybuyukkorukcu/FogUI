@@ -30,7 +30,7 @@ const Input: React.FC<any> = ({ label, ...props }) => (
 
 const Badge: React.FC<any> = ({ children, label, ...props }) => <div {...props}>{children ?? label}</div>;
 
-const Stack: React.FC<any> = ({ children, direction = 'vertical', gap = 8, style, ...props }) => (
+const Stack: React.FC<any> = ({ children, direction = 'vertical', gap = 8, style, onAction, ...props }) => (
     <div
         {...props}
         style={{
