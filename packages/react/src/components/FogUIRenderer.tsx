@@ -312,9 +312,9 @@ export function FogUIRenderer({
 
   return (
     <div className={className} style={style}>
-      {response.content.map((block) => (
+      {response.content.map((block, index) => (
         <ContentBlockRenderer
-          key={getBlockKey(block)}
+          key={getBlockKey(block, index)}
           block={block}
           registry={adapter.components}
           lifecycleHandlers={lifecycleHandlers}
