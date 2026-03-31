@@ -54,6 +54,15 @@ if (!conformance.ok) {
 - Deterministic fallback rendering for unmapped components or `mapProps` failures.
 - Deterministic action lifecycle: `onActionStart -> onAction -> onActionComplete|onActionError`.
 
+## Compatibility expectations
+
+- Adapter compatibility follows package semver, while the canonical wire format is governed separately by `metadata.contractVersion`.
+- Patch releases should not require adapter rewrites.
+- Minor releases may add new canonical component types or props, but existing mapped component behavior should remain backward compatible unless explicitly documented.
+- Major releases are the only place where FogUI should require adapter contract changes by default.
+
+See `docs/RELEASE_COMPATIBILITY.md` for the cross-package release policy.
+
 ## Migration note
 
 - Older `mapProps(componentType, props)` adapters must be updated to `mapProps({ componentType, props })`.

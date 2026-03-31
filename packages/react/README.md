@@ -141,6 +141,15 @@ const { transform, transformStream, isLoading, error, clearError } = useFogUI();
 - Missing or mismatched versions log a warning unless `contractVersion.strict` is enabled.
 - In strict mode, `transform(...)` returns `success: false` and streaming emits an `error` event instead of a `result` event.
 
+## Release Compatibility
+
+- `@fogui/react` follows semver independently from the Java modules.
+- Package version and canonical contract version are different concerns: package upgrades do not automatically imply a contract-version change.
+- Patch releases should preserve adapter and renderer behavior for existing canonical payloads.
+- Minor releases may add new capabilities, but breaking renderer or adapter expectations should still be called out explicitly.
+
+Cross-package upgrade expectations live in `docs/RELEASE_COMPATIBILITY.md`.
+
 ## Adapter Conformance
 
 Adapters remain intentionally small:

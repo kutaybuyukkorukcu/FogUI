@@ -2,6 +2,8 @@
 
 FogUI is designed to run self-hosted with BYOK and a reference server.
 
+This guide is for working inside the FogUI monorepo. If you want to consume published Java artifacts from another Spring Boot project, use `docs/SPRING_BOOT_INTEGRATION_GUIDE.md` instead.
+
 Roadmap context: `docs/ROADMAP_OSS.md`
 
 ## Build all Java modules
