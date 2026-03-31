@@ -1,6 +1,6 @@
 # FogUI OSS Roadmap (Deterministic Agent UI Runtime)
 
-**Last Updated:** March 31, 2026
+**Last Updated:** March 26, 2026
 
 ## North Star
 
@@ -9,10 +9,6 @@ By October 31, 2026, FogUI should let teams running Spring AI reliably convert m
 1. A validated canonical UI contract.
 2. Deterministic stream updates.
 3. Adapter-safe rendering behavior for product design systems.
-
-## Current Execution State
-
-Phases 1 through 3 are effectively complete on `main`. Active OSS work has moved to Phase 4 adoption and release discipline, while cloud/commercial work remains deferred in `docs/ROADMAP_CLOUD.md`.
 
 ## Product Positioning
 
@@ -43,11 +39,9 @@ Deferred items stay in `docs/ROADMAP_CLOUD.md`.
 
 ## 2026 Execution Phases
 
-### Phase 1: Contract Hardening (April 1 - May 15, 2026, completed early on `main`)
+### Phase 1: Contract Hardening (April 1 - May 15, 2026)
 
 Goal: make canonical outputs explicit, versioned, and testable.
-
-Status: complete on `main`.
 
 Deliverables:
 
@@ -61,11 +55,9 @@ Exit criteria:
 1. Same payload + same rules always yields same validation result.
 2. CI includes canonical conformance fixtures as required checks.
 
-### Phase 2: Spring AI Reliability Pack (May 16 - July 1, 2026, completed early on `main`)
+### Phase 2: Spring AI Reliability Pack (May 16 - July 1, 2026)
 
 Goal: make Spring AI behavior predictable enough for production UI generation.
-
-Status: complete on `main`.
 
 Deliverables:
 
@@ -79,11 +71,9 @@ Exit criteria:
 1. Transform endpoint behavior is deterministic under policy constraints.
 2. Stream lifecycle (`result`, `usage`, `error`, `done`) is covered by integration tests.
 
-### Phase 3: Compatibility + Adapter Trust (July 2 - August 31, 2026, completed early on `main`)
+### Phase 3: Compatibility + Adapter Trust (July 2 - August 31, 2026)
 
 Goal: make interop and rendering safety measurable.
-
-Status: complete on `main`.
 
 Deliverables:
 
@@ -97,17 +87,15 @@ Exit criteria:
 1. Unknown protocol/component inputs fail safely with deterministic errors.
 2. Adapter conformance suite runs in CI.
 
-### Phase 4: OSS Adoption and Release Discipline (active now; pulled forward ahead of the original September 1 - October 31, 2026 target window)
+### Phase 4: OSS Adoption and Release Discipline (September 1 - October 31, 2026)
 
 Goal: make FogUI easy to adopt externally.
 
-Status: active.
-
 Deliverables:
 
-1. GitHub Packages publishing pipeline for `fogui-java-core` and `fogui-spring-starter`, with Maven Central kept as a later follow-up.
+1. Java artifact publishing pipeline for `fogui-java-core` and `fogui-spring-starter`.
 2. Versioning/release policy and compatibility notes per release.
-3. Standalone external quickstart for Spring Boot consumption plus `@fogui/react` integration notes.
+3. External quickstart for Spring Boot + `@fogui/react` integration.
 4. Observability starter docs (metrics, logs, tracing hooks).
 
 Exit criteria:

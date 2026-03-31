@@ -5,62 +5,20 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.1</version>
-        <relativePath/>
+        <groupId>com.genui</groupId>
+        <artifactId>fogui-modules</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.genui</groupId>
     <artifactId>fogui-spring-starter</artifactId>
-    <version>${revision}</version>
     <name>FogUI Spring Starter</name>
     <description>Spring Boot starter for FogUI compatibility and canonical contract services</description>
-    <url>https://fogui.dev</url>
 
     <properties>
         <revision>1.0.0-SNAPSHOT</revision>
-        <java.version>21</java.version>
         <spring-ai.version>1.1.0-M2</spring-ai.version>
     </properties>
-
-    <organization>
-        <name>FogUI</name>
-        <url>https://fogui.dev</url>
-    </organization>
-
-    <licenses>
-        <license>
-            <name>MIT</name>
-            <url>https://opensource.org/license/mit/</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-
-    <scm>
-        <connection>scm:git:https://github.com/kutaybuyukkorukcu/FogUI.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/kutaybuyukkorukcu/FogUI.git</developerConnection>
-        <url>https://github.com/kutaybuyukkorukcu/FogUI</url>
-        <tag>HEAD</tag>
-    </scm>
-
-    <issueManagement>
-        <system>GitHub Issues</system>
-        <url>https://github.com/kutaybuyukkorukcu/FogUI/issues</url>
-    </issueManagement>
-
-    <distributionManagement>
-        <repository>
-            <id>github</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/kutaybuyukkorukcu/FogUI</url>
-        </repository>
-        <snapshotRepository>
-            <id>github</id>
-            <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/kutaybuyukkorukcu/FogUI</url>
-        </snapshotRepository>
-    </distributionManagement>
 
     <dependencyManagement>
         <dependencies>
@@ -131,35 +89,6 @@
                         <phase>clean</phase>
                         <goals>
                             <goal>clean</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>3.3.1</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.6.3</version>
-                <configuration>
-                    <doclint>none</doclint>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
                         </goals>
                     </execution>
                 </executions>

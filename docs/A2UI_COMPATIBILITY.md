@@ -21,21 +21,6 @@ Positioning note: FogUI interoperates with A2UI payloads; it does not attempt to
 - Runs canonical validation and returns validation error details.
 - Supports request correlation with `X-FogUI-Request-Id` request/response header.
 
-## Supported subset and known gaps
-
-- Supported today: inbound translation into canonical FogUI blocks for `thinking`, plain `text`, and `component`-style content.
-- Unsupported or unknown nodes are preserved as deterministic fallback components (`A2UiUnsupportedNode`) instead of crashing translation.
-- Outbound A2UI generation is not part of the current OSS scope.
-- React never consumes raw A2UI payloads directly; backend translation is the only supported compatibility boundary.
-
-## Compatibility expectations
-
-- A2UI support is best-effort for the documented inbound subset, not a promise to mirror the entire upstream protocol surface.
-- Patch releases should preserve deterministic translation behavior for already supported nodes.
-- If a release changes supported-node behavior or fallback semantics, it should be called out in the tagged release notes.
-
-See `docs/RELEASE_COMPATIBILITY.md` for the broader package and contract policy.
-
 ## React Boundary
 
 - `@fogui/react` does not parse or validate A2UI payloads directly.

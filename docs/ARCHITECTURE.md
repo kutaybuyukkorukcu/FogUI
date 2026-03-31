@@ -70,32 +70,6 @@ Minimal verification app for:
 2. Stream flow.
 3. Compatibility flow.
 
-### `examples/spring-consumer`
-
-Standalone verification app for:
-
-1. Non-reactor Java artifact consumption.
-2. Starter auto-configuration validation.
-3. Deterministic policy and canonical bean availability checks.
-
-## Public Stability Surface
-
-Stable OSS surfaces that downstream teams should design against:
-
-1. `fogui-java-core` public canonical model and validation APIs.
-2. `fogui-spring-starter` auto-configured bean surface and advisor behavior.
-3. `@fogui/react` renderer, provider, hooks, and adapter contract.
-4. Canonical contract versioning through `metadata.contractVersion`.
-5. Core reference endpoints for transform, stream, and A2UI inbound compatibility.
-
-Reference-only surfaces that are intentionally not treated as long-term public contract:
-
-1. `backend-java` auth, API key, usage, and profile endpoints.
-2. Example applications and their internal wiring.
-3. CI workflow details and repository-local release tooling.
-
-See `docs/RELEASE_COMPATIBILITY.md` for package-version and upgrade expectations.
-
 ## Determinism Guardrails
 
 FogUI enforces trust at multiple points:
