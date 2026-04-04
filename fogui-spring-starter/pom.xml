@@ -5,20 +5,17 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.1</version>
-        <relativePath/>
+        <groupId>com.genui</groupId>
+        <artifactId>fogui-modules</artifactId>
+        <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.genui</groupId>
     <artifactId>fogui-spring-starter</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
     <name>FogUI Spring Starter</name>
     <description>Spring Boot starter for FogUI compatibility and canonical contract services</description>
 
     <properties>
-        <java.version>21</java.version>
         <spring-ai.version>1.1.0-M2</spring-ai.version>
     </properties>
 
@@ -38,7 +35,7 @@
         <dependency>
             <groupId>com.genui</groupId>
             <artifactId>fogui-java-core</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>${revision}</version>
         </dependency>
 
         <dependency>
