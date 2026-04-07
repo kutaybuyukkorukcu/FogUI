@@ -32,6 +32,8 @@ Deterministic core engine:
 3. Protocol translation primitives (A2UI inbound today).
 4. Stream parse/reconcile helpers.
 
+This module contains the highest-value deterministic logic that remains useful even outside the reference server.
+
 ### `fogui-spring-starter`
 
 Spring Boot integration layer:
@@ -39,6 +41,8 @@ Spring Boot integration layer:
 1. Auto-configures FogUI core services.
 2. Provides integration points for middleware, metrics, and runtime policy.
 3. Keeps framework-specific wiring out of `fogui-java-core`.
+
+This module is the publishable Spring integration boundary for teams that want deterministic behavior without adopting the entire reference server.
 
 ### `packages/react` (`@fogui/react`)
 
@@ -61,6 +65,14 @@ Reference server and integration harness, not the OSS product center:
    - `POST /fogui/compat/a2ui/inbound`
 2. Optional reference-server APIs:
    - auth, usage, profile endpoints.
+
+`backend-java` does contain implementation details, but mainly at the transport and orchestration layer:
+
+1. prompt construction and model invocation
+2. SSE transport and request lifecycle handling
+3. persistence, auth, and operational endpoints
+
+The deterministic contract itself is intentionally pushed down into `fogui-java-core` and `fogui-spring-starter` so those modules remain independently publishable and reusable.
 
 ### `examples/react-demo`
 

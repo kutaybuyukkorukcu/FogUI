@@ -57,8 +57,8 @@ For deterministic transform workloads:
 Run from repository root:
 
 ```bash
-./backend-java/mvnw -B -f pom.xml -pl fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
-./backend-java/mvnw -B -f pom.xml -pl fogui-spring-starter test
+./backend-java/mvnw -B -f pom.xml -pl :fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
+./backend-java/mvnw -B -f pom.xml -pl :fogui-spring-starter test
 ./backend-java/mvnw -B -f pom.xml -pl backend-java test -Dtest=TransformControllerUnitTest,TransformControllerTest,A2UiCompatibilityControllerTest,ChatClientFactoryTest
 ```
 

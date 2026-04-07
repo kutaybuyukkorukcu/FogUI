@@ -12,10 +12,10 @@ services:
       - ./pom.xml:/workspace/pom.xml
       - ./backend-java/src:/workspace/backend-java/src
       - ./backend-java/pom.xml:/workspace/backend-java/pom.xml
-      - ./fogui-java-core/src:/workspace/fogui-java-core/src
-      - ./fogui-java-core/pom.xml:/workspace/fogui-java-core/pom.xml
-      - ./fogui-spring-starter/src:/workspace/fogui-spring-starter/src
-      - ./fogui-spring-starter/pom.xml:/workspace/fogui-spring-starter/pom.xml
+      - ./packages/fogui-java-core/src:/workspace/packages/fogui-java-core/src
+      - ./packages/fogui-java-core/pom.xml:/workspace/packages/fogui-java-core/pom.xml
+      - ./packages/fogui-spring-boot-starter/src:/workspace/packages/fogui-spring-boot-starter/src
+      - ./packages/fogui-spring-boot-starter/pom.xml:/workspace/packages/fogui-spring-boot-starter/pom.xml
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - GENUI_PROVIDER=${GENUI_PROVIDER:-openai}

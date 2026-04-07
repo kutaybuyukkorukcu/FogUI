@@ -57,7 +57,7 @@ That means an inbound payload can be translated, rendered, and still be consider
 
 ## Fixture-Backed Examples
 
-These behaviors are pinned by translator fixtures in `fogui-java-core/src/test/resources/fixtures/a2ui` and enforced by `A2UiCompatibilityFixtureTest`.
+These behaviors are pinned by translator fixtures in `packages/fogui-java-core/src/test/resources/fixtures/a2ui` and enforced by `A2UiCompatibilityFixtureTest`.
 
 ### Supported Example
 
