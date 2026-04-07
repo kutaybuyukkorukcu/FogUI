@@ -1,11 +1,9 @@
 package com.genui.controller;
 
-import com.genui.entity.ApiKey;
 import com.genui.entity.User;
 import com.genui.entity.UserRole;
-import com.genui.repository.ApiKeyRepository;
 import com.genui.repository.UserRepository;
-import com.genui.security.ApiKeyAuthenticationFilter;
+import com.genui.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -24,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Integration tests for UsageController.
- * Tests usage statistics endpoint for API key authenticated users.
+ * Tests usage statistics endpoint for authenticated reference-server users.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -40,14 +38,13 @@ class UsageControllerTest {
     private UserRepository userRepository;
 
     @Autowired
-    private ApiKeyRepository apiKeyRepository;
+    private JwtService jwtService;
 
     private User testUser;
-    private String apiKey;
+    private String jwtToken;
 
     @BeforeEach
     void setUp() {
-        apiKeyRepository.deleteAll();
         userRepository.deleteAll();
 
         // Create test user
@@ -61,17 +58,7 @@ class UsageControllerTest {
                 .build();
         testUser = userRepository.save(testUser);
 
-        // Create API key for authentication
-        apiKey = "fog_live_" + "a".repeat(32);
-        String keyHash = ApiKeyAuthenticationFilter.hashApiKey(apiKey);
-        ApiKey key = ApiKey.builder()
-                .user(testUser)
-                .keyPrefix("fog_live_aaaa")
-                .keyHash(keyHash)
-                .name("Test Key")
-                .testMode(false)
-                .build();
-        apiKeyRepository.save(key);
+            jwtToken = jwtService.generateToken(testUser);
     }
 
     @Nested
@@ -82,7 +69,7 @@ class UsageControllerTest {
         @DisplayName("should return usage stats with authenticated user")
         void shouldReturnUsageStats() throws Exception {
             mockMvc.perform(get("/api/usage/stats")
-                    .header("Authorization", "Bearer " + apiKey))
+                    .header("Authorization", "Bearer " + jwtToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.currentPeriod.transforms").value(25))
                     .andExpect(jsonPath("$.currentPeriod.quota").value(100))
@@ -100,7 +87,7 @@ class UsageControllerTest {
             userRepository.save(testUser);
 
             mockMvc.perform(get("/api/usage/stats")
-                    .header("Authorization", "Bearer " + apiKey))
+                    .header("Authorization", "Bearer " + jwtToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.currentPeriod.transforms").value(80))
                     .andExpect(jsonPath("$.currentPeriod.remaining").value(20));
@@ -114,7 +101,7 @@ class UsageControllerTest {
             userRepository.save(testUser);
 
             mockMvc.perform(get("/api/usage/stats")
-                    .header("Authorization", "Bearer " + apiKey))
+                    .header("Authorization", "Bearer " + jwtToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.currentPeriod.quota").value(-1))
                     .andExpect(jsonPath("$.currentPeriod.remaining").value(-1));
@@ -126,7 +113,7 @@ class UsageControllerTest {
             String today = LocalDate.now().toString();
 
             mockMvc.perform(get("/api/usage/stats")
-                    .header("Authorization", "Bearer " + apiKey))
+                    .header("Authorization", "Bearer " + jwtToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.history[0].date").value(today));
         }
@@ -138,17 +125,17 @@ class UsageControllerTest {
             userRepository.save(testUser);
 
             mockMvc.perform(get("/api/usage/stats")
-                    .header("Authorization", "Bearer " + apiKey))
+                    .header("Authorization", "Bearer " + jwtToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.currentPeriod.transforms").value(0))
                     .andExpect(jsonPath("$.currentPeriod.remaining").value(100));
         }
 
-        // Note: Tests for unauthenticated access are omitted because the endpoint
-        // is not properly protected in SecurityConfig (uses anyRequest().permitAll()).
-        // The controller relies on @AuthenticationPrincipal which becomes null for
-        // unauthenticated requests, causing an NPE. This is a security configuration
-        // issue that should be fixed by adding /api/usage/** and /api/user/** to
-        // the authenticated endpoints in SecurityConfig.
+        @Test
+        @DisplayName("should reject unauthenticated requests")
+        void shouldRejectUnauthenticatedRequests() throws Exception {
+            mockMvc.perform(get("/api/usage/stats"))
+                    .andExpect(status().isForbidden());
+        }
     }
 }

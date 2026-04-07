@@ -26,7 +26,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
@@ -39,12 +38,11 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/health", "/actuator/**").permitAll()
-                        // Protected endpoints
-                        .requestMatchers("/fogui/**").authenticated()
-                        .requestMatchers("/api/keys/**").authenticated()
+                    .requestMatchers("/fogui/**").permitAll()
+                    // Optional reference-server account endpoints
+                    .requestMatchers("/api/user/**", "/api/usage/**").authenticated()
                         .anyRequest().permitAll())
-                .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, ApiKeyAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

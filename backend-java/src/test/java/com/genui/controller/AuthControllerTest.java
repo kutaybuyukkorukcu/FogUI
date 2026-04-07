@@ -202,9 +202,26 @@ class AuthControllerTest {
                     .andExpect(status().isUnauthorized());
         }
 
-        // Note: Testing authenticated /me endpoint requires JWT token handling
-        // which is handled by JwtAuthenticationFilter. Full E2E test would be:
-        // 1. Register -> get token
-        // 2. Call /me with Authorization: Bearer <token>
+        @Test
+        @DisplayName("should return current user when authenticated")
+        void shouldReturnCurrentUserWhenAuthenticated() throws Exception {
+            RegisterRequest request = new RegisterRequest();
+            request.setEmail("me@example.com");
+            request.setPassword("securePassword123");
+
+            String token = objectMapper.readTree(mockMvc.perform(post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()).get("token").asText();
+
+            mockMvc.perform(get("/api/auth/me")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("me@example.com"))
+                .andExpect(jsonPath("$.role").value("FREE"));
+        }
     }
 }

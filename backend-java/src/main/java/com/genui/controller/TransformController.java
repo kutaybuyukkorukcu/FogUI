@@ -1,12 +1,9 @@
 package com.genui.controller;
 
 import com.genui.contract.FogUiCanonicalContract;
-import com.genui.entity.User;
 import com.genui.model.genui.GenerativeUIResponse;
 import com.genui.model.transform.TransformRequest;
 import com.genui.model.transform.TransformResponse;
-import com.genui.repository.UserRepository;
-import com.genui.security.ApiKeyUserDetails;
 import com.genui.starter.advisor.FogUiAdvisorContextKeys;
 import com.genui.starter.advisor.FogUiAdvisorException;
 import com.genui.service.ChatClientFactory;
@@ -24,7 +21,6 @@ import org.springframework.ai.chat.prompt.Prompt;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -54,24 +50,21 @@ import java.util.Map;
 public class TransformController {
 
     private final ChatClientFactory chatClientFactory;
-    private final UserRepository userRepository;
     private final RequestCorrelationService requestCorrelationService;
     private final TransformStreamProcessor transformStreamProcessor;
 
     /**
      * POST /fogui/transform
      * Transform raw LLM text into structured UI components.
-     * Requires API key authentication.
+         * This endpoint is intentionally public in the OSS/reference runtime.
      */
     @PostMapping("/transform")
     @Operation(summary = "Transform content", description = "Converts raw model text into structured FogUI response")
     public ResponseEntity<TransformResponse> transform(
             @RequestHeader(value = RequestCorrelationService.REQUEST_ID_HEADER, required = false) String requestIdHeader,
-            @AuthenticationPrincipal ApiKeyUserDetails userDetails,
             @RequestBody TransformRequest request) {
 
         String requestId = requestCorrelationService.resolveRequestId(requestIdHeader);
-        User user = userDetails != null ? userDetails.getUser() : null;
 
         if (request.getContent() == null || request.getContent().isBlank()) {
             return ResponseEntity.badRequest()
@@ -142,14 +135,6 @@ public class TransformController {
                     .processingTimeMs(processingTime)
                     .estimatedCost(estimatedCost)
                     .build();
-
-            // Increment user's usage counter
-            if (user != null) {
-                user.incrementUsage();
-                userRepository.save(user);
-                log.debug("Usage incremented for user: {} ({}/{})",
-                        user.getEmail(), user.getUsedThisMonth(), user.getMonthlyQuota());
-            }
 
             log.info("Transform completed in {}ms, ~{} tokens", processingTime, estimatedTokens);
 

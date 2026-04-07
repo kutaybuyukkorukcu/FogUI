@@ -38,16 +38,16 @@ export const fogUIResponseSchema = z.object({
 });
 
 export const fogUITransformUsageSchema = z.object({
-    transformTokens: z.number().optional(),
-    model: z.string().optional(),
-    estimatedCost: z.number().optional(),
-    processingTimeMs: z.number().optional(),
+    transformTokens: z.number().nullable().optional(),
+    model: z.string().nullable().optional(),
+    estimatedCost: z.number().nullable().optional(),
+    processingTimeMs: z.number().nullable().optional(),
 }).catchall(z.unknown());
 
 export const fogUITransformResultSchema = z.object({
     success: z.boolean(),
     result: fogUIResponseSchema.optional(),
-    error: z.string().optional(),
+    error: z.string().nullable().optional(),
     usage: fogUITransformUsageSchema.optional(),
 }).superRefine((value, context) => {
     if (value.success && !value.result) {
@@ -58,7 +58,7 @@ export const fogUITransformResultSchema = z.object({
         });
     }
 
-    if (!value.success && !value.error && !value.result) {
+    if (!value.success && value.error == null && !value.result) {
         context.addIssue({
             code: 'custom',
             path: ['error'],

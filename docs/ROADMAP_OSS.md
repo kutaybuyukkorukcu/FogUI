@@ -1,6 +1,6 @@
 # FogUI OSS Roadmap (Deterministic Agent UI Runtime)
 
-**Last Updated:** March 26, 2026
+**Last Updated:** April 6, 2026
 
 ## North Star
 
@@ -26,7 +26,7 @@ FogUI owns deterministic contract enforcement, compatibility translation, and ru
 
 1. `fogui-java-core` for canonical schema, validation, protocol translation primitives, stream reconciliation.
 2. `fogui-spring-starter` for Spring Boot integration and runtime wiring.
-3. `packages/react` for canonical rendering and adapter behavior guarantees.
+3. `packages/react` for canonical rendering and adapter behavior guarantees, kept intentionally narrow as a reference trust surface.
 4. `backend-java` and `examples/react-demo` as reference implementations.
 
 ### Out of active OSS scope
@@ -36,6 +36,17 @@ FogUI owns deterministic contract enforcement, compatibility translation, and ru
 3. Commercial GTM experiments.
 
 Deferred items stay in `docs/ROADMAP_CLOUD.md`.
+
+## Current Execution Status
+
+As of April 6, 2026, implementation is ahead of the original dated phase plan:
+
+1. Phase 1 is complete.
+2. Phase 2 is complete.
+3. Phase 3 is mostly complete; remaining work is A2UI compatibility hardening around supported-subset documentation and deterministic diagnostics.
+4. Phase 4 groundwork exists; GitHub Packages release automation is available as an interim lane, while Maven Central remains the intended long-term target and is still TBD.
+5. No active roadmap item exists to add protocol bridges beyond A2UI unless product direction changes.
+6. Near-term focus shifts back to implementation hardening and firsthand observation of deterministic behavior before broader external-usability work.
 
 ## 2026 Execution Phases
 
@@ -77,7 +88,7 @@ Goal: make interop and rendering safety measurable.
 
 Deliverables:
 
-1. A2UI inbound compatibility expansion (documented supported subset and gaps).
+1. A2UI inbound compatibility hardening (documented supported subset, deterministic diagnostics, and explicit gaps).
 2. Adapter conformance checks for required mappings and prop transforms.
 3. Deterministic action lifecycle checks in `@fogui/react`.
 4. Reference demo scenarios proving transform, stream, and compat flows.
@@ -93,15 +104,17 @@ Goal: make FogUI easy to adopt externally.
 
 Deliverables:
 
-1. Java artifact publishing pipeline for `fogui-java-core` and `fogui-spring-starter`.
+1. Interim Java artifact publishing lane for `fogui-java-core` and `fogui-spring-starter` via GitHub Packages.
 2. Versioning/release policy and compatibility notes per release.
-3. External quickstart for Spring Boot + `@fogui/react` integration.
+3. External quickstart for Spring Boot consumption of published Java artifacts.
 4. Observability starter docs (metrics, logs, tracing hooks).
+5. Define Maven Central migration requirements after the OSS API surface stabilizes.
 
 Exit criteria:
 
 1. External teams can consume released Java artifacts without cloning the monorepo.
-2. New contributor can understand core vs reference boundaries in under 5 minutes.
+2. The path from interim GitHub Packages releases to Maven Central is explicit.
+3. New contributor can understand core vs reference boundaries in under 5 minutes.
 
 ## Backend Specialization Track (Spring AI Learning Outcomes)
 

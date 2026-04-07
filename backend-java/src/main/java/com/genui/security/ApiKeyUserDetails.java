@@ -9,7 +9,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Custom UserDetails implementation for API key authenticated users.
+ * Custom UserDetails implementation for authenticated reference-server users.
  */
 public class ApiKeyUserDetails implements UserDetails {
 
@@ -30,7 +30,7 @@ public class ApiKeyUserDetails implements UserDetails {
 
     @Override
     public String getPassword() {
-        return null; // Not used for API key auth
+        return null; // Not used for token-based auth
     }
 
     @Override

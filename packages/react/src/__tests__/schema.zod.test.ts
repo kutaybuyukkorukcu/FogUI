@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   fogUIResponseSchema,
+  fogUIStreamErrorSchema,
+  fogUIStreamUsageSchema,
   fogUITransformResultSchema,
 } from '../types/schema.zod';
 
@@ -166,11 +168,162 @@ describe('fogUIResponseSchema', () => {
     expect(fogUITransformResultSchema.safeParse(payload).success).toBe(true);
   });
 
+  it('accepts transform usage objects with nullable fields and extra metadata', () => {
+    const payload = {
+      success: true,
+      result: {
+        thinking: [],
+        content: [],
+      },
+      usage: {
+        transformTokens: null,
+        model: null,
+        estimatedCost: null,
+        processingTimeMs: null,
+        provider: 'test-provider',
+      },
+    };
+
+    expect(fogUITransformResultSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it('accepts backend transform envelopes with null error fields', () => {
+    const payload = {
+      success: true,
+      result: {
+        thinking: [],
+        content: [
+          {
+            type: 'component',
+            value: null,
+            componentType: 'Card',
+            props: {
+              title: 'Launch Readiness Summary',
+              description: 'All systems are prepared for launch.',
+            },
+            children: null,
+          },
+          {
+            type: 'text',
+            value: 'Operator Note: Ensure all safety protocols are followed.',
+            componentType: null,
+            props: null,
+            children: null,
+          },
+        ],
+        metadata: {
+          contractVersion: 'fogui/1.0',
+        },
+      },
+      error: null,
+      errorCode: null,
+      errorDetails: null,
+      usage: {
+        model: 'gpt-4.1-nano',
+        transformTokens: 31,
+        estimatedCost: 0.0000186,
+        processingTimeMs: 2263,
+      },
+      sessionId: null,
+      requestId: 'fogui-aebb939d-4fe8-41ff-8839-12da43e29080',
+    };
+
+    expect(fogUITransformResultSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it('accepts failed transform envelopes with either an error or a fallback result', () => {
+    const withError = {
+      success: false,
+      error: 'Transform failed',
+    };
+    const withResult = {
+      success: false,
+      result: {
+        thinking: [],
+        content: [{ type: 'text', value: 'partial fallback' }],
+      },
+    };
+
+    expect(fogUITransformResultSchema.safeParse(withError).success).toBe(true);
+    expect(fogUITransformResultSchema.safeParse(withResult).success).toBe(true);
+  });
+
   it('rejects successful transform envelopes without results', () => {
     const payload = {
       success: true,
     };
 
     expect(fogUITransformResultSchema.safeParse(payload).success).toBe(false);
+  });
+
+  it('rejects failed transform envelopes without an error or result', () => {
+    const payload = {
+      success: false,
+      error: null,
+    };
+
+    expect(fogUITransformResultSchema.safeParse(payload).success).toBe(false);
+  });
+
+  it('rejects text blocks with non-string values', () => {
+    const payload = {
+      thinking: [],
+      content: [{ type: 'text', value: 42 }],
+    };
+
+    expect(fogUIResponseSchema.safeParse(payload).success).toBe(false);
+  });
+
+  it('rejects nested component trees with invalid child blocks', () => {
+    const payload = {
+      thinking: [],
+      content: [
+        {
+          type: 'component',
+          componentType: 'Container',
+          children: [
+            {
+              type: 'text',
+              value: 99,
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(fogUIResponseSchema.safeParse(payload).success).toBe(false);
+  });
+});
+
+describe('stream schemas', () => {
+  it('accepts stream usage with extra fields', () => {
+    const payload = {
+      transformTokens: 11,
+      processingTimeMs: 320,
+      model: 'stream-model',
+    };
+
+    expect(fogUIStreamUsageSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it('rejects invalid stream usage field types', () => {
+    const payload = {
+      transformTokens: '11',
+    };
+
+    expect(fogUIStreamUsageSchema.safeParse(payload).success).toBe(false);
+  });
+
+  it('accepts stream errors with additional metadata', () => {
+    const payload = {
+      error: 'Stream interrupted',
+      code: 'STREAM_ABORT',
+    };
+
+    expect(fogUIStreamErrorSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it('rejects stream errors without a message', () => {
+    expect(fogUIStreamErrorSchema.safeParse({ code: 'STREAM_ABORT' }).success).toBe(false);
   });
 });

@@ -25,10 +25,10 @@ export interface FogUIActionErrorPayload extends FogUIActionPayload {
 }
 
 export interface TransformUsage {
-  readonly transformTokens?: number;
-  readonly model?: string;
-  readonly estimatedCost?: number;
-  readonly processingTimeMs?: number;
+  readonly transformTokens?: number | null;
+  readonly model?: string | null;
+  readonly estimatedCost?: number | null;
+  readonly processingTimeMs?: number | null;
   readonly [key: string]: unknown;
 }
 

@@ -15,7 +15,6 @@ FogUI transform and compatibility endpoints support request correlation by `X-Fo
 
 ```bash
 curl -i -X POST http://localhost:5001/fogui/transform \
-  -H "Authorization: Bearer fog_live_xxx" \
   -H "Content-Type: application/json" \
   -H "X-FogUI-Request-Id: req-demo-001" \
   -d '{"content":"Summarize system health"}'

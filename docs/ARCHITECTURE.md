@@ -60,7 +60,7 @@ Reference server and integration harness, not the OSS product center:
    - `POST /fogui/transform/stream`
    - `POST /fogui/compat/a2ui/inbound`
 2. Optional reference-server APIs:
-   - auth, API key, usage, profile endpoints.
+   - auth, usage, profile endpoints.
 
 ### `examples/react-demo`
 

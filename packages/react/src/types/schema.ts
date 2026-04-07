@@ -2,6 +2,7 @@ export const FOGUI_RECOMMENDED_COMPONENT_TYPES = [
   'Badge',
   'Button',
   'Card',
+  'Container',
   'Form',
   'Grid',
   'Input',

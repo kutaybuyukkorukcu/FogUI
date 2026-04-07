@@ -150,6 +150,58 @@ describe('useFogUI', () => {
     });
   });
 
+  it('should accept successful backend envelopes that include null error metadata', async () => {
+    const mockResponse = {
+      success: true,
+      result: withContractVersion({
+        thinking: [],
+        content: [
+          {
+            type: 'component',
+            value: null,
+            componentType: 'Card',
+            props: {
+              title: 'Launch Readiness Summary',
+              description: 'All systems are prepared for launch.',
+            },
+            children: null,
+          },
+          {
+            type: 'text',
+            value: 'Operator Note: Ensure all safety protocols are followed.',
+            componentType: null,
+            props: null,
+            children: null,
+          },
+        ],
+      }),
+      error: null,
+      errorCode: null,
+      errorDetails: null,
+      usage: {
+        model: 'gpt-4.1-nano',
+        transformTokens: 31,
+        estimatedCost: 0.0000186,
+        processingTimeMs: 2263,
+      },
+      sessionId: null,
+      requestId: 'fogui-aebb939d-4fe8-41ff-8839-12da43e29080',
+    };
+
+    fetchMock.mockReturnValue(createFetchResponse(mockResponse));
+    const { result } = renderHook(() => useFogUI(), { wrapper });
+
+    await waitFor(async () => {
+      const transformResult = await result.current.transform('launch readiness');
+      expect(transformResult.success).toBe(true);
+      if (transformResult.success) {
+        expect(transformResult.result.content).toHaveLength(2);
+      }
+    });
+
+    expect(result.current.error).toBe(null);
+  });
+
   it('should omit Authorization header when apiKey is not provided', async () => {
     const mockResponse = {
       success: true,

@@ -9,6 +9,47 @@ function stringifyValue(value: unknown): string {
     return JSON.stringify(value);
 }
 
+function resolveGap(gap: unknown, fallback = 8): number {
+    if (typeof gap === 'number' && Number.isFinite(gap)) {
+        return gap;
+    }
+
+    if (typeof gap === 'string') {
+        const normalizedGap = gap.toLowerCase();
+        if (normalizedGap === 'sm') {
+            return 8;
+        }
+        if (normalizedGap === 'md') {
+            return 12;
+        }
+        if (normalizedGap === 'lg') {
+            return 16;
+        }
+
+        const parsedGap = Number(normalizedGap);
+        if (Number.isFinite(parsedGap)) {
+            return parsedGap;
+        }
+    }
+
+    return fallback;
+}
+
+function resolveColumns(columns: unknown, fallback = 2): number {
+    if (typeof columns === 'number' && Number.isInteger(columns) && columns > 0) {
+        return columns;
+    }
+
+    if (typeof columns === 'string') {
+        const parsedColumns = Number(columns);
+        if (Number.isInteger(parsedColumns) && parsedColumns > 0) {
+            return parsedColumns;
+        }
+    }
+
+    return fallback;
+}
+
 const Button: React.FC<any> = ({ children, label, onAction, ...props }) => (
     <button type="button" onClick={() => onAction?.('click')} {...props}>{children ?? label}</button>
 );
@@ -36,7 +77,7 @@ const Stack: React.FC<any> = ({ children, direction = 'vertical', gap = 8, style
         style={{
             display: 'flex',
             flexDirection: direction === 'horizontal' ? 'row' : 'column',
-            gap,
+            gap: resolveGap(gap),
             ...style,
         }}
     >
@@ -49,14 +90,32 @@ const Grid: React.FC<any> = ({ children, columns = 2, gap = 8, style, ...props }
         {...props}
         style={{
             display: 'grid',
-            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-            gap,
+            gridTemplateColumns: `repeat(${resolveColumns(columns)}, minmax(0, 1fr))`,
+            gap: resolveGap(gap),
             ...style,
         }}
     >
         {children}
     </div>
 );
+
+const Container: React.FC<any> = ({ children, layout = 'stack', columns = 2, gap = 8, style, ...props }) => {
+    const normalizedLayout = typeof layout === 'string' ? layout.toLowerCase() : 'stack';
+
+    if (normalizedLayout === 'grid') {
+        return (
+            <Grid {...props} columns={resolveColumns(columns)} gap={resolveGap(gap)} style={style}>
+                {children}
+            </Grid>
+        );
+    }
+
+    return (
+        <Stack {...props} gap={resolveGap(gap)} style={style}>
+            {children}
+        </Stack>
+    );
+};
 
 const Table: React.FC<any> = ({ headers = [], rows = [] }) => (
     <table>
@@ -92,6 +151,7 @@ export const headlessAdapter = createAdapter({
         Badge,
         Button,
         Card,
+        Container,
         Form,
         Grid,
         Input,
