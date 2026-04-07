@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { headlessAdapter } from '../adapters/headless';
 import { createAdapter, getAdapterConformance } from '../utils';
@@ -48,6 +48,26 @@ describe('adapters', () => {
     expect(container.querySelectorAll('ul').length).toBe(1);
   });
 
+  it('stringifies complex table and list values', () => {
+    const Table = headlessAdapter.components.Table;
+    const List = headlessAdapter.components.List;
+
+    render(
+      <>
+        <Table
+          headers={['Payload', 'Enabled']}
+          rows={[[{ status: 'ok' }, false]]}
+        />
+        <List items={[{ id: 7, label: 'queued' }, true]} ordered={false} />
+      </>
+    );
+
+    expect(screen.getByText('{"status":"ok"}')).toBeInTheDocument();
+    expect(screen.getAllByText('false')).toHaveLength(1);
+    expect(screen.getByText('{"id":7,"label":"queued"}')).toBeInTheDocument();
+    expect(screen.getByText('true')).toBeInTheDocument();
+  });
+
   it('renders headless layout components with inline layout styles', () => {
     const Container = headlessAdapter.components.Container;
     const Stack = headlessAdapter.components.Stack;
@@ -75,6 +95,46 @@ describe('adapters', () => {
     expect(screen.getByTestId('stack')).toHaveStyle({ flexDirection: 'row', gap: '2px' });
     expect(screen.getByTestId('grid')).toHaveStyle({ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' });
     expect(screen.getByTestId('tabs')).toHaveTextContent('tab-content');
+  });
+
+  it('normalizes layout props and falls back for invalid values', () => {
+    const Container = headlessAdapter.components.Container;
+    const Grid = headlessAdapter.components.Grid;
+    const Stack = headlessAdapter.components.Stack;
+
+    render(
+      <>
+        <Container layout="GRID" columns="4" gap="12" data-testid="container-grid-string">cell</Container>
+        <Container layout="masonry" gap="unknown" data-testid="container-fallback">fallback</Container>
+        <Grid columns="0" gap="bad" data-testid="grid-fallback">cell</Grid>
+        <Stack direction="vertical" gap="md" data-testid="stack-md">item</Stack>
+      </>
+    );
+
+    expect(screen.getByTestId('container-grid-string')).toHaveStyle({
+      gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+      gap: '12px',
+    });
+    expect(screen.getByTestId('container-fallback')).toHaveStyle({
+      flexDirection: 'column',
+      gap: '8px',
+    });
+    expect(screen.getByTestId('grid-fallback')).toHaveStyle({
+      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+      gap: '8px',
+    });
+    expect(screen.getByTestId('stack-md')).toHaveStyle({ gap: '12px' });
+  });
+
+  it('dispatches button actions on click', () => {
+    const Button = headlessAdapter.components.Button;
+    const onAction = vi.fn();
+
+    render(<Button onAction={onAction}>Run</Button>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+
+    expect(onAction).toHaveBeenCalledWith('click');
   });
 
   it('reports adapter conformance issues for missing required components', () => {
