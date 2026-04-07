@@ -171,14 +171,20 @@ jobs:
           name: backend-build
           path: .
 
-      - name: Verify Java analysis inputs exist
+      - name: Verify Java analysis and coverage inputs exist
         run: |
           test -d fogui-java-core/target/classes
           test -d fogui-spring-starter/target/classes
           test -d backend-java/target/classes
+          test -f fogui-java-core/target/site/jacoco/jacoco.xml
+          test -f fogui-spring-starter/target/site/jacoco/jacoco.xml
+          test -f backend-java/target/site/jacoco/jacoco.xml
           ls -la fogui-java-core/target | head
           ls -la fogui-spring-starter/target | head
           ls -la backend-java/target | head
+          ls -la fogui-java-core/target/site/jacoco | head
+          ls -la fogui-spring-starter/target/site/jacoco | head
+          ls -la backend-java/target/site/jacoco | head
 
       - name: Download frontend coverage
         uses: actions/download-artifact@v4

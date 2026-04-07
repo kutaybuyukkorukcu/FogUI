@@ -49,18 +49,29 @@ describe('adapters', () => {
   });
 
   it('renders headless layout components with inline layout styles', () => {
+    const Container = headlessAdapter.components.Container;
     const Stack = headlessAdapter.components.Stack;
     const Grid = headlessAdapter.components.Grid;
     const Tabs = headlessAdapter.components.Tabs;
 
     render(
       <>
+        <Container layout="grid" columns={3} gap="lg" data-testid="container-grid">cell</Container>
+        <Container layout="stack" gap="sm" data-testid="container-stack">stacked</Container>
         <Stack direction="horizontal" gap={2} data-testid="stack">item</Stack>
         <Grid columns={3} gap={6} data-testid="grid">cell</Grid>
         <Tabs data-testid="tabs">tab-content</Tabs>
       </>
     );
 
+    expect(screen.getByTestId('container-grid')).toHaveStyle({
+      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+      gap: '16px',
+    });
+    expect(screen.getByTestId('container-stack')).toHaveStyle({
+      flexDirection: 'column',
+      gap: '8px',
+    });
     expect(screen.getByTestId('stack')).toHaveStyle({ flexDirection: 'row', gap: '2px' });
     expect(screen.getByTestId('grid')).toHaveStyle({ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' });
     expect(screen.getByTestId('tabs')).toHaveTextContent('tab-content');

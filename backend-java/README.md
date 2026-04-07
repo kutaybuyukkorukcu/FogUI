@@ -2,7 +2,7 @@
 
 `backend-java` is the **reference implementation** for FogUI integration.
 
-It demonstrates how to expose deterministic transform/stream/compatibility APIs and includes optional product-style endpoints for auth/API-key management.
+It demonstrates how to expose deterministic transform/stream/compatibility APIs and includes optional reference endpoints for JWT-backed auth, profile, and usage inspection.
 
 ## Tech Stack
 
@@ -27,7 +27,7 @@ Reference server URL: `http://localhost:5001`
 - `POST /fogui/transform/stream` (SSE)
 - `POST /fogui/compat/a2ui/inbound` (A2UI -> FogUI canonical translation)
 
-These require `Authorization: Bearer <fog_live_... | fog_test_...>`.
+These are public endpoints and do not require API keys or JWTs.
 
 ## Deterministic Runtime Defaults
 
@@ -48,10 +48,6 @@ These are useful for integration harness scenarios, but are not considered FogUI
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
-- `GET /api/keys`
-- `POST /api/keys`
-- `DELETE /api/keys/{id}`
-- `POST /api/keys/{id}/rotate`
 - `GET /api/usage/stats`
 - `GET /api/user/profile`
 - `PUT /api/user/profile`

@@ -2,12 +2,10 @@ package com.genui.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.genui.dto.UserProfile;
-import com.genui.entity.ApiKey;
 import com.genui.entity.User;
 import com.genui.entity.UserRole;
-import com.genui.repository.ApiKeyRepository;
 import com.genui.repository.UserRepository;
-import com.genui.security.ApiKeyAuthenticationFilter;
+import com.genui.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,14 +42,13 @@ class UserControllerTest {
     private UserRepository userRepository;
 
     @Autowired
-    private ApiKeyRepository apiKeyRepository;
+        private JwtService jwtService;
 
     private User testUser;
-    private String apiKey;
+        private String jwtToken;
 
     @BeforeEach
     void setUp() {
-        apiKeyRepository.deleteAll();
         userRepository.deleteAll();
 
         // Create test user
@@ -63,17 +60,7 @@ class UserControllerTest {
                 .build();
         testUser = userRepository.save(testUser);
 
-        // Create API key for authentication
-        apiKey = "fog_live_" + "b".repeat(32);
-        String keyHash = ApiKeyAuthenticationFilter.hashApiKey(apiKey);
-        ApiKey key = ApiKey.builder()
-                .user(testUser)
-                .keyPrefix("fog_live_bbbb")
-                .keyHash(keyHash)
-                .name("Test Key")
-                .testMode(false)
-                .build();
-        apiKeyRepository.save(key);
+        jwtToken = jwtService.generateToken(testUser);
     }
 
     @Nested
@@ -84,7 +71,7 @@ class UserControllerTest {
         @DisplayName("should return user profile with authenticated user")
         void shouldReturnUserProfile() throws Exception {
             mockMvc.perform(get("/api/user/profile")
-                    .header("Authorization", "Bearer " + apiKey))
+                                        .header("Authorization", "Bearer " + jwtToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(testUser.getId().toString()))
                     .andExpect(jsonPath("$.email").value("user-test@example.com"))
@@ -92,7 +79,12 @@ class UserControllerTest {
                     .andExpect(jsonPath("$.createdAt").exists());
         }
 
-        // Note: Test for unauthenticated access omitted - see comment at end of file.
+                @Test
+                @DisplayName("should reject unauthenticated access")
+                void shouldRejectUnauthenticatedAccess() throws Exception {
+                        mockMvc.perform(get("/api/user/profile"))
+                                        .andExpect(status().isForbidden());
+                }
     }
 
     @Nested
@@ -107,7 +99,7 @@ class UserControllerTest {
                     .build();
 
             mockMvc.perform(put("/api/user/profile")
-                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Authorization", "Bearer " + jwtToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -131,7 +123,7 @@ class UserControllerTest {
                     .build();
 
             mockMvc.perform(put("/api/user/profile")
-                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Authorization", "Bearer " + jwtToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict());
@@ -145,7 +137,7 @@ class UserControllerTest {
                     .build();
 
             mockMvc.perform(put("/api/user/profile")
-                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Authorization", "Bearer " + jwtToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -160,7 +152,7 @@ class UserControllerTest {
                     .build();
 
             mockMvc.perform(put("/api/user/profile")
-                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Authorization", "Bearer " + jwtToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -175,18 +167,11 @@ class UserControllerTest {
                     .build();
 
             mockMvc.perform(put("/api/user/profile")
-                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Authorization", "Bearer " + jwtToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.email").value("user-test@example.com"));
         }
-
-        // Note: Tests for unauthenticated access are omitted because the endpoint
-        // is not properly protected in SecurityConfig (uses anyRequest().permitAll()).
-        // The controller relies on @AuthenticationPrincipal which becomes null for
-        // unauthenticated requests, causing an NPE. This is a security configuration
-        // issue that should be fixed by adding /api/usage/** and /api/user/** to
-        // the authenticated endpoints in SecurityConfig.
     }
 }

@@ -6,7 +6,6 @@ const appRoot = resolve(__dirname);
 const foguiReactRoot = resolve(__dirname, '../../packages/react');
 const foguiReactEntry = resolve(foguiReactRoot, 'src/index.ts');
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -16,11 +15,7 @@ export default defineConfig({
   },
   server: {
     fs: {
-      allow: [
-        searchForWorkspaceRoot(appRoot),
-        appRoot,
-        foguiReactRoot,
-      ],
+      allow: [searchForWorkspaceRoot(appRoot), appRoot, foguiReactRoot],
     },
   },
   optimizeDeps: {

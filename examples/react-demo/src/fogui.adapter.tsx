@@ -10,6 +10,7 @@ export const DEMO_REQUIRED_COMPONENTS = [
   'Badge',
   'Button',
   'Card',
+  'Container',
   'Form',
   'Grid',
   'Input',
@@ -25,6 +26,47 @@ const surfaceStyle: React.CSSProperties = {
   padding: 14,
   background: '#ffffff',
 };
+
+function resolveGap(gap: unknown, fallback = 8): number {
+  if (typeof gap === 'number' && Number.isFinite(gap)) {
+    return gap;
+  }
+
+  if (typeof gap === 'string') {
+    const normalizedGap = gap.toLowerCase();
+    if (normalizedGap === 'sm') {
+      return 8;
+    }
+    if (normalizedGap === 'md') {
+      return 12;
+    }
+    if (normalizedGap === 'lg') {
+      return 16;
+    }
+
+    const parsedGap = Number(normalizedGap);
+    if (Number.isFinite(parsedGap)) {
+      return parsedGap;
+    }
+  }
+
+  return fallback;
+}
+
+function resolveColumns(columns: unknown): number | null {
+  if (typeof columns === 'number' && Number.isInteger(columns) && columns > 0) {
+    return columns;
+  }
+
+  if (typeof columns === 'string') {
+    const parsedColumns = Number(columns);
+    if (Number.isInteger(parsedColumns) && parsedColumns > 0) {
+      return parsedColumns;
+    }
+  }
+
+  return null;
+}
 
 function stringifyValue(value: unknown): string {
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -111,12 +153,64 @@ const Table = ({ headers = [] as string[], rows = [] as unknown[] }: { headers?:
   );
 };
 
-const Stack = ({ children }: { children?: React.ReactNode }) => (
-  <div style={{ display: 'grid', gap: 10 }}>{children}</div>
+const Container = ({
+  children,
+  layout,
+  columns,
+  gap,
+}: {
+  children?: React.ReactNode;
+  layout?: string;
+  columns?: number | string;
+  gap?: number | string;
+}) => {
+  const resolvedGap = resolveGap(gap);
+  const normalizedLayout = typeof layout === 'string' ? layout.toLowerCase() : 'stack';
+  const resolvedColumns = resolveColumns(columns);
+
+  if (normalizedLayout === 'grid') {
+    return (
+      <div
+        style={{
+          display: 'grid',
+          gap: resolvedGap,
+          gridTemplateColumns: resolvedColumns
+            ? `repeat(${resolvedColumns}, minmax(0, 1fr))`
+            : 'repeat(auto-fit, minmax(180px, 1fr))',
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  return <div style={{ display: 'grid', gap: resolvedGap }}>{children}</div>;
+};
+
+const Stack = ({ children, gap }: { children?: React.ReactNode; gap?: number | string }) => (
+  <div style={{ display: 'grid', gap: resolveGap(gap) }}>{children}</div>
 );
 
-const Grid = ({ children }: { children?: React.ReactNode }) => (
-  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' }}>{children}</div>
+const Grid = ({
+  children,
+  columns,
+  gap,
+}: {
+  children?: React.ReactNode;
+  columns?: number | string;
+  gap?: number | string;
+}) => (
+  <div
+    style={{
+      display: 'grid',
+      gap: resolveGap(gap),
+      gridTemplateColumns: resolveColumns(columns)
+        ? `repeat(${resolveColumns(columns)}, minmax(0, 1fr))`
+        : 'repeat(auto-fit, minmax(180px, 1fr))',
+    }}
+  >
+    {children}
+  </div>
 );
 
 const Button = ({ label, onAction }: { label?: string; onAction?: (action: string, data?: unknown) => void }) => (
@@ -183,6 +277,7 @@ const DemoFallback = ({
 export const demoAdapter = createAdapter({
   components: {
     Card,
+    Container,
     Badge,
     List,
     Table,

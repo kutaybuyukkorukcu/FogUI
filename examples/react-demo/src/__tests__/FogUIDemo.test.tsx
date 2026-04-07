@@ -76,6 +76,57 @@ const transformResult = {
   },
 };
 
+const containerTransformResult = {
+  success: true,
+  result: {
+    thinking: [],
+    content: [
+      {
+        type: 'component',
+        value: null,
+        componentType: 'Container',
+        props: {
+          layout: 'stack',
+          gap: 'sm',
+        },
+        children: [
+          {
+            type: 'component',
+            value: null,
+            componentType: 'Card',
+            props: {
+              title: 'Weekly KPI Summary',
+              description: 'Key performance indicators for the week',
+            },
+            children: null,
+          },
+          {
+            type: 'component',
+            value: null,
+            componentType: 'List',
+            props: {
+              items: [
+                'Sales Growth: 12%',
+                'Customer Satisfaction: 4.8/5',
+                'New Users: 150',
+              ],
+            },
+            children: null,
+          },
+        ],
+      },
+    ],
+    metadata: {
+      contractVersion: 'fogui/1.0',
+    },
+  },
+  usage: {
+    model: 'test-model',
+    transformTokens: 16,
+    processingTimeMs: 52,
+  },
+};
+
 describe('FogUIDemo', () => {
   beforeEach(() => {
     fetchMock.mockReset();
@@ -105,6 +156,20 @@ describe('FogUIDemo', () => {
       'http://localhost:5001/fogui/transform',
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+
+  it('renders canonical Container blocks returned by backend transforms', async () => {
+    fetchMock.mockReturnValueOnce(createJsonResponse(containerTransformResult));
+
+    render(<FogUIDemo />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run Transform' }));
+
+    expect(await screen.findByText('Weekly KPI Summary')).toBeInTheDocument();
+    expect(screen.getByText('Sales Growth: 12%')).toBeInTheDocument();
+    expect(screen.getByText('Customer Satisfaction: 4.8/5')).toBeInTheDocument();
+    expect(screen.queryByTestId('demo-adapter-fallback')).not.toBeInTheDocument();
+    expect(screen.getByTestId('response-summary')).toHaveTextContent('source=transform');
   });
 
   it('runs stream flow and records stream events', async () => {

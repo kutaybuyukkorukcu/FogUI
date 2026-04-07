@@ -1,20 +1,13 @@
 package com.genui.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.genui.entity.ApiKey;
-import com.genui.entity.User;
-import com.genui.entity.UserRole;
 import com.genui.model.genui.ContentBlock;
 import com.genui.model.genui.GenerativeUIResponse;
 import com.genui.model.genui.ThinkingItem;
 import com.genui.model.transform.TransformRequest;
-import com.genui.repository.ApiKeyRepository;
-import com.genui.repository.UserRepository;
-import com.genui.security.ApiKeyAuthenticationFilter;
 import com.genui.service.ChatClientFactory;
 import com.genui.service.RequestCorrelationService;
 import com.genui.starter.advisor.FogUiAdvisorException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -58,45 +50,8 @@ class TransformControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ApiKeyRepository apiKeyRepository;
-
     @MockitoBean
     private ChatClientFactory chatClientFactory;
-
-    private User testUser;
-    private String apiKey;
-
-    @BeforeEach
-    void setUp() {
-        apiKeyRepository.deleteAll();
-        userRepository.deleteAll();
-
-        // Create test user
-        testUser = User.builder()
-                .email("transform-test@example.com")
-                .passwordHash("hashed")
-                .role(UserRole.FREE)
-                .monthlyQuota(100)
-                .build();
-        testUser = userRepository.save(testUser);
-
-        // Create API key for authentication
-        apiKey = "fog_live_" + "a".repeat(32);
-        String keyHash = ApiKeyAuthenticationFilter.hashApiKey(apiKey);
-
-        ApiKey key = ApiKey.builder()
-                .user(testUser)
-                .keyPrefix("fog_live_aaaa")
-                .keyHash(keyHash)
-                .name("Test Key")
-                .testMode(false)
-                .build();
-        apiKeyRepository.save(key);
-    }
 
     @Nested
     @DisplayName("POST /fogui/transform")
@@ -115,7 +70,6 @@ class TransformControllerTest {
             request.setContent("Tell me about the Tesla Model 3");
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-transform-1")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
@@ -140,7 +94,6 @@ class TransformControllerTest {
             request.setContent("Compare iPhone and Android");
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -155,7 +108,6 @@ class TransformControllerTest {
             request.setContent("");
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -171,35 +123,46 @@ class TransformControllerTest {
             // content is null
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
-        @DisplayName("should return 401 without API key")
-        void shouldReturn401WithoutApiKey() throws Exception {
+        @DisplayName("should allow transform without authentication")
+        void shouldAllowTransformWithoutAuthentication() throws Exception {
+            GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                    .content(List.of(ContentBlock.text("Public transform")))
+                    .build();
+            mockChatClient(uiResponse);
+
             TransformRequest request = new TransformRequest();
             request.setContent("Some content");
 
             mockMvc.perform(post("/fogui/transform")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
         }
 
         @Test
-        @DisplayName("should return 401 for invalid API key")
-        void shouldReturn401ForInvalidApiKey() throws Exception {
+        @DisplayName("should ignore irrelevant authorization headers for public transform")
+        void shouldIgnoreIrrelevantAuthorizationHeadersForPublicTransform() throws Exception {
+            GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
+                    .content(List.of(ContentBlock.text("Legacy auth ignored")))
+                    .build();
+            mockChatClient(uiResponse);
+
             TransformRequest request = new TransformRequest();
             request.setContent("Some content");
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer fog_live_invalid")
+                    .header("Authorization", "Bearer ignored-by-public-transform")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
         }
 
         @Test
@@ -214,7 +177,6 @@ class TransformControllerTest {
             request.setContent("Say hello");
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -241,36 +203,11 @@ class TransformControllerTest {
             request.setContext(context);
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.result.content[0].componentType").value("chart"));
-        }
-
-        @Test
-        @DisplayName("should increment user usage after successful transform")
-        void shouldIncrementUserUsageAfterTransform() throws Exception {
-            GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
-                    .content(List.of(ContentBlock.text("Test")))
-                    .build();
-            mockChatClient(uiResponse);
-
-            int initialUsage = testUser.getUsedThisMonth();
-
-            TransformRequest request = new TransformRequest();
-            request.setContent("Test content");
-
-            mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk());
-
-            // Verify usage was incremented
-            User updatedUser = userRepository.findById(testUser.getId()).orElseThrow();
-            assertEquals(initialUsage + 1, updatedUser.getUsedThisMonth());
         }
 
         @Test
@@ -283,7 +220,6 @@ class TransformControllerTest {
             request.setContent("Some content");
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isInternalServerError())
@@ -305,7 +241,6 @@ class TransformControllerTest {
             request.setContent("Some content");
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-advisor-1")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
@@ -328,7 +263,6 @@ class TransformControllerTest {
             request.setContent("Test content");
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -342,7 +276,6 @@ class TransformControllerTest {
             request.setContent("   \n\t  ");
 
             mockMvc.perform(post("/fogui/transform")
-                    .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -366,7 +299,6 @@ class TransformControllerTest {
             request.setContent("Stream this");
 
             mockMvc.perform(post("/fogui/transform/stream")
-                    .header("Authorization", "Bearer " + apiKey)
                     .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-stream-1")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
@@ -381,7 +313,6 @@ class TransformControllerTest {
             request.setContent("   ");
 
             String body = mockMvc.perform(post("/fogui/transform/stream")
-                    .header("Authorization", "Bearer " + apiKey)
                     .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-stream-blank")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
@@ -408,7 +339,6 @@ class TransformControllerTest {
             request.setContent("Stream this");
 
             String body = mockMvc.perform(post("/fogui/transform/stream")
-                    .header("Authorization", "Bearer " + apiKey)
                     .header(RequestCorrelationService.REQUEST_ID_HEADER, "req-stream-advisor")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))

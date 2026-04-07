@@ -1,12 +1,9 @@
 package com.genui.controller;
 
-import com.genui.entity.User;
 import com.genui.model.genui.ContentBlock;
 import com.genui.model.genui.GenerativeUIResponse;
 import com.genui.model.transform.TransformRequest;
 import com.genui.model.transform.TransformResponse;
-import com.genui.repository.UserRepository;
-import com.genui.security.ApiKeyUserDetails;
 import com.genui.starter.advisor.FogUiAdvisorException;
 import com.genui.service.ChatClientFactory;
 import com.genui.service.RequestCorrelationService;
@@ -29,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,7 +34,6 @@ import static org.mockito.Mockito.when;
 class TransformControllerUnitTest {
 
     private ChatClientFactory chatClientFactory;
-    private UserRepository userRepository;
     private RequestCorrelationService requestCorrelationService;
     private TransformStreamProcessor transformStreamProcessor;
     private TransformController controller;
@@ -46,7 +41,6 @@ class TransformControllerUnitTest {
     @BeforeEach
     void setUp() {
         chatClientFactory = Mockito.mock(ChatClientFactory.class);
-        userRepository = Mockito.mock(UserRepository.class);
         requestCorrelationService = Mockito.mock(RequestCorrelationService.class);
         transformStreamProcessor = Mockito.mock(TransformStreamProcessor.class);
         when(requestCorrelationService.resolveRequestId(anyString())).thenReturn("req-unit-1");
@@ -54,7 +48,6 @@ class TransformControllerUnitTest {
 
         controller = new TransformController(
                 chatClientFactory,
-                userRepository,
                 requestCorrelationService,
                 transformStreamProcessor);
     }
@@ -67,7 +60,7 @@ class TransformControllerUnitTest {
         TransformRequest request = new TransformRequest();
         request.setContent("hello");
 
-        ResponseEntity<?> response = controller.transform(null, null, request);
+        ResponseEntity<?> response = controller.transform(null, request);
 
         assertEquals(500, response.getStatusCode().value());
     }
@@ -83,7 +76,7 @@ class TransformControllerUnitTest {
         TransformRequest request = new TransformRequest();
         request.setContent("hello");
 
-        ResponseEntity<?> response = controller.transform(null, null, request);
+        ResponseEntity<?> response = controller.transform(null, request);
 
         assertEquals(422, response.getStatusCode().value());
         TransformResponse body = (TransformResponse) response.getBody();
@@ -93,54 +86,12 @@ class TransformControllerUnitTest {
     }
 
     @Test
-    @DisplayName("transform should not save usage without authenticated user")
-    void transformShouldNotSaveUsageWithoutAuthenticatedUser() {
-        GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
-                .content(List.of(ContentBlock.text("ok")))
-                .build();
-        mockSyncChatClient(uiResponse);
-        when(chatClientFactory.getActiveModelName()).thenReturn("gpt-test");
-
-        TransformRequest request = new TransformRequest();
-        request.setContent("hello");
-
-        ResponseEntity<?> response = controller.transform(null, null, request);
-
-        assertEquals(200, response.getStatusCode().value());
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    @DisplayName("transform should save usage with authenticated user")
-    void transformShouldSaveUsageWithAuthenticatedUser() {
-        GenerativeUIResponse uiResponse = GenerativeUIResponse.builder()
-                .content(List.of(ContentBlock.text("ok")))
-                .build();
-        mockSyncChatClient(uiResponse);
-        when(chatClientFactory.getActiveModelName()).thenReturn("gpt-test");
-
-        User user = User.builder()
-                .email("unit@example.com")
-                .passwordHash("hash")
-                .build();
-        ApiKeyUserDetails userDetails = new ApiKeyUserDetails(user);
-
-        TransformRequest request = new TransformRequest();
-        request.setContent("hello");
-
-        ResponseEntity<?> response = controller.transform(null, userDetails, request);
-
-        assertEquals(200, response.getStatusCode().value());
-        verify(userRepository).save(user);
-    }
-
-    @Test
     @DisplayName("transform should return 400 for blank content")
     void transformShouldReturn400ForBlankContent() {
         TransformRequest request = new TransformRequest();
         request.setContent("   ");
 
-        ResponseEntity<?> response = controller.transform(null, null, request);
+        ResponseEntity<?> response = controller.transform(null, request);
 
         assertEquals(400, response.getStatusCode().value());
     }
@@ -170,7 +121,7 @@ class TransformControllerUnitTest {
         context.setInstructions("Lead with a short summary.");
         request.setContext(context);
 
-        ResponseEntity<?> response = controller.transform(null, null, request);
+        ResponseEntity<?> response = controller.transform(null, request);
 
         assertEquals(200, response.getStatusCode().value());
 

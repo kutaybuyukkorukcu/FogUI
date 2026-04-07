@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for ApiKeyUserDetails.
- * Tests UserDetails implementation for API key authenticated users.
+ * Tests UserDetails implementation for authenticated reference-server users.
  */
 @DisplayName("ApiKeyUserDetails")
 class ApiKeyUserDetailsTest {
@@ -88,7 +88,7 @@ class ApiKeyUserDetailsTest {
     class GetPassword {
 
         @Test
-        @DisplayName("should return null for API key auth")
+        @DisplayName("should return null for token-based auth")
         void shouldReturnNullForApiKeyAuth() {
             assertNull(userDetails.getPassword());
         }

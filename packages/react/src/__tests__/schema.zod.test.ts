@@ -166,6 +166,50 @@ describe('fogUIResponseSchema', () => {
     expect(fogUITransformResultSchema.safeParse(payload).success).toBe(true);
   });
 
+  it('accepts backend transform envelopes with null error fields', () => {
+    const payload = {
+      success: true,
+      result: {
+        thinking: [],
+        content: [
+          {
+            type: 'component',
+            value: null,
+            componentType: 'Card',
+            props: {
+              title: 'Launch Readiness Summary',
+              description: 'All systems are prepared for launch.',
+            },
+            children: null,
+          },
+          {
+            type: 'text',
+            value: 'Operator Note: Ensure all safety protocols are followed.',
+            componentType: null,
+            props: null,
+            children: null,
+          },
+        ],
+        metadata: {
+          contractVersion: 'fogui/1.0',
+        },
+      },
+      error: null,
+      errorCode: null,
+      errorDetails: null,
+      usage: {
+        model: 'gpt-4.1-nano',
+        transformTokens: 31,
+        estimatedCost: 0.0000186,
+        processingTimeMs: 2263,
+      },
+      sessionId: null,
+      requestId: 'fogui-aebb939d-4fe8-41ff-8839-12da43e29080',
+    };
+
+    expect(fogUITransformResultSchema.safeParse(payload).success).toBe(true);
+  });
+
   it('rejects successful transform envelopes without results', () => {
     const payload = {
       success: true,

@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -30,11 +31,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+        protected void doFilterInternal(@NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        // Skip if already authenticated (e.g., by API key filter)
+        // Skip if a previous authentication step already populated the context.
         if (SecurityContextHolder.getContext().getAuthentication() != null) {
             filterChain.doFilter(request, response);
             return;
@@ -45,24 +46,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
             String token = authHeader.substring(BEARER_PREFIX.length()).trim();
 
-            // Skip if it's an API key (handled by ApiKeyAuthenticationFilter)
-            if (token.startsWith("fog_")) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
             UUID userId = jwtService.validateTokenAndGetUserId(token);
 
             if (userId != null) {
-                userRepository.findById(userId).ifPresent(user -> {
-                    if (user.getActive()) {
-                        ApiKeyUserDetails userDetails = new ApiKeyUserDetails(user);
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                        log.debug("JWT authenticated for user: {}", user.getEmail());
-                    }
-                });
+                userRepository.findById(userId)
+                        .filter(user -> user.getActive())
+                        .ifPresent(user -> {
+                            ApiKeyUserDetails userDetails = new ApiKeyUserDetails(user);
+                            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                            log.debug("JWT authenticated for user: {}", user.getEmail());
+                        });
             }
         }
 
@@ -70,11 +65,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/api/auth/")
+        return path.equals("/api/auth/register")
+            || path.equals("/api/auth/login")
                 || path.equals("/health")
                 || path.startsWith("/actuator/")
-                || path.startsWith("/fogui/"); // API key auth handles these
+                || path.startsWith("/fogui/"); // Transform endpoints are intentionally public.
     }
 }

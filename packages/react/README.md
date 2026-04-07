@@ -153,6 +153,7 @@ Adapters remain intentionally small:
 ## Renderer Behavior
 
 - Renders `text` and `component` blocks.
+- Canonical layout/grouping typically arrives as `Container` with `layout`, `columns`, and `gap` props; adapters can map that into local stack/grid primitives.
 - Supports nested component trees through `children`.
 - Supports `props.children` fallback when block-level `children` is empty.
 - Resolves adapter component names case-insensitively.
