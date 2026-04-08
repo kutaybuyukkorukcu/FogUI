@@ -14,8 +14,8 @@ From repository root:
 
 This builds:
 
-- `fogui-java-core`
-- `fogui-spring-starter`
+- `packages/fogui-java-core`
+- `packages/fogui-spring-boot-starter`
 - `backend-java` (reference server)
 
 ## Run reference server
@@ -81,7 +81,7 @@ These checks align with Phase 1 and Phase 2 goals in `docs/ROADMAP_OSS.md`.
 From repository root:
 
 ```bash
-./backend-java/mvnw -B -f pom.xml -pl fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
+./backend-java/mvnw -B -f pom.xml -pl :fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
 ```
 
 This validates:

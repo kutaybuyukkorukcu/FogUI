@@ -57,14 +57,14 @@ jobs:
         run: |
           mvn -B -f pom.xml \
             -Drevision=${{ steps.release-version.outputs.value }} \
-            -pl .,fogui-java-core,fogui-spring-starter \
+            -pl .,:fogui-java-core,:fogui-spring-starter \
             -am verify
 
       - name: Publish fogui-java-core and fogui-spring-starter
         run: |
           mvn -B -f pom.xml \
             -Drevision=${{ steps.release-version.outputs.value }} \
-            -pl .,fogui-java-core,fogui-spring-starter \
+            -pl .,:fogui-java-core,:fogui-spring-starter \
             -am deploy -DskipTests -DdeployAtEnd=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

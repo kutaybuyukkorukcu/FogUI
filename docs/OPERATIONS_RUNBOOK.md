@@ -51,7 +51,7 @@ If stream final UI looks unstable:
 Run:
 
 ```bash
-./backend-java/mvnw -B -f pom.xml -pl fogui-java-core test -Dtest=StreamReplayDeterminismTest
+./backend-java/mvnw -B -f pom.xml -pl :fogui-java-core test -Dtest=StreamReplayDeterminismTest
 ```
 
 ## Canonical Contract Diagnostics
@@ -72,7 +72,7 @@ Contract-version mismatch issues use:
 Run fixture checks:
 
 ```bash
-./backend-java/mvnw -B -f pom.xml -pl fogui-java-core test -Dtest=CanonicalConformanceFixtureTest
+./backend-java/mvnw -B -f pom.xml -pl :fogui-java-core test -Dtest=CanonicalConformanceFixtureTest
 ```
 
 ## Advisors Troubleshooting

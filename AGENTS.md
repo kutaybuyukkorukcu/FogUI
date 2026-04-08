@@ -6,8 +6,8 @@ This document provides essential guidelines for AI agents operating within the F
 
 FogUI is an OSS-first deterministic agent UI compatibility and rendering layer.
 
-- **`fogui-java-core`**: Canonical contracts, validation, translation primitives, and deterministic stream utilities.
-- **`fogui-spring-starter`**: Spring Boot integration glue for wiring FogUI core services.
+- **`packages/fogui-java-core`**: Canonical contracts, validation, translation primitives, and deterministic stream utilities.
+- **`packages/fogui-spring-boot-starter`**: Spring Boot integration glue for wiring FogUI core services.
 - **`packages/react`**: Publishable NPM library (`@fogui/react`) for canonical rendering and design-system adapters.
 - **`backend-java`**: Reference Spring Boot server exposing transform, stream, and compatibility APIs.
 - **`examples/react-demo`**: Minimal React demo app that validates transform, stream, and compatibility flows.

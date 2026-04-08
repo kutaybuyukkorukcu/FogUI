@@ -39,7 +39,7 @@ jobs:
         run: ./mvnw -f ../pom.xml -pl backend-java -am test
 
       - name: Deterministic Conformance and Replay Suites
-        run: ./mvnw -f ../pom.xml -pl fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
+        run: ./mvnw -f ../pom.xml -pl :fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
 
       - name: Package with Sentry source context upload
         run: |
@@ -57,8 +57,8 @@ jobs:
         with:
           name: backend-build
           path: |
-            fogui-java-core/target
-            fogui-spring-starter/target
+            packages/fogui-java-core/target
+            packages/fogui-spring-boot-starter/target
             backend-java/target
           retention-days: 1
 
@@ -138,17 +138,17 @@ jobs:
 
       - name: Verify Java analysis and coverage inputs exist
         run: |
-          test -d fogui-java-core/target/classes
-          test -d fogui-spring-starter/target/classes
+          test -d packages/fogui-java-core/target/classes
+          test -d packages/fogui-spring-boot-starter/target/classes
           test -d backend-java/target/classes
-          test -f fogui-java-core/target/site/jacoco/jacoco.xml
-          test -f fogui-spring-starter/target/site/jacoco/jacoco.xml
+          test -f packages/fogui-java-core/target/site/jacoco/jacoco.xml
+          test -f packages/fogui-spring-boot-starter/target/site/jacoco/jacoco.xml
           test -f backend-java/target/site/jacoco/jacoco.xml
-          ls -la fogui-java-core/target | head
-          ls -la fogui-spring-starter/target | head
+          ls -la packages/fogui-java-core/target | head
+          ls -la packages/fogui-spring-boot-starter/target | head
           ls -la backend-java/target | head
-          ls -la fogui-java-core/target/site/jacoco | head
-          ls -la fogui-spring-starter/target/site/jacoco | head
+          ls -la packages/fogui-java-core/target/site/jacoco | head
+          ls -la packages/fogui-spring-boot-starter/target/site/jacoco | head
           ls -la backend-java/target/site/jacoco | head
 
       - name: Download frontend coverage

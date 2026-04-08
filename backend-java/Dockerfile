@@ -4,13 +4,13 @@ WORKDIR /workspace
 
 # Copy reactor + module poms first (cache-friendly)
 COPY pom.xml .
-COPY fogui-java-core/pom.xml fogui-java-core/pom.xml
-COPY fogui-spring-starter/pom.xml fogui-spring-starter/pom.xml
+COPY packages/fogui-java-core/pom.xml packages/fogui-java-core/pom.xml
+COPY packages/fogui-spring-boot-starter/pom.xml packages/fogui-spring-boot-starter/pom.xml
 COPY backend-java/pom.xml backend-java/pom.xml
 
 # Copy source trees and build backend with required modules
-COPY fogui-java-core/src fogui-java-core/src
-COPY fogui-spring-starter/src fogui-spring-starter/src
+COPY packages/fogui-java-core/src packages/fogui-java-core/src
+COPY packages/fogui-spring-boot-starter/src packages/fogui-spring-boot-starter/src
 COPY backend-java/src backend-java/src
 RUN mvn -q -DskipTests -pl backend-java -am package
 
