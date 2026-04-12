@@ -1,5 +1,4 @@
 # Design System Adapter Guide
-
 FogUI renderer uses adapters to map canonical component types to your own UI components.
 
 ## Core idea

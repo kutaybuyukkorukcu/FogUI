@@ -1,6 +1,5 @@
 # FogUI OSS Roadmap (Deterministic Agent UI Runtime)
-
-**Last Updated:** April 6, 2026
+**Last Updated:** April 8, 2026
 
 ## North Star
 
@@ -24,10 +23,10 @@ FogUI owns deterministic contract enforcement, compatibility translation, and ru
 
 ### In active OSS scope
 
-1. `fogui-java-core` for canonical schema, validation, protocol translation primitives, stream reconciliation.
-2. `fogui-spring-starter` for Spring Boot integration and runtime wiring.
+1. `packages/fogui-java-core` for canonical schema, validation, protocol translation primitives, stream reconciliation.
+2. `packages/fogui-spring-boot-starter` for Spring Boot integration and runtime wiring.
 3. `packages/react` for canonical rendering and adapter behavior guarantees, kept intentionally narrow as a reference trust surface.
-4. `backend-java` and `examples/react-demo` as reference implementations.
+4. `backend-java` and `examples/transform-showcase` as reference implementations.
 
 ### Out of active OSS scope
 
@@ -43,10 +42,11 @@ As of April 6, 2026, implementation is ahead of the original dated phase plan:
 
 1. Phase 1 is complete.
 2. Phase 2 is complete.
-3. Phase 3 is mostly complete; remaining work is A2UI compatibility hardening around supported-subset documentation and deterministic diagnostics.
-4. Phase 4 groundwork exists; GitHub Packages release automation is available as an interim lane, while Maven Central remains the intended long-term target and is still TBD.
-5. No active roadmap item exists to add protocol bridges beyond A2UI unless product direction changes.
-6. Near-term focus shifts back to implementation hardening and firsthand observation of deterministic behavior before broader external-usability work.
+3. Phase 3 A2UI hardening is in place: supported-subset docs, deterministic diagnostics, and fixture-backed examples are now explicit.
+4. Remaining Phase 3 reference-surface work is keeping the transform showcase and docs aligned, and deciding whether explicit demo smoke or broader stream/compat demo coverage should return.
+5. Phase 4 groundwork exists; GitHub Packages release automation is available as an interim lane, while Maven Central remains the intended long-term target and is still TBD.
+6. No active roadmap item exists to add protocol bridges beyond A2UI unless product direction changes.
+7. Near-term focus shifts back to implementation hardening and firsthand observation of deterministic behavior before broader external-usability work.
 
 ## 2026 Execution Phases
 

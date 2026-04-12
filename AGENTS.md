@@ -10,7 +10,7 @@ FogUI is an OSS-first deterministic agent UI compatibility and rendering layer.
 - **`packages/fogui-spring-boot-starter`**: Spring Boot integration glue for wiring FogUI core services.
 - **`packages/react`**: Publishable NPM library (`@fogui/react`) for canonical rendering and design-system adapters.
 - **`backend-java`**: Reference Spring Boot server exposing transform, stream, and compatibility APIs.
-- **`examples/react-demo`**: Minimal React demo app that validates transform, stream, and compatibility flows.
+- **`examples/transform-showcase`**: Transform-focused React demo app for validating local canonical UI rendering against the backend.
 
 ## 2. Build, Lint, and Test Commands
 

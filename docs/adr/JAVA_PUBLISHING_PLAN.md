@@ -1,5 +1,4 @@
 # Java Artifact Publishing Plan
-
 Goal: publish `fogui-java-core` and `fogui-spring-starter` as consumable OSS artifacts for external Java/Spring teams.
 
 Roadmap alignment: Phase 4 adoption work in `docs/ROADMAP_OSS.md`.

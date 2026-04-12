@@ -1,5 +1,4 @@
 # FogUI Advisors Runtime
-
 This document describes the Spring AI Advisors pipeline used by FogUI deterministic runtime v1.
 
 ## Scope

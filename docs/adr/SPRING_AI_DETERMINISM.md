@@ -1,5 +1,4 @@
 # Spring AI Deterministic Runtime Guide
-
 This guide documents FogUI deterministic runtime defaults for transform and stream flows.
 
 ## Goals

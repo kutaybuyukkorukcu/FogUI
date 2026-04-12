@@ -1,8 +1,15 @@
 # FogUI Architecture Boundaries
-
 ## Architectural Thesis
 
 FogUI is a backend runtime plus renderer contract that makes agent-generated UI **predictable, validated, and safe** before it reaches user-facing components.
+
+## Related ADRs
+
+- `ENDPOINT_INTENT_AND_BOUNDARIES.md` for route responsibility split and compatibility boundaries.
+- `RUNTIME_CONFIGURATION_MODES.md` for local-vs-docker configuration and endpoint routing behavior.
+- `A2UI_COMPATIBILITY.md` for A2UI inbound subset and deterministic diagnostics.
+- `SPRING_AI_DETERMINISM.md` for deterministic generation policy and advisor defaults.
+- `ADVISORS_RUNTIME.md` for advisor chain behavior and runtime exception mapping.
 
 ## End-to-End Runtime Flow
 
@@ -23,7 +30,7 @@ FogUI is a backend runtime plus renderer contract that makes agent-generated UI 
 
 ## Core OSS Modules
 
-### `fogui-java-core`
+### `packages/fogui-java-core`
 
 Deterministic core engine:
 
@@ -34,13 +41,13 @@ Deterministic core engine:
 
 This module contains the highest-value deterministic logic that remains useful even outside the reference server.
 
-### `fogui-spring-starter`
+### `packages/fogui-spring-boot-starter`
 
 Spring Boot integration layer:
 
 1. Auto-configures FogUI core services.
 2. Provides integration points for middleware, metrics, and runtime policy.
-3. Keeps framework-specific wiring out of `fogui-java-core`.
+3. Keeps framework-specific wiring out of `packages/fogui-java-core`.
 
 This module is the publishable Spring integration boundary for teams that want deterministic behavior without adopting the entire reference server.
 
@@ -72,15 +79,17 @@ Reference server and integration harness, not the OSS product center:
 2. SSE transport and request lifecycle handling
 3. persistence, auth, and operational endpoints
 
-The deterministic contract itself is intentionally pushed down into `fogui-java-core` and `fogui-spring-starter` so those modules remain independently publishable and reusable.
+The deterministic contract itself is intentionally pushed down into `packages/fogui-java-core` and `packages/fogui-spring-boot-starter` so those modules remain independently publishable and reusable.
 
-### `examples/react-demo`
+### `examples/transform-showcase`
 
-Minimal verification app for:
+Transform-focused manual validation app for:
 
-1. Transform flow.
-2. Stream flow.
-3. Compatibility flow.
+1. Canonical transform flow.
+2. Local `@fogui/react` renderer integration.
+3. Component-family coverage across canned scenarios.
+
+Stream and compatibility behavior remain exercised primarily through backend endpoints, tests, and docs.
 
 ## Determinism Guardrails
 
