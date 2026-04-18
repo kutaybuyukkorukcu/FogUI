@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Factory for creating Spring AI ChatClient instances.
@@ -29,6 +30,9 @@ public class ChatClientFactory {
     @Value("${spring.ai.openai.chat.options.model:gpt-4.1-nano}")
     private String openAiModel;
 
+    @Value("${spring.ai.openai.base-url:https://api.openai.com}")
+    private String openAiBaseUrl;
+
     public ChatClientFactory(
             OpenAiChatModel openAiChatModel,
             FogUiGenerationPolicyService generationPolicyService,
@@ -44,24 +48,41 @@ public class ChatClientFactory {
      * Creates a ChatClient using the configured OpenAI-compatible provider.
      */
     public ChatClient createClient() {
+        return createClientInternal(true);
+    }
+
+    /**
+     * Creates a ChatClient without default advisors.
+     * Useful for evaluation baselines that should skip the FogUI trust layer.
+     */
+    public ChatClient createClientWithoutAdvisors() {
+        return createClientInternal(false);
+    }
+
+    private ChatClient createClientInternal(boolean includeDefaultAdvisors) {
         if (openAiChatModel == null) {
             throw new IllegalStateException("OpenAI provider not configured. Set OPENAI_API_KEY and OPENAI_MODEL.");
         }
 
         log.info(
-                "Creating ChatClient with model: {} and {} default advisors",
+                "Creating ChatClient with model: {} and {} default advisors (enabled={})",
                 getActiveModelName(),
-                defaultAdvisors.size());
-        return ChatClient.builder(openAiChatModel)
-                .defaultAdvisors(defaultAdvisors)
-                .build();
+                defaultAdvisors.size(),
+                includeDefaultAdvisors);
+
+        ChatClient.Builder builder = ChatClient.builder(Objects.requireNonNull(openAiChatModel));
+        if (includeDefaultAdvisors) {
+            builder.defaultAdvisors(Objects.requireNonNull(defaultAdvisors));
+        }
+
+        return builder.build();
     }
 
     /**
      * Applies deterministic generation policy to a request spec.
      */
     public void applyDeterministicOptions(ChatClient.ChatClientRequestSpec requestSpec) {
-        requestSpec.options(buildDeterministicOptions());
+        requestSpec.options(Objects.requireNonNull(buildDeterministicOptions()));
     }
 
     public OpenAiChatOptions buildDeterministicOptions() {
@@ -83,6 +104,13 @@ public class ChatClientFactory {
      */
     public String getActiveModelName() {
         return openAiModel;
+    }
+
+    /**
+     * Returns the currently configured OpenAI-compatible provider base URL.
+     */
+    public String getActiveProviderBaseUrl() {
+        return openAiBaseUrl;
     }
 
     @PostConstruct
