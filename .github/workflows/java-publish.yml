@@ -53,18 +53,18 @@ jobs:
 
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Verify fogui-java-core and fogui-spring-starter
+      - name: Verify fogui-java-core, fogui-spring-starter, and fogui-spring-web-starter
         run: |
           mvn -B -f pom.xml \
             -Drevision=${{ steps.release-version.outputs.value }} \
-            -pl .,:fogui-java-core,:fogui-spring-starter \
+            -pl .,:fogui-java-core,:fogui-spring-starter,:fogui-spring-web-starter \
             -am verify
 
-      - name: Publish fogui-java-core and fogui-spring-starter
+      - name: Publish fogui-java-core, fogui-spring-starter, and fogui-spring-web-starter
         run: |
           mvn -B -f pom.xml \
             -Drevision=${{ steps.release-version.outputs.value }} \
-            -pl .,:fogui-java-core,:fogui-spring-starter \
+            -pl .,:fogui-java-core,:fogui-spring-starter,:fogui-spring-web-starter \
             -am deploy -DskipTests -DdeployAtEnd=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -77,5 +77,6 @@ jobs:
           echo "Repository: https://github.com/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "Registry: https://maven.pkg.github.com/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "Published modules:" >> $GITHUB_STEP_SUMMARY
-          echo "- com.genui:fogui-java-core" >> $GITHUB_STEP_SUMMARY
-          echo "- com.genui:fogui-spring-starter" >> $GITHUB_STEP_SUMMARY
+          echo "- com.fogui:fogui-java-core" >> $GITHUB_STEP_SUMMARY
+          echo "- com.fogui:fogui-spring-starter" >> $GITHUB_STEP_SUMMARY
+          echo "- com.fogui:fogui-spring-web-starter" >> $GITHUB_STEP_SUMMARY

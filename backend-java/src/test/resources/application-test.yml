@@ -42,4 +42,4 @@ jwt:
 
 logging:
   level:
-    com.genui: DEBUG
+    com.fogui: DEBUG

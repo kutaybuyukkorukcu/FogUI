@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - genui-network
+      - fogui-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U fogui -d fogui" ]
       interval: 10s
@@ -23,7 +23,7 @@ services:
     build:
       context: .
       dockerfile: backend-java/Dockerfile
-    container_name: genui-backend
+    container_name: fogui-backend
     ports:
       - "8080:5001"
     environment:
@@ -48,7 +48,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - genui-network
+      - fogui-network
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "http://localhost:5001/health" ]
       interval: 30s
@@ -61,19 +61,19 @@ services:
     build:
       context: .
       dockerfile: examples/react-demo/Dockerfile
-    container_name: genui-frontend
+    container_name: fogui-frontend
     ports:
       - "5174:80"
     depends_on:
       backend:
         condition: service_healthy
     networks:
-      - genui-network
+      - fogui-network
     environment:
       - NODE_ENV=production
 
 networks:
-  genui-network:
+  fogui-network:
     driver: bridge
 
 volumes:

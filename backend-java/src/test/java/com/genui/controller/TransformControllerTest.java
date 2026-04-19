@@ -5,9 +5,9 @@ import com.genui.model.genui.ContentBlock;
 import com.genui.model.genui.GenerativeUIResponse;
 import com.genui.model.genui.ThinkingItem;
 import com.genui.model.transform.TransformRequest;
-import com.genui.service.ChatClientFactory;
 import com.genui.service.RequestCorrelationService;
 import com.genui.starter.advisor.FogUiAdvisorException;
+import com.fogui.webstarter.runtime.FogUiTransformRuntime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -51,7 +51,7 @@ class TransformControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private ChatClientFactory chatClientFactory;
+        private FogUiTransformRuntime transformRuntime;
 
     @Nested
     @DisplayName("POST /fogui/transform")
@@ -214,7 +214,7 @@ class TransformControllerTest {
         @DisplayName("should return 500 when LLM fails")
         void shouldReturn500WhenLlmFails() throws Exception {
             // Mock ChatClient to throw exception
-            when(chatClientFactory.createClient()).thenThrow(new RuntimeException("LLM service unavailable"));
+            when(transformRuntime.createClient()).thenThrow(new RuntimeException("LLM service unavailable"));
 
             TransformRequest request = new TransformRequest();
             request.setContent("Some content");
@@ -257,7 +257,7 @@ class TransformControllerTest {
                     .content(List.of(ContentBlock.text("Test")))
                     .build();
             mockChatClient(uiResponse);
-            when(chatClientFactory.getActiveModelName()).thenReturn("gpt-4");
+            when(transformRuntime.getActiveModelName()).thenReturn("gpt-4");
 
             TransformRequest request = new TransformRequest();
             request.setContent("Test content");
@@ -293,7 +293,7 @@ class TransformControllerTest {
             String llmResponse = "{\"thinking\":[],\"content\":[{\"type\":\"text\",\"value\":\"Hello\"}]}";
 
             mockStreamingChatClient(llmResponse);
-            when(chatClientFactory.getActiveModelName()).thenReturn("gpt-4.1-nano");
+            when(transformRuntime.getActiveModelName()).thenReturn("gpt-4.1-nano");
 
             TransformRequest request = new TransformRequest();
             request.setContent("Stream this");
@@ -360,7 +360,7 @@ class TransformControllerTest {
         ChatClient.ChatClientRequestSpec mockRequestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
         ChatClient.CallResponseSpec mockCallSpec = Mockito.mock(ChatClient.CallResponseSpec.class);
 
-        when(chatClientFactory.createClient()).thenReturn(mockClient);
+        when(transformRuntime.createClient()).thenReturn(mockClient);
         when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
         when(mockRequestSpec.call()).thenReturn(mockCallSpec);
         when(mockCallSpec.entity(GenerativeUIResponse.class)).thenReturn(response);
@@ -371,7 +371,7 @@ class TransformControllerTest {
         ChatClient.ChatClientRequestSpec mockRequestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
         ChatClient.CallResponseSpec mockCallSpec = Mockito.mock(ChatClient.CallResponseSpec.class);
 
-        when(chatClientFactory.createClient()).thenReturn(mockClient);
+        when(transformRuntime.createClient()).thenReturn(mockClient);
         when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
         when(mockRequestSpec.call()).thenReturn(mockCallSpec);
         when(mockCallSpec.entity(GenerativeUIResponse.class)).thenThrow(exception);
@@ -382,7 +382,7 @@ class TransformControllerTest {
         ChatClient.ChatClientRequestSpec mockRequestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
         ChatClient.StreamResponseSpec mockStreamSpec = Mockito.mock(ChatClient.StreamResponseSpec.class);
 
-        when(chatClientFactory.createClient()).thenReturn(mockClient);
+        when(transformRuntime.createClient()).thenReturn(mockClient);
         when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
         when(mockRequestSpec.stream()).thenReturn(mockStreamSpec);
         when(mockStreamSpec.content()).thenReturn(Flux.fromArray(chunks));
@@ -393,7 +393,7 @@ class TransformControllerTest {
         ChatClient.ChatClientRequestSpec mockRequestSpec = Mockito.mock(ChatClient.ChatClientRequestSpec.class);
         ChatClient.StreamResponseSpec mockStreamSpec = Mockito.mock(ChatClient.StreamResponseSpec.class);
 
-        when(chatClientFactory.createClient()).thenReturn(mockClient);
+        when(transformRuntime.createClient()).thenReturn(mockClient);
         when(mockClient.prompt(any(org.springframework.ai.chat.prompt.Prompt.class))).thenReturn(mockRequestSpec);
         when(mockRequestSpec.stream()).thenReturn(mockStreamSpec);
         when(mockStreamSpec.content()).thenReturn(chunks);

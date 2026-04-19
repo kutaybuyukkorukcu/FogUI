@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Factory for creating Spring AI ChatClient instances.
@@ -29,6 +30,9 @@ public class ChatClientFactory {
     @Value("${spring.ai.openai.chat.options.model:gpt-4.1-nano}")
     private String openAiModel;
 
+    @Value("${spring.ai.openai.base-url:https://api.openai.com}")
+    private String openAiBaseUrl;
+
     public ChatClientFactory(
             OpenAiChatModel openAiChatModel,
             FogUiGenerationPolicyService generationPolicyService,
@@ -44,24 +48,26 @@ public class ChatClientFactory {
      * Creates a ChatClient using the configured OpenAI-compatible provider.
      */
     public ChatClient createClient() {
-        if (openAiChatModel == null) {
-            throw new IllegalStateException("OpenAI provider not configured. Set OPENAI_API_KEY and OPENAI_MODEL.");
-        }
+        OpenAiChatModel chatModel = requireOpenAiChatModel();
 
         log.info(
                 "Creating ChatClient with model: {} and {} default advisors",
                 getActiveModelName(),
                 defaultAdvisors.size());
-        return ChatClient.builder(openAiChatModel)
-                .defaultAdvisors(defaultAdvisors)
+        return ChatClient.builder(chatModel)
+                .defaultAdvisors(Objects.requireNonNull(defaultAdvisors))
                 .build();
+    }
+
+    public ChatClient createClientWithoutAdvisors() {
+        return ChatClient.builder(requireOpenAiChatModel()).build();
     }
 
     /**
      * Applies deterministic generation policy to a request spec.
      */
     public void applyDeterministicOptions(ChatClient.ChatClientRequestSpec requestSpec) {
-        requestSpec.options(buildDeterministicOptions());
+        requestSpec.options(Objects.requireNonNull(buildDeterministicOptions()));
     }
 
     public OpenAiChatOptions buildDeterministicOptions() {
@@ -83,6 +89,17 @@ public class ChatClientFactory {
      */
     public String getActiveModelName() {
         return openAiModel;
+    }
+
+    public String getActiveProviderBaseUrl() {
+        return openAiBaseUrl;
+    }
+
+    private OpenAiChatModel requireOpenAiChatModel() {
+        if (openAiChatModel == null) {
+            throw new IllegalStateException("OpenAI provider not configured. Set OPENAI_API_KEY and OPENAI_MODEL.");
+        }
+        return openAiChatModel;
     }
 
     @PostConstruct

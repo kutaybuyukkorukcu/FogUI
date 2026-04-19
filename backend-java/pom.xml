@@ -5,16 +5,16 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.genui</groupId>
+        <groupId>com.fogui</groupId>
         <artifactId>fogui-modules</artifactId>
         <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.genui</groupId>
-    <artifactId>genui-backend</artifactId>
+    <groupId>com.fogui</groupId>
+    <artifactId>fogui-backend</artifactId>
     <version>${revision}</version>
-    <name>GenUI Backend</name>
+    <name>FogUI Backend</name>
     <description>Generative UI Platform - Spring Boot Backend</description>
 
     <properties>
@@ -48,13 +48,18 @@
 
         <!-- FogUI OSS compatibility engine modules -->
         <dependency>
-            <groupId>com.genui</groupId>
+            <groupId>com.fogui</groupId>
             <artifactId>fogui-java-core</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>
-            <groupId>com.genui</groupId>
+            <groupId>com.fogui</groupId>
             <artifactId>fogui-spring-starter</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fogui</groupId>
+            <artifactId>fogui-spring-web-starter</artifactId>
             <version>${revision}</version>
         </dependency>
 

@@ -3,14 +3,14 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>com.genui</groupId>
+    <groupId>com.fogui</groupId>
     <artifactId>fogui-modules</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
-  <groupId>com.genui</groupId>
-  <artifactId>genui-backend</artifactId>
+  <groupId>com.fogui</groupId>
+  <artifactId>fogui-backend</artifactId>
   <version>1.0.0-SNAPSHOT</version>
-  <name>GenUI Backend</name>
+  <name>FogUI Backend</name>
   <description>Generative UI Platform - Spring Boot Backend</description>
   <licenses>
     <license>
@@ -52,13 +52,18 @@
       <artifactId>spring-ai-starter-model-openai</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.genui</groupId>
+      <groupId>com.fogui</groupId>
       <artifactId>fogui-java-core</artifactId>
       <version>${revision}</version>
     </dependency>
     <dependency>
-      <groupId>com.genui</groupId>
+      <groupId>com.fogui</groupId>
       <artifactId>fogui-spring-starter</artifactId>
+      <version>${revision}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fogui</groupId>
+      <artifactId>fogui-spring-web-starter</artifactId>
       <version>${revision}</version>
     </dependency>
     <dependency>
