@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Factory for creating Spring AI ChatClient instances.
@@ -53,8 +52,8 @@ public class ChatClientFactory {
                 "Creating ChatClient with model: {} and {} default advisors",
                 getActiveModelName(),
                 defaultAdvisors.size());
-            return ChatClient.builder(Objects.requireNonNull(openAiChatModel))
-                .defaultAdvisors(Objects.requireNonNull(defaultAdvisors))
+        return ChatClient.builder(openAiChatModel)
+                .defaultAdvisors(defaultAdvisors)
                 .build();
     }
 
@@ -62,7 +61,7 @@ public class ChatClientFactory {
      * Applies deterministic generation policy to a request spec.
      */
     public void applyDeterministicOptions(ChatClient.ChatClientRequestSpec requestSpec) {
-        requestSpec.options(Objects.requireNonNull(buildDeterministicOptions()));
+        requestSpec.options(buildDeterministicOptions());
     }
 
     public OpenAiChatOptions buildDeterministicOptions() {

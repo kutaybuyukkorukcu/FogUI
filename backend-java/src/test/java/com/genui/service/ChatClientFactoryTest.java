@@ -11,12 +11,10 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.lang.NonNull;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -31,23 +29,9 @@ import static org.mockito.Mockito.when;
 class ChatClientFactoryTest {
 
     private ObjectProvider<List<Advisor>> advisorProvider(List<Advisor> advisors) {
-        List<Advisor> safeAdvisors = Objects.requireNonNull(advisors);
-        return new ObjectProvider<>() {
-            @Override
-            public @NonNull List<Advisor> getObject(@NonNull Object... args) {
-                return safeAdvisors;
-            }
-
-            @Override
-            public @NonNull List<Advisor> getObject() {
-                return safeAdvisors;
-            }
-
-            @Override
-            public @NonNull Iterator<List<Advisor>> iterator() {
-                return Objects.requireNonNull(List.of(safeAdvisors).iterator());
-            }
-        };
+        ObjectProvider<List<Advisor>> provider = mock(ObjectProvider.class);
+        when(provider.getIfAvailable((Supplier<List<Advisor>>) org.mockito.ArgumentMatchers.any())).thenReturn(advisors);
+        return provider;
     }
 
     private FogUiGenerationPolicyService mockPolicyService() {

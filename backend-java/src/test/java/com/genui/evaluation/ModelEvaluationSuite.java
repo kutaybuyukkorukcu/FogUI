@@ -15,11 +15,8 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.evaluation.EvaluationRequest;
 import org.springframework.ai.evaluation.EvaluationResponse;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.lang.NonNull;
-import reactor.core.publisher.Flux;
 
 import java.util.List;
-import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Intentionally not named *Test to keep it out of required default test lanes.
  */
 @Tag("evaluation")
-class ModelEvaluationIT {
+class ModelEvaluationSuite {
 
     @Test
     void relevancyEvaluatorShouldPassOnDeterministicYesJudge() {
@@ -88,7 +85,7 @@ class ModelEvaluationIT {
         assertFalse(response.isPass());
     }
 
-    private @NonNull ChatOptions deterministicJudgeOptions() {
+    private OpenAiChatOptions deterministicJudgeOptions() {
         OpenAiChatOptions options = OpenAiChatOptions.builder().build();
         options.setTemperature(0.0);
         options.setTopP(1.0);
@@ -97,29 +94,24 @@ class ModelEvaluationIT {
 
     private static final class FixedJudgeChatModel implements ChatModel {
 
-        private final @NonNull String answer;
+        private final String answer;
 
         private FixedJudgeChatModel(String answer) {
-            this.answer = Objects.requireNonNull(answer);
+            this.answer = answer;
         }
 
         @Override
-        public @NonNull ChatResponse call(Prompt prompt) {
-            AssistantMessage assistantMessage = new AssistantMessage(Objects.requireNonNull(answer));
+        public ChatResponse call(Prompt prompt) {
+            AssistantMessage assistantMessage = new AssistantMessage(answer);
             return new ChatResponse(List.of(new Generation(assistantMessage)));
         }
 
         @Override
-        public @NonNull ChatOptions getDefaultOptions() {
+        public ChatOptions getDefaultOptions() {
             OpenAiChatOptions options = OpenAiChatOptions.builder().build();
             options.setTemperature(0.0);
             options.setTopP(1.0);
             return options;
-        }
-
-        @Override
-        public @NonNull Flux<ChatResponse> stream(Prompt prompt) {
-            return Objects.requireNonNull(Flux.just(call(prompt)));
         }
     }
 }
