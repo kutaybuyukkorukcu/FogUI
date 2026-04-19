@@ -16,6 +16,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -30,20 +31,21 @@ import static org.mockito.Mockito.when;
 class ChatClientFactoryTest {
 
     private ObjectProvider<List<Advisor>> advisorProvider(List<Advisor> advisors) {
+        List<Advisor> safeAdvisors = Objects.requireNonNull(advisors);
         return new ObjectProvider<>() {
             @Override
             public @NonNull List<Advisor> getObject(@NonNull Object... args) {
-                return advisors;
+                return safeAdvisors;
             }
 
             @Override
             public @NonNull List<Advisor> getObject() {
-                return advisors;
+                return safeAdvisors;
             }
 
             @Override
             public @NonNull Iterator<List<Advisor>> iterator() {
-                return List.of(advisors).iterator();
+                return Objects.requireNonNull(List.of(safeAdvisors).iterator());
             }
         };
     }
@@ -65,26 +67,10 @@ class ChatClientFactoryTest {
                     mockPolicyService(),
                     advisorProvider(List.of()));
             ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4.1-nano");
-            ReflectionTestUtils.setField(factory, "openAiBaseUrl", "https://api.openai.com");
 
             String modelName = factory.getActiveModelName();
 
             assertEquals("gpt-4.1-nano", modelName);
-        }
-
-        @Test
-        @DisplayName("should return configured OpenAI provider base URL")
-        void shouldReturnConfiguredOpenAiProviderBaseUrl() {
-            OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
-            ChatClientFactory factory = new ChatClientFactory(
-                    mockOpenAiModel,
-                    mockPolicyService(),
-                    advisorProvider(List.of()));
-            ReflectionTestUtils.setField(factory, "openAiBaseUrl", "https://api.openai.com");
-
-            String baseUrl = factory.getActiveProviderBaseUrl();
-
-            assertEquals("https://api.openai.com", baseUrl);
         }
     }
 
@@ -103,22 +89,6 @@ class ChatClientFactoryTest {
             ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4.1-nano");
 
             ChatClient client = factory.createClient();
-
-            assertNotNull(client);
-        }
-
-        @Test
-        @DisplayName("should create ChatClient without default advisors")
-        void shouldCreateChatClientWithoutDefaultAdvisors() {
-            OpenAiChatModel mockOpenAiModel = mock(OpenAiChatModel.class);
-            Advisor advisor = mock(Advisor.class);
-            ChatClientFactory factory = new ChatClientFactory(
-                    mockOpenAiModel,
-                    mockPolicyService(),
-                    advisorProvider(List.of(advisor)));
-            ReflectionTestUtils.setField(factory, "openAiModel", "gpt-4.1-nano");
-
-            ChatClient client = factory.createClientWithoutAdvisors();
 
             assertNotNull(client);
         }

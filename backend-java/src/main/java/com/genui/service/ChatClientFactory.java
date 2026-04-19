@@ -30,9 +30,6 @@ public class ChatClientFactory {
     @Value("${spring.ai.openai.chat.options.model:gpt-4.1-nano}")
     private String openAiModel;
 
-    @Value("${spring.ai.openai.base-url:https://api.openai.com}")
-    private String openAiBaseUrl;
-
     public ChatClientFactory(
             OpenAiChatModel openAiChatModel,
             FogUiGenerationPolicyService generationPolicyService,
@@ -48,34 +45,17 @@ public class ChatClientFactory {
      * Creates a ChatClient using the configured OpenAI-compatible provider.
      */
     public ChatClient createClient() {
-        return createClientInternal(true);
-    }
-
-    /**
-     * Creates a ChatClient without default advisors.
-     * Useful for evaluation baselines that should skip the FogUI trust layer.
-     */
-    public ChatClient createClientWithoutAdvisors() {
-        return createClientInternal(false);
-    }
-
-    private ChatClient createClientInternal(boolean includeDefaultAdvisors) {
         if (openAiChatModel == null) {
             throw new IllegalStateException("OpenAI provider not configured. Set OPENAI_API_KEY and OPENAI_MODEL.");
         }
 
         log.info(
-                "Creating ChatClient with model: {} and {} default advisors (enabled={})",
+                "Creating ChatClient with model: {} and {} default advisors",
                 getActiveModelName(),
-                defaultAdvisors.size(),
-                includeDefaultAdvisors);
-
-        ChatClient.Builder builder = ChatClient.builder(Objects.requireNonNull(openAiChatModel));
-        if (includeDefaultAdvisors) {
-            builder.defaultAdvisors(Objects.requireNonNull(defaultAdvisors));
-        }
-
-        return builder.build();
+                defaultAdvisors.size());
+            return ChatClient.builder(Objects.requireNonNull(openAiChatModel))
+                .defaultAdvisors(Objects.requireNonNull(defaultAdvisors))
+                .build();
     }
 
     /**
@@ -104,13 +84,6 @@ public class ChatClientFactory {
      */
     public String getActiveModelName() {
         return openAiModel;
-    }
-
-    /**
-     * Returns the currently configured OpenAI-compatible provider base URL.
-     */
-    public String getActiveProviderBaseUrl() {
-        return openAiBaseUrl;
     }
 
     @PostConstruct
