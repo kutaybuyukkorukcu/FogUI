@@ -18,10 +18,10 @@ services:
       - ./packages/fogui-spring-boot-starter/pom.xml:/workspace/packages/fogui-spring-boot-starter/pom.xml
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - GENUI_PROVIDER=${GENUI_PROVIDER:-openai}
+      - AI_PROVIDER=${AI_PROVIDER:-openai}
       # Keep non-empty by default so Spring AI does not fail-fast at startup.
       - OPENAI_API_KEY=${OPENAI_API_KEY:-local-dev-key}
-      - LOGGING_LEVEL_COM_GENUI=DEBUG
+      - LOGGING_LEVEL_COM_FOGUI=DEBUG
     # First dev boot can take longer while Maven pulls dependencies.
     healthcheck:
       start_period: 180s

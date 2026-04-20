@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: genui-backend
+    name: fogui-backend
   
   # Database Configuration
   datasource:
@@ -65,7 +65,7 @@ fogui:
 # Logging
 logging:
   level:
-    com.genui: DEBUG
+    com.fogui: DEBUG
     org.springframework.ai: DEBUG
     org.springframework.security: DEBUG
     org.springframework.web.client: DEBUG

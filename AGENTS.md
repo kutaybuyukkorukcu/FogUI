@@ -110,8 +110,8 @@ This project enforces **80% code coverage** through SonarCloud quality gates. Th
 - **Annotations**: Heavily utilize Lombok (`@Data`, `@Builder`, `@RequiredArgsConstructor`, `@Slf4j`) to reduce boilerplate.
 - **Immutability**: Use `final` for dependency-injected fields.
 - **DTOs vs Entities**:
-    - **Entities**: Reside in `com.genui.entity` and are used for JPA persistence.
-    - **DTOs**: Reside in `com.genui.dto`. They are plain POJOs, often created from entities via a static `from(Entity entity)` factory method.
+  - **Entities**: Reside in `com.fogui.backend.entity` and are used for JPA persistence.
+  - **DTOs**: Reside in `com.fogui.backend.dto`. They are plain POJOs, often created from entities via a static `from(Entity entity)` factory method.
 - **Responses**: For controllers, return `ResponseEntity<T>`. Use builder patterns on custom response DTOs with static `success(...)` and `error(...)` factory methods.
 - **Error Handling**:
   - Handle expected errors at the controller level and return appropriate `ResponseEntity` statuses.
@@ -124,7 +124,7 @@ This project enforces **80% code coverage** through SonarCloud quality gates. Th
 
 ## 4. File Organization
 
-- **`backend-java/src/main/java/com/genui`**:
+- **`backend-java/src/main/java/com/fogui/backend`**:
     - `controller`: REST API endpoints.
     - `service`: Business logic.
     - `repository`: Spring Data JPA interfaces.
