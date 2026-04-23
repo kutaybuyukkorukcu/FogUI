@@ -8,7 +8,7 @@
         <groupId>com.fogui</groupId>
         <artifactId>fogui-modules</artifactId>
         <version>${revision}</version>
-        <relativePath>../pom.xml</relativePath>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <groupId>com.fogui</groupId>

@@ -9,8 +9,8 @@ FogUI is an OSS-first deterministic agent UI compatibility and rendering layer.
 - **`packages/fogui-java-core`**: Canonical contracts, validation, translation primitives, and deterministic stream utilities.
 - **`packages/fogui-spring-boot-starter`**: Spring Boot integration glue for wiring FogUI core services.
 - **`packages/react`**: Publishable NPM library (`@fogui/react`) for canonical rendering and design-system adapters.
-- **`backend-java`**: Reference Spring Boot server exposing transform, stream, and compatibility APIs.
-- **`examples/transform-showcase`**: Transform-focused React demo app for validating local canonical UI rendering against the backend.
+- **`apps/be-transform-showcase`**: Reference Spring Boot server exposing transform, stream, and compatibility APIs.
+- **`apps/fe-transform-showcase`**: Transform-focused React demo app for validating local canonical UI rendering against the backend.
 
 ## 2. Build, Lint, and Test Commands
 
@@ -19,7 +19,7 @@ FogUI is an OSS-first deterministic agent UI compatibility and rendering layer.
 This project enforces **80% code coverage** through SonarCloud quality gates. The following modules are analyzed:
 
 **SonarCloud Configuration** (see `sonar-project.properties`):
-- **Backend** (`backend-java`): Java code coverage via JaCoCo
+- **Backend** (`apps/be-transform-showcase`): Java code coverage via JaCoCo
   - Report path: `target/site/jacoco/jacoco.xml`
   - Coverage target: 80% minimum
 - **React Package** (`packages/react`): TypeScript coverage via Vitest/Istanbul
@@ -29,28 +29,28 @@ This project enforces **80% code coverage** through SonarCloud quality gates. Th
 
 **Important**: When modifying code, ensure tests are added/updated to maintain coverage above 80%.
 
-### 2.1. Backend (`backend-java`)
+### 2.1. Backend (`apps/be-transform-showcase`)
 
 - **Run Application**:
   ```bash
-  cd backend-java && ./mvnw spring-boot:run
+  cd apps/be-transform-showcase && ./mvnw spring-boot:run
   ```
 - **Run All Tests**:
   ```bash
-  cd backend-java && ./mvnw -B test
+  cd apps/be-transform-showcase && ./mvnw -B test
   ```
 - **Run a Single Test Class**:
   ```bash
   # Runs all tests in TransformControllerTest
-  cd backend-java && ./mvnw -B test -Dtest=TransformControllerTest
+  cd apps/be-transform-showcase && ./mvnw -B test -Dtest=TransformControllerTest
   ```
 - **Run a Single Test Method**:
   ```bash
-  cd backend-java && ./mvnw -B test -Dtest=TransformControllerTest#shouldTransformContentWithCardComponent
+  cd apps/be-transform-showcase && ./mvnw -B test -Dtest=TransformControllerTest#shouldTransformContentWithCardComponent
   ```
 - **Build & Package**:
   ```bash
-  cd backend-java && ./mvnw -B package -DskipTests
+  cd apps/be-transform-showcase && ./mvnw -B package -DskipTests
   ```
 
 **Note**: See Section 2.0 for coverage requirements. Run tests with `./mvnw test jacoco:report` to generate local coverage reports.
@@ -105,7 +105,7 @@ This project enforces **80% code coverage** through SonarCloud quality gates. Th
     - Hooks: `useCamelCase.ts`
     - Functions/Variables: `camelCase`
 
-### 3.2. Java / Spring Boot (`backend-java`)
+### 3.2. Java / Spring Boot (`apps/be-transform-showcase`)
 
 - **Annotations**: Heavily utilize Lombok (`@Data`, `@Builder`, `@RequiredArgsConstructor`, `@Slf4j`) to reduce boilerplate.
 - **Immutability**: Use `final` for dependency-injected fields.
@@ -124,7 +124,7 @@ This project enforces **80% code coverage** through SonarCloud quality gates. Th
 
 ## 4. File Organization
 
-- **`backend-java/src/main/java/com/fogui/backend`**:
+- **`apps/be-transform-showcase/src/main/java/com/fogui/backend`**:
     - `controller`: REST API endpoints.
     - `service`: Business logic.
     - `repository`: Spring Data JPA interfaces.

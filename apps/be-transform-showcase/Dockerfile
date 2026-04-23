@@ -6,13 +6,15 @@ WORKDIR /workspace
 COPY pom.xml .
 COPY packages/fogui-java-core/pom.xml packages/fogui-java-core/pom.xml
 COPY packages/fogui-spring-boot-starter/pom.xml packages/fogui-spring-boot-starter/pom.xml
-COPY backend-java/pom.xml backend-java/pom.xml
+COPY packages/fogui-spring-web-starter/pom.xml packages/fogui-spring-web-starter/pom.xml
+COPY apps/be-transform-showcase/pom.xml apps/be-transform-showcase/pom.xml
 
 # Copy source trees and build backend with required modules
 COPY packages/fogui-java-core/src packages/fogui-java-core/src
 COPY packages/fogui-spring-boot-starter/src packages/fogui-spring-boot-starter/src
-COPY backend-java/src backend-java/src
-RUN mvn -q -DskipTests -pl backend-java -am package
+COPY packages/fogui-spring-web-starter/src packages/fogui-spring-web-starter/src
+COPY apps/be-transform-showcase/src apps/be-transform-showcase/src
+RUN mvn -q -DskipTests -pl apps/be-transform-showcase -am package
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
@@ -20,7 +22,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy the built JAR
-COPY --from=builder /workspace/backend-java/target/*.jar app.jar
+COPY --from=builder /workspace/apps/be-transform-showcase/target/*.jar app.jar
 
 # Expose port
 EXPOSE 5001

@@ -1,6 +1,6 @@
 # FogUI Reference Server (Spring Boot)
 
-`backend-java` is the **reference implementation** for FogUI integration.
+`apps/be-transform-showcase` is the **reference implementation** for FogUI integration.
 
 It demonstrates how to expose deterministic transform/stream/compatibility APIs and includes optional reference endpoints for JWT-backed auth, profile, and usage inspection.
 
@@ -15,8 +15,8 @@ It demonstrates how to expose deterministic transform/stream/compatibility APIs 
 ## Run Locally
 
 ```bash
-./backend-java/mvnw -f pom.xml -q -DskipTests package
-cd backend-java && ./mvnw spring-boot:run
+./apps/be-transform-showcase/mvnw -f pom.xml -q -DskipTests package
+cd apps/be-transform-showcase && ./mvnw spring-boot:run
 ```
 
 Reference server URL: `http://localhost:5001`
@@ -31,7 +31,7 @@ These are public endpoints and do not require API keys or JWTs.
 
 ## Deterministic Runtime Defaults
 
-`backend-java` applies deterministic generation policy via `fogui-spring-starter`:
+`apps/be-transform-showcase` applies deterministic generation policy via `fogui-spring-starter`:
 
 - `fogui.deterministic.temperature` (default `0.0`)
 - `fogui.deterministic.top-p` (default `1.0`)
@@ -62,6 +62,8 @@ Important env vars:
 - `OPENAI_BASE_URL` (default: `https://api.openai.com`)
 - `OPENAI_MODEL` (default: `gpt-4.1-nano`)
 
+The backend currently supports OpenAI-compatible providers only.
+
 ## Correlation and Error Envelope
 
 - Incoming request header: `X-FogUI-Request-Id` (optional).
@@ -84,10 +86,12 @@ Important env vars:
 
 Flyway migration: `src/main/resources/db/migration/V1__initial_schema.sql`
 
+This database wiring is still active for the reference app's auth, profile, and usage flows.
+
 ## Testing
 
 ```bash
-cd backend-java
+cd apps/be-transform-showcase
 ./mvnw -B test
 ```
 

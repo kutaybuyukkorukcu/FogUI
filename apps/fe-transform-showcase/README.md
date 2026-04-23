@@ -6,7 +6,7 @@ Small reference app for manually validating the backend `POST /fogui/transform` 
 
 ```bash
 cd packages/react && npm install && npm run build
-cd ../examples/transform-showcase && npm install && npm run dev
+cd ../../apps/fe-transform-showcase && npm install && npm run dev
 ```
 
 Default backend endpoint: `http://localhost:5001`
