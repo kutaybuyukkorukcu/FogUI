@@ -19,6 +19,8 @@ COPY apps/fe-transform-showcase/src apps/fe-transform-showcase/src
 RUN npm --prefix packages/react ci --no-audit --no-fund
 RUN npm --prefix packages/react run build
 RUN npm --prefix apps/fe-transform-showcase ci --no-audit --no-fund
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm --prefix apps/fe-transform-showcase run build
 
 FROM nginx:1.27-alpine
