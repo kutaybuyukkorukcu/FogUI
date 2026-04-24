@@ -76,7 +76,7 @@ export interface FogUIProviderProps {
   readonly contractVersion?: FogUIContractVersionConfig;
   /**
    * Custom component adapter for your design system.
-   * @see https://fogui.dev/docs/adapters
+    * @see https://github.com/kutaybuyukkorukcu/FogUI/blob/main/docs/adr/ADAPTER_GUIDE.md
    */
   readonly adapter?: Adapter;
   /**
