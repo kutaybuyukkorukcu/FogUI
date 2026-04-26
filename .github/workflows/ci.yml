@@ -59,6 +59,7 @@ jobs:
           path: |
             packages/fogui-java-core/target
             packages/fogui-spring-boot-starter/target
+            packages/fogui-spring-web-starter/target
             apps/be-transform-showcase/target
           retention-days: 1
 
@@ -140,15 +141,19 @@ jobs:
         run: |
           test -d packages/fogui-java-core/target/classes
           test -d packages/fogui-spring-boot-starter/target/classes
+          test -d packages/fogui-spring-web-starter/target/classes
           test -d apps/be-transform-showcase/target/classes
           test -f packages/fogui-java-core/target/site/jacoco/jacoco.xml
           test -f packages/fogui-spring-boot-starter/target/site/jacoco/jacoco.xml
+          test -f packages/fogui-spring-web-starter/target/site/jacoco/jacoco.xml
           test -f apps/be-transform-showcase/target/site/jacoco/jacoco.xml
           ls -la packages/fogui-java-core/target | head
           ls -la packages/fogui-spring-boot-starter/target | head
+          ls -la packages/fogui-spring-web-starter/target | head
           ls -la apps/be-transform-showcase/target | head
           ls -la packages/fogui-java-core/target/site/jacoco | head
           ls -la packages/fogui-spring-boot-starter/target/site/jacoco | head
+          ls -la packages/fogui-spring-web-starter/target/site/jacoco | head
           ls -la apps/be-transform-showcase/target/site/jacoco | head
 
       - name: Download frontend coverage
@@ -164,7 +169,7 @@ jobs:
           head -n 20 packages/react/coverage/lcov.info
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
