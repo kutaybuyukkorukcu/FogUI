@@ -22,7 +22,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend-java/Dockerfile
+      dockerfile: apps/be-transform-showcase/Dockerfile
     container_name: fogui-backend
     ports:
       - "8080:5001"
@@ -33,17 +33,15 @@ services:
       - DATABASE_PASSWORD=${DATABASE_PASSWORD:-fogui_secret}
       # JWT Configuration
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-min-32-chars}
-      # LLM Provider Selection
-      - AI_PROVIDER=${AI_PROVIDER:-openai}
       # OpenAI-Compatible Provider (Groq, OpenRouter, OpenAI, etc.)
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       # Keep non-empty by default so Spring AI does not fail-fast at startup.
       - OPENAI_API_KEY=${OPENAI_API_KEY:-local-dev-key}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://host.docker.internal:11434}
       - OPENAI_MODEL=${OPENAI_MODEL:-llama-3.3-70b-versatile}
-      # Google Gemini Provider
-      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY:-}
-      - GOOGLE_AI_MODEL=${GOOGLE_AI_MODEL:-gemini-2.5-flash}
+      # Optional backend Sentry integration
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
     depends_on:
       db:
         condition: service_healthy
@@ -60,7 +58,7 @@ services:
     profiles: ["ui"]
     build:
       context: .
-      dockerfile: examples/react-demo/Dockerfile
+      dockerfile: apps/fe-transform-showcase/Dockerfile
     container_name: fogui-frontend
     ports:
       - "5174:80"

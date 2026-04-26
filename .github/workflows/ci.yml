@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./backend-java
+        working-directory: ./apps/be-transform-showcase
 
     steps:
       - name: Checkout code
@@ -36,14 +36,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build, Test & Generate Coverage
-        run: ./mvnw -f ../pom.xml -pl backend-java -am test
+        run: ./mvnw -f ../../pom.xml -pl apps/be-transform-showcase -am test
 
       - name: Deterministic Conformance and Replay Suites
-        run: ./mvnw -f ../pom.xml -pl :fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
+        run: ./mvnw -f ../../pom.xml -pl :fogui-java-core test -Dtest=CanonicalConformanceFixtureTest,StreamReplayDeterminismTest
 
       - name: Package with Sentry source context upload
         run: |
-          ./mvnw -B -f ../pom.xml -pl backend-java -am package -DskipTests dependency:copy-dependencies \
+          ./mvnw -B -f ../../pom.xml -pl apps/be-transform-showcase -am package -DskipTests dependency:copy-dependencies \
             -Dsentry.org=${{ secrets.SENTRY_ORG }} \
             -Dsentry.project=${{ secrets.SENTRY_PROJECT_BACKEND }} \
             -Dsentry.authToken=${{ secrets.SENTRY_AUTH_TOKEN }} \
@@ -59,7 +59,8 @@ jobs:
           path: |
             packages/fogui-java-core/target
             packages/fogui-spring-boot-starter/target
-            backend-java/target
+            packages/fogui-spring-web-starter/target
+            apps/be-transform-showcase/target
           retention-days: 1
 
   # ================================
@@ -140,16 +141,20 @@ jobs:
         run: |
           test -d packages/fogui-java-core/target/classes
           test -d packages/fogui-spring-boot-starter/target/classes
-          test -d backend-java/target/classes
+          test -d packages/fogui-spring-web-starter/target/classes
+          test -d apps/be-transform-showcase/target/classes
           test -f packages/fogui-java-core/target/site/jacoco/jacoco.xml
           test -f packages/fogui-spring-boot-starter/target/site/jacoco/jacoco.xml
-          test -f backend-java/target/site/jacoco/jacoco.xml
+          test -f packages/fogui-spring-web-starter/target/site/jacoco/jacoco.xml
+          test -f apps/be-transform-showcase/target/site/jacoco/jacoco.xml
           ls -la packages/fogui-java-core/target | head
           ls -la packages/fogui-spring-boot-starter/target | head
-          ls -la backend-java/target | head
+          ls -la packages/fogui-spring-web-starter/target | head
+          ls -la apps/be-transform-showcase/target | head
           ls -la packages/fogui-java-core/target/site/jacoco | head
           ls -la packages/fogui-spring-boot-starter/target/site/jacoco | head
-          ls -la backend-java/target/site/jacoco | head
+          ls -la packages/fogui-spring-web-starter/target/site/jacoco | head
+          ls -la apps/be-transform-showcase/target/site/jacoco | head
 
       - name: Download frontend coverage
         uses: actions/download-artifact@v4
@@ -164,7 +169,7 @@ jobs:
           head -n 20 packages/react/coverage/lcov.info
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

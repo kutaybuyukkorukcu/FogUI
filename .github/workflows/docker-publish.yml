@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'backend-java/**'
+      - 'apps/be-transform-showcase/**'
       - '.github/workflows/docker-publish.yml'
 
 env:
@@ -49,8 +49,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend-java
-          file: ./backend-java/Dockerfile
+          context: .
+          file: ./apps/be-transform-showcase/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}

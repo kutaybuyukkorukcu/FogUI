@@ -77,11 +77,12 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/fogui/react.git"
+        "url": "https://github.com/kutaybuyukkorukcu/FogUI.git",
+        "directory": "packages/react"
     },
-    "homepage": "https://fogui.dev",
+    "homepage": "https://github.com/kutaybuyukkorukcu/FogUI/tree/main/packages/react#readme",
     "bugs": {
-        "url": "https://github.com/fogui/react/issues"
+        "url": "https://github.com/kutaybuyukkorukcu/FogUI/issues"
     },
     "dependencies": {
         "zod": "^4.3.6"

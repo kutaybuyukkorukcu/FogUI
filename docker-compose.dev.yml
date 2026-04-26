@@ -3,24 +3,27 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend-java/Dockerfile.dev
+      dockerfile: apps/be-transform-showcase/Dockerfile.dev
     ports:
       - "5001:5001"
       - "5005:5005" # Debug port
     volumes:
       # Mount reactor + module sources for hot reload
       - ./pom.xml:/workspace/pom.xml
-      - ./backend-java/src:/workspace/backend-java/src
-      - ./backend-java/pom.xml:/workspace/backend-java/pom.xml
+      - ./apps/be-transform-showcase/src:/workspace/apps/be-transform-showcase/src
+      - ./apps/be-transform-showcase/pom.xml:/workspace/apps/be-transform-showcase/pom.xml
       - ./packages/fogui-java-core/src:/workspace/packages/fogui-java-core/src
       - ./packages/fogui-java-core/pom.xml:/workspace/packages/fogui-java-core/pom.xml
       - ./packages/fogui-spring-boot-starter/src:/workspace/packages/fogui-spring-boot-starter/src
       - ./packages/fogui-spring-boot-starter/pom.xml:/workspace/packages/fogui-spring-boot-starter/pom.xml
+      - ./packages/fogui-spring-web-starter/src:/workspace/packages/fogui-spring-web-starter/src
+      - ./packages/fogui-spring-web-starter/pom.xml:/workspace/packages/fogui-spring-web-starter/pom.xml
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - AI_PROVIDER=${AI_PROVIDER:-openai}
       # Keep non-empty by default so Spring AI does not fail-fast at startup.
       - OPENAI_API_KEY=${OPENAI_API_KEY:-local-dev-key}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
       - LOGGING_LEVEL_COM_FOGUI=DEBUG
     # First dev boot can take longer while Maven pulls dependencies.
     healthcheck:
@@ -31,10 +34,10 @@ services:
 
   frontend:
     build:
-      context: ./examples/react-demo
-      dockerfile: Dockerfile.dev
+      context: .
+      dockerfile: apps/fe-transform-showcase/Dockerfile.dev
     volumes:
-      - ./examples/react-demo:/app
+      - ./apps/fe-transform-showcase:/app
       - ./packages/react:/packages/react
       - /app/node_modules
     ports:
@@ -42,5 +45,5 @@ services:
     environment:
       - NODE_ENV=development
       - DOCKER_CONTAINER=true
-      - VITE_API_URL=http://localhost:5001
+      - VITE_API_URL=http://localhost:8080
     command: [ "sh", "-c", "rm -rf node_modules/* node_modules/.[!.]* 2>/dev/null || true; npm --prefix /packages/react install --no-package-lock --no-audit --no-fund && npm --prefix /packages/react run build && npm install --no-package-lock --no-audit --no-fund && npm run dev -- --host 0.0.0.0" ]

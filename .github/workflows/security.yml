@@ -52,7 +52,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high --file=backend-java/pom.xml
+          args: --severity-threshold=high --file=apps/be-transform-showcase/pom.xml
 
       - name: Upload Snyk results to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v3
@@ -99,10 +99,10 @@ jobs:
 
       - name: Build JAR for Docker
         run: ./mvnw -B package -DskipTests
-        working-directory: ./backend-java
+        working-directory: ./apps/be-transform-showcase
 
       - name: Build Docker image for scanning
-        run: docker build -t fogui-backend:scan ./backend-java
+        run: docker build -t fogui-backend:scan -f ./apps/be-transform-showcase/Dockerfile .
 
       - name: Run Snyk Container scan
         uses: snyk/actions/docker@master

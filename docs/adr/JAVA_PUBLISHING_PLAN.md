@@ -7,7 +7,7 @@ Backlog alignment: publishable runtime support and Java onboarding work tracked 
 
 1. GitHub Packages publishing is implemented as the interim Java release lane for all current Java artifacts.
 2. Shared `revision`-based versioning across the reactor is in place for tagged/manual Java releases.
-3. The reusable HTTP/runtime surface now lives in `fogui-spring-web-starter` rather than only in `backend-java`.
+3. The reusable HTTP/runtime surface now lives in `fogui-spring-web-starter` rather than only in `apps/be-transform-showcase`.
 4. External consumption docs for Spring Boot users are still incomplete.
 5. Maven Central remains the intended long-term distribution target, but the migration date and prerequisites are still TBD.
 

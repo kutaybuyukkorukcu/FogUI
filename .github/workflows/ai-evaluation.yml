@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./backend-java
+        working-directory: ./apps/be-transform-showcase
 
     steps:
       - name: Checkout code
@@ -27,5 +27,5 @@ jobs:
           cache: maven
 
       - name: Run deterministic evaluator suite
-        run: ./mvnw -B -f ../pom.xml -pl backend-java -am test -Dtest=ModelEvaluationSuite -Dsurefire.failIfNoSpecifiedTests=false
+        run: ./mvnw -B -f ../../pom.xml -pl apps/be-transform-showcase -am test -Dtest=ModelEvaluationSuite -Dsurefire.failIfNoSpecifiedTests=false
 

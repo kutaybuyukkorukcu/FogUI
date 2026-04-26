@@ -26,6 +26,8 @@ dist/
 build/
 packages/react/coverage/
 *.jar
+.flattened-pom.xml
+**/.flattened-pom.xml
 
 # Logs
 *.log
