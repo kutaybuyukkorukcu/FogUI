@@ -310,7 +310,7 @@
             <plugin>
                 <groupId>io.sentry</groupId>
                 <artifactId>sentry-maven-plugin</artifactId>
-                <version>0.0.8</version>
+                <version>0.11.0</version>
                 <extensions>true</extensions>
                 <configuration>
                     <debugSentryCli>true</debugSentryCli>
