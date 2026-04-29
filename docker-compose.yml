@@ -1,24 +1,4 @@
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: fogui-db
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB:-fogui}
-      - POSTGRES_USER=${POSTGRES_USER:-fogui}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fogui_secret}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - fogui-network
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U fogui -d fogui" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   backend:
     build:
       context: .
@@ -27,24 +7,12 @@ services:
     ports:
       - "8080:5001"
     environment:
-      # Database Configuration
-      - DATABASE_URL=${DATABASE_URL:-jdbc:postgresql://db:5432/fogui}
-      - DATABASE_USER=${DATABASE_USER:-fogui}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-fogui_secret}
-      # JWT Configuration
-      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-min-32-chars}
       # OpenAI-Compatible Provider (Groq, OpenRouter, OpenAI, etc.)
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       # Keep non-empty by default so Spring AI does not fail-fast at startup.
       - OPENAI_API_KEY=${OPENAI_API_KEY:-local-dev-key}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://host.docker.internal:11434}
       - OPENAI_MODEL=${OPENAI_MODEL:-llama-3.3-70b-versatile}
-      # Optional backend Sentry integration
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - fogui-network
     healthcheck:
@@ -73,6 +41,3 @@ services:
 networks:
   fogui-network:
     driver: bridge
-
-volumes:
-  postgres_data:
