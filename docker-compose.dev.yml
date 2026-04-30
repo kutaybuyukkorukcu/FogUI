@@ -22,8 +22,8 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       # Keep non-empty by default so Spring AI does not fail-fast at startup.
       - OPENAI_API_KEY=${OPENAI_API_KEY:-local-dev-key}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://host.docker.internal:11434}
+      - OPENAI_MODEL=${OPENAI_MODEL:-llama-3.3-70b-versatile}
       - LOGGING_LEVEL_COM_FOGUI=DEBUG
     # First dev boot can take longer while Maven pulls dependencies.
     healthcheck:
