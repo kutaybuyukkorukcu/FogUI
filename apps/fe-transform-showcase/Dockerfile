@@ -23,7 +23,7 @@ ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm --prefix apps/fe-transform-showcase run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.31.1-alpine
 
 COPY --from=builder /workspace/apps/fe-transform-showcase/dist /usr/share/nginx/html
 
